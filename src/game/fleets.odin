@@ -51,8 +51,39 @@ MISFILE_PER_MILLE :: 10 // each turn, each filed report (not home's) is lost thi
 
 MAX_FLEETS :: 64
 
+// What a ship carries from technology. A fleet goes with the oldest kit any of its ships has.
+Kit_Stat :: enum u8 {
+	Weapon,
+	Shield,
+	Armour,
+	To_Hit,
+	Speed,
+	Fuel,
+}
+
+Kit :: [Kit_Stat]int
+
+KIT_EFFECT := [Kit_Stat]Effect {
+	.Weapon = .Weapon,
+	.Shield = .Shield,
+	.Armour = .Armour,
+	.To_Hit = .To_Hit,
+	.Speed  = .Speed,
+	.Fuel   = .Fuel,
+}
+
+KIT_NAMES := [Kit_Stat]string {
+	.Weapon = "Weapons",
+	.Shield = "Shields",
+	.Armour = "Armour",
+	.To_Hit = "To hit",
+	.Speed  = "Speed",
+	.Fuel   = "Fuel",
+}
+
 Fleet :: struct {
 	used:    bool,
+	kit:     Kit, // the technology its ships have been upgraded to (and paid for)
 	ships:   [Ship_Type]int,
 	star:    int, // docked at this star, or NO_STAR while in transit
 	from:    int, // in transit: from this star ...
@@ -79,7 +110,7 @@ fleet_size :: proc(f: ^Fleet) -> int {
 	return n
 }
 
-// The fewest turns away any ship in it can manage.
+// The fewest turns away any ship in it can manage, with its Commuting kit.
 fleet_fuel :: proc(f: ^Fleet) -> int {
 	best := max(int)
 	for c, t in f.ships {
@@ -87,10 +118,10 @@ fleet_fuel :: proc(f: ^Fleet) -> int {
 			best = min(best, SHIPS[t].fuel)
 		}
 	}
-	return best == max(int) ? 0 : best
+	return best == max(int) ? 0 : best + f.kit[.Fuel]
 }
 
-// The slowest ship sets the pace.
+// The slowest ship sets the pace, with its Commuting kit.
 fleet_speed :: proc(f: ^Fleet) -> int {
 	best := max(int)
 	for c, t in f.ships {
@@ -98,7 +129,107 @@ fleet_speed :: proc(f: ^Fleet) -> int {
 			best = min(best, SHIPS[t].speed)
 		}
 	}
-	return best == max(int) ? 1 : best
+	return best == max(int) ? 1 : best + f.kit[.Speed]
+}
+
+// The kit yer technology gives a ship built today.
+empire_kit :: proc(g: ^Game) -> (k: Kit) {
+	for s in Kit_Stat {
+		k[s] = bonus(g, KIT_EFFECT[s])
+	}
+	return
+}
+
+is_warship :: proc(t: Ship_Type) -> bool {
+	return t == .Golf_Cart || t == .Pickup || t == .Monster_Truck
+}
+
+// Ships in a fleet that a kind of upgrade applies to: weapons and aiming only to warships.
+affected :: proc(f: ^Fleet, s: Kit_Stat) -> int {
+	n := 0
+	for c, t in f.ships {
+		if s == .Weapon || s == .To_Hit {
+			if is_warship(t) {
+				n += c
+			}
+		} else {
+			n += c
+		}
+	}
+	return n
+}
+
+// BJ a fleet still owes for upgrades it has not had (it keeps its old kit until paid).
+owed :: proc(g: ^Game, f: ^Fleet) -> int {
+	now := empire_kit(g)
+	n := 0
+	for s in Kit_Stat {
+		if f.kit[s] < now[s] {
+			n += affected(f, s) * UPGRADE_FEE
+		}
+	}
+	return n
+}
+
+// Pays what a fleet owes, if there is the BJ for it, and brings its kit up to date.
+pay_upgrades :: proc(g: ^Game, f: ^Fleet) -> bool {
+	due := owed(g, f)
+	if due == 0 || g.bj < due {
+		return false
+	}
+	g.bj -= due
+	f.kit = empire_kit(g)
+	return true
+}
+
+// A tech has just changed the empire's kit from `before`: every fleet that was up to date is billed
+// for the upgrade, ship by ship; a fleet the BJ cannot cover keeps its old kit and is Unpaid.
+bill_upgrades :: proc(g: ^Game, before: Kit) {
+	now := empire_kit(g)
+	if now == before {
+		return
+	}
+	billed, ships, unpaid := 0, 0, 0
+	for &f in g.fleets {
+		if !f.used || f.kit != before {
+			continue
+		}
+		fee := 0
+		n := 0
+		for s in Kit_Stat {
+			if now[s] != before[s] {
+				fee += affected(&f, s) * UPGRADE_FEE
+				n = max(n, affected(&f, s))
+			}
+		}
+		if fee == 0 {
+			f.kit = now
+			continue
+		}
+		if g.bj >= fee {
+			g.bj -= fee
+			f.kit = now
+			billed += fee
+			ships += n
+		} else {
+			unpaid += n
+		}
+	}
+	if billed > 0 {
+		b: Text
+		add(&b, "Upgrade fee: ")
+		add_int(&b, billed)
+		add(&b, " BJ for ")
+		add_int(&b, ships)
+		add(&b, ships == 1 ? " ship." : " ships.")
+		say(g, text(&b))
+	}
+	if unpaid > 0 {
+		b: Text
+		add_int(&b, unpaid)
+		add(&b, unpaid == 1 ? " ship is Unpaid and keeps its old kit." : " ships are Unpaid and keep their old kit.")
+		say(g, text(&b))
+	}
 }
 
 // Turns of fuel still in the tanks.
@@ -163,6 +294,9 @@ dock :: proc(g: ^Game, f: ^Fleet, star: int) {
 			}
 			o.away = max(o.away, f.away)
 			o.refills += f.refills
+			for s in Kit_Stat {
+				o.kit[s] = min(o.kit[s], f.kit[s])
+			}
 			f^ = {}
 			return
 		}
@@ -185,6 +319,7 @@ send_problem :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) -> string {
 		return "Nobody is here."
 	}
 	trial.away = f.away
+	trial.kit = f.kit
 	if trip_turns(g, from, to, fleet_speed(&trial)) > fleet_range(&trial) {
 		return "Out of range."
 	}
@@ -201,6 +336,7 @@ send_fleet :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) {
 	cans := src.ships[.Gas_Can]
 	f.ships = ships
 	f.away = src.away
+	f.kit = src.kit
 	if cans > 0 {
 		f.refills = src.refills * ships[.Gas_Can] / cans
 		src.refills -= f.refills
@@ -222,6 +358,7 @@ end_turn :: proc(g: ^Game) {
 	for i in 0 ..< g.star_count {
 		run_colony(g, i)
 	}
+	research_turn(g)
 	for &f in g.fleets {
 		if !f.used || f.star != NO_STAR {
 			continue
@@ -318,7 +455,7 @@ survey :: proc(g: ^Game, i: int) {
 		size    = s.size,
 		special = s.special,
 	}
-	if rng_int(&g.rng, 100) < BAD_READING_PERCENT {
+	if rng_int(&g.rng, 100) < max(0, BAD_READING_PERCENT - SURVEY_STEP * bonus(g, .Survey)) {
 		if rng_int(&g.rng, 2) == 0 {
 			r.planet = Planet_Type((int(s.planet) + 1 + rng_int(&g.rng, len(Planet_Type) - 1)) % len(Planet_Type))
 		} else {

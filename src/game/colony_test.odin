@@ -67,7 +67,7 @@ test_home_starts_settled :: proc(t: ^testing.T) {
 	c := colony_at(g, g.home)
 	testing.expect(t, c != nil)
 	testing.expect_value(t, c.households, HOME_HOUSEHOLDS)
-	testing.expect_value(t, c.max, 70)
+	testing.expect_value(t, colony_max(g, g.home), 70)
 	testing.expect_value(t, c.factories, HOME_FACTORIES)
 	testing.expect_value(t, production(g, g.home), 55) // 25 from households, 30 from factories
 	testing.expect_value(t, tax(g, g.home), 5)
@@ -111,7 +111,7 @@ test_factories_stop_at_what_households_can_work :: proc(t: ^testing.T) {
 	defer free(g)
 	init_game(g, SEED)
 	c := colony_at(g, g.home)
-	c.households, c.max = 10, 10
+	c.households, c.wear = 10, 60 // room for 10
 	c.factories = 19
 	c.stored[.Home_Improvement] = 5 // with this turn's 7, one more factory
 	run_colony(g, g.home)
@@ -131,19 +131,19 @@ test_waste_wears_the_planet_down :: proc(t: ^testing.T) {
 	c.factories = 100
 	c.households = 70
 	set_slider(c, .Lawn_Care, 0)
-	max_before := c.max
+	max_before := colony_max(g, g.home)
 	for _ in 0 ..< 10 {
 		run_colony(g, g.home)
 	}
-	testing.expect(t, c.max < max_before)
+	testing.expect(t, colony_max(g, g.home) < max_before)
 	// Enough Lawn Care keeps it tidy.
 	c.waste = 0
 	set_slider(c, .Lawn_Care, 60)
-	max_now := c.max
+	max_now := colony_max(g, g.home)
 	for _ in 0 ..< 10 {
 		run_colony(g, g.home)
 	}
-	testing.expect_value(t, c.max, max_now)
+	testing.expect_value(t, colony_max(g, g.home), max_now)
 }
 
 @(test)
@@ -201,7 +201,7 @@ test_moving_van_settles_and_sees_the_truth :: proc(t: ^testing.T) {
 		testing.expect(t, c != nil)
 		testing.expect_value(t, g.stars[to].report.planet, Planet_Type.Ocean)
 		testing.expect_value(t, g.stars[to].report.size, Planet_Size.Medium)
-		testing.expect_value(t, c.max, 63)
+		testing.expect_value(t, colony_max(g, to), 63)
 		// The listing said Rich; after a few turns the colony knows better.
 		testing.expect_value(t, g.stars[to].report.special, Special.None)
 		testing.expect(t, fleet_at(g, to) == nil) // the van was used up

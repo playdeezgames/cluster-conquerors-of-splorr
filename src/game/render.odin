@@ -4,9 +4,12 @@ package game
 
 draw_game :: proc(f: ^Frame, g: ^Game) {
 	cls(f, COLOR_BLACK)
-	if g.mode == .Colony {
+	switch g.mode {
+	case .Colony:
 		draw_colony(f, g)
-	} else {
+	case .Research:
+		draw_research(f, g)
+	case .Map, .Fleet, .Destination:
 		draw_map(f, g)
 	}
 	draw_panel(f, g)
@@ -127,14 +130,18 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	switch g.mode {
 	case .Map:
 		draw_star_panel(f, g)
-	case .Colony:
+	case .Colony, .Research:
 		draw_empire_panel(f, g)
 	case .Fleet:
 		draw_fleet_panel(f, g)
 	case .Destination:
 		draw_destination_panel(f, g)
 	}
-	print(f, "Slice 1, step 3", x, VIEW_H * TILE - 12, COLOR_DARK)
+	if g.mode == .Map || g.mode == .Colony {
+		print(f, "R: research", x, RESEARCH_LINK_Y, COLOR_CYAN)
+	} else if g.mode == .Research {
+		print(f, "R: back to map", x, RESEARCH_LINK_Y, COLOR_CYAN)
+	}
 }
 
 // The star under the cursor and yer ships there.
@@ -168,7 +175,7 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			add(&pop, g.cursor == g.home ? "Home, " : "Colony, ")
 			add_int(&pop, col.households)
 			add(&pop, "/")
-			add_int(&pop, col.max)
+			add_int(&pop, colony_max(g, g.cursor))
 			print(f, text(&pop), x, y, COLOR_GREEN)
 			y += 10
 		}
@@ -208,6 +215,14 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			add_int(&cans, fl.refills)
 			draw_gfx(f, .Barrel, x, y - 2, COLOR_ORANGE)
 			print(f, text(&cans), x + 14, y, COLOR_MID)
+			y += 12
+		}
+		if due := owed(g, fl); due > 0 {
+			u: Text
+			add(&u, "Unpaid: ")
+			add_int(&u, due)
+			add(&u, " BJ")
+			print(f, text(&u), x, y, COLOR_ORANGE)
 		}
 	}
 	if colony_at(g, g.cursor) != nil {
@@ -278,6 +293,18 @@ draw_fleet_panel :: proc(f: ^Frame, g: ^Game) {
 		add_int(&count, g.send[t])
 		add(&count, ">")
 		print(f, text(&count), x + COUNT_COL * GLYPH_W, y, g.send[t] > 0 ? COLOR_CYAN : COLOR_MID)
+	}
+	if src := fleet_at(g, g.source); src != nil {
+		if due := owed(g, src); due > 0 {
+			y := FLEET_TOP + n * ROW_H + 4
+			if g.row == n {
+				fill_rect(f, x - 2, y - 1, PANEL_W - 2, ROW_H, COLOR_NAVY)
+			}
+			pay: Text
+			add(&pay, "Pay upgrades: ")
+			add_int(&pay, due)
+			print(f, text(&pay), x, y, g.bj >= due ? COLOR_ORANGE : COLOR_RED)
+		}
 	}
 	print(f, "Choose where >", x, ACTION_Y, COLOR_CYAN)
 	print(f, "Back", x, BACK_Y, COLOR_MID)
@@ -355,16 +382,85 @@ draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 	rows := [?]struct {
 		label: string,
 		value: int,
-	}{{"Colonies", colonies}, {"Households", households}, {"BJ a turn", made}, {"Research", g.research}, {"RP a turn", rp}}
+	}{{"Colonies", colonies}, {"Households", households}, {"BJ a turn", made}, {"RP a turn", rp}}
 	for r, i in rows {
 		print(f, r.label, x, 44 + i * 11, COLOR_MID)
 		v: Text
 		add_int(&v, r.value)
 		print(f, text(&v), x + 11 * GLYPH_W, 44 + i * 11, COLOR_LIGHT)
 	}
-	print(f, "Research buys", x, 110, COLOR_DARK)
-	print(f, "nothing yet", x, 120, COLOR_DARK)
-	print(f, "(step 4).", x, 130, COLOR_DARK)
+	// What a ship built today carries.
+	print(f, "Ship kit:", x, 96, COLOR_WHITE)
+	kit := empire_kit(g)
+	for s, i in Kit_Stat {
+		print(f, KIT_NAMES[s], x, 108 + int(i) * 10, COLOR_MID)
+		v: Text
+		add(&v, "+")
+		add_int(&v, kit[s])
+		print(f, text(&v), x + 11 * GLYPH_W, 108 + int(i) * 10, kit[s] > 0 ? COLOR_LIGHT : COLOR_DARK)
+	}
+	extra: Text
+	add(&extra, "Factories ")
+	add_int(&extra, factory_cost(g))
+	add(&extra, " each")
+	print(f, text(&extra), x, 172, COLOR_MID)
+}
+
+// The six fields, each with its slider, its next tech and how far along it is.
+draw_research :: proc(f: ^Frame, g: ^Game) {
+	res := &g.tech
+	x := COLONY_X
+	print(f, "Book Club research", x, 6, COLOR_WHITE)
+	total := 0
+	for i in 0 ..< g.star_count {
+		total += research_points(g, i)
+	}
+	head: Text
+	add_int(&head, total)
+	add(&head, " research a turn, shared among the hobbies.")
+	print(f, text(&head), x, 18, COLOR_LIGHT)
+	for fld in Field {
+		row := int(fld)
+		y := research_row_y(row)
+		selected := g.row == row
+		if selected {
+			fill_rect(f, 0, y - 3, VIEW_W * TILE, RESEARCH_H - 2, COLOR_NAVY)
+		}
+		print(f, FIELD_NAMES[fld], x, y, selected ? COLOR_WHITE : COLOR_LIGHT)
+		bx := x + BAR_COL * GLYPH_W
+		bw := BAR_CELLS * GLYPH_W
+		frame_rect(f, bx - 1, y - 1, bw + 2, 10, COLOR_DARK)
+		fill_rect(f, bx, y, bw * res.slider[fld] / 100, 8, res.locked[fld] ? COLOR_MID : COLOR_CYAN)
+		pct: Text
+		add_int(&pct, res.slider[fld])
+		add(&pct, "%")
+		print(f, text(&pct), x + PCT_COL * GLYPH_W, y, COLOR_LIGHT)
+		print(f, res.locked[fld] ? "L" : "-", x + LOCK_COL * GLYPH_W, y, res.locked[fld] ? COLOR_ORANGE : COLOR_DARK)
+		k: Text
+		add_int(&k, known_count(res, fld))
+		add(&k, " of ")
+		add_int(&k, OFFERED_PER_FIELD)
+		print(f, text(&k), x + EFFECT_COL * GLYPH_W, y, COLOR_MID)
+		next := next_tech(res, fld)
+		line: Text
+		if next < 0 {
+			add(&line, "Nothing left to learn.")
+		} else {
+			add(&line, "Next: ")
+			add(&line, TECHS[fld][next].name)
+			add(&line, "  ")
+			add_int(&line, res.stored[fld])
+			add(&line, "/")
+			add_int(&line, tech_cost(next + 1))
+		}
+		print(f, text(&line), x + 2 * GLYPH_W, y + 11, COLOR_MID)
+	}
+	by := research_row_y(RESEARCH_BACK_ROW)
+	if g.row == RESEARCH_BACK_ROW {
+		fill_rect(f, 0, by - 3, VIEW_W * TILE, 14, COLOR_NAVY)
+	}
+	print(f, "Back to the map", x, by, COLOR_MID)
+	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: lock.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
 // Turns until `stored` plus `per_turn` a turn reaches `cost`; 0 if it never will.
@@ -407,7 +503,7 @@ draw_colony :: proc(f: ^Frame, g: ^Game) {
 	add(&line1, "Households ")
 	add_int(&line1, col.households)
 	add(&line1, "/")
-	add_int(&line1, col.max)
+	add_int(&line1, colony_max(g, g.source))
 	add(&line1, "   Factories ")
 	add_int(&line1, col.factories)
 	add(&line1, "/")
@@ -423,7 +519,7 @@ draw_colony :: proc(f: ^Frame, g: ^Game) {
 	add(&line2, " to BJ. Waste ")
 	add_int(&line2, col.waste)
 	add(&line2, " (+")
-	add_int(&line2, waste_made(col))
+	add_int(&line2, waste_made(g, col))
 	add(&line2, " a turn)")
 	print(f, text(&line2), x, 40, COLOR_LIGHT)
 
@@ -505,7 +601,7 @@ chore_effect :: proc(g: ^Game, star: int, ch: Chore) -> string {
 			add(&b, " factories")
 		}
 	case .Lawn_Care:
-		need := (col.waste + waste_made(col) + WASTE_CLEANED_PER_POINT - 1) / WASTE_CLEANED_PER_POINT
+		need := (col.waste + waste_made(g, col) + WASTE_CLEANED_PER_POINT - 1) / WASTE_CLEANED_PER_POINT
 		if pts >= need {
 			add(&b, "tidy")
 		} else {

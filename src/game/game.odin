@@ -1,7 +1,7 @@
 package game
 
-// The rules, independent of the platform. Slice 1 step 3 (PLAN.md): colonies, turns, fleets, fuel and
-// surveying over a generated cluster. Technology, rivals and the rest arrive in later steps.
+// The rules, independent of the platform. Slice 1 step 4 (PLAN.md): technology, colonies, turns,
+// fleets, fuel and surveying over a generated cluster. Rivals and the rest arrive in later steps.
 
 // Commands the page sends for keys, gamepad buttons and the touch pads (keep in step with
 // web/index.html). Directions move the cursor to the next star that way, or work a list.
@@ -17,6 +17,7 @@ Command :: enum i32 {
 	Confirm,
 	Cancel,
 	End_Turn,
+	Research,
 }
 
 DIRECTION := [Command][2]int {
@@ -31,6 +32,7 @@ DIRECTION := [Command][2]int {
 	.Confirm    = {0, 0},
 	.Cancel     = {0, 0},
 	.End_Turn   = {0, 0},
+	.Research   = {0, 0},
 }
 
 // How a click or tap reached the game (the page sends these numbers).
@@ -40,10 +42,11 @@ Pointer :: enum i32 {
 	Touch,
 }
 
-// What the controls are doing: looking at the map, running a colony, picking ships to send, or
-// picking where.
+// What the controls are doing: looking at the map, sharing out research, running a colony, picking
+// ships to send, or picking where.
 Mode :: enum u8 {
 	Map,
+	Research,
 	Colony,
 	Fleet,
 	Destination,
@@ -58,7 +61,8 @@ Game :: struct {
 	cursor:     int, // the star under the cursor; the panel shows it
 	turn:       int,
 	bj:         int, // billion jools, the empire's money
-	research:   int, // research points from Book Club (spent in step 4)
+	research:   int, // this turn's research points from Book Club, shared out at the turn's end
+	tech:       Research,
 	fleets:     [MAX_FLEETS]Fleet,
 	mode:       Mode,
 	source:     int, // the star ships are being sent from
@@ -72,6 +76,7 @@ init_game :: proc(g: ^Game, seed: u64) {
 	g.seed = seed
 	g.rng = Rng{seed ~ 0x5A17_C0DE_0000_0001}
 	make_cluster(g, seed)
+	offer_techs(&g.tech, &g.rng)
 	g.cursor = g.home
 	g.turn = 1
 	home := found_colony(g, g.home, HOME_HOUSEHOLDS)
@@ -86,13 +91,24 @@ init_game :: proc(g: ^Game, seed: u64) {
 	add(&b, g.stars[g.home].name)
 	add(&b, ". The Homeowners' Association has been notified.")
 	say(g, text(&b))
-	say(g, "(Slice 1, step 3: Enter/OK on a colony runs it; T or Turn ends the turn.)")
+	say(g, "(Slice 1, step 4: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
 }
 
 command :: proc(g: ^Game, c: Command) {
+	if c == .Research {
+		// R, gamepad Y or the Tech pad opens the research screen from anywhere but the middle of an order.
+		if g.mode == .Research {
+			g.mode = .Map
+		} else if g.mode == .Map || g.mode == .Colony {
+			open_research(g)
+		}
+		return
+	}
 	switch g.mode {
 	case .Map:
 		map_command(g, c)
+	case .Research:
+		research_command(g, c)
 	case .Colony:
 		colony_command(g, c)
 	case .Fleet:
@@ -123,6 +139,8 @@ map_command :: proc(g: ^Game, c: Command) {
 		say(g, "Back to yer home star.")
 	case .End_Turn:
 		next_turn(g)
+	case .Research:
+		open_research(g)
 	}
 }
 
@@ -142,6 +160,46 @@ next_turn :: proc(g: ^Game) {
 	add(&b, ".")
 	say(g, text(&b))
 	end_turn(g)
+}
+
+// ---- The research screen: six field rows, then Back ----
+
+RESEARCH_BACK_ROW :: len(Field)
+RESEARCH_ROWS :: RESEARCH_BACK_ROW + 1
+
+open_research :: proc(g: ^Game) {
+	g.mode = .Research
+	g.row = 0
+}
+
+// Up and Down pick a field, Left and Right move its slider by 5, Enter/OK locks it (or, on Back,
+// goes back); Escape/Back goes back to the map.
+research_command :: proc(g: ^Game, c: Command) {
+	res := &g.tech
+	#partial switch c {
+	case .North:
+		g.row = (g.row + RESEARCH_ROWS - 1) % RESEARCH_ROWS
+	case .South:
+		g.row = (g.row + 1) % RESEARCH_ROWS
+	case .West, .East:
+		if g.row < len(Field) {
+			f := Field(g.row)
+			v := res.slider[f]
+			v = c == .West ? (v - 1) / SLIDER_STEP * SLIDER_STEP : (v / SLIDER_STEP + 1) * SLIDER_STEP
+			set_research_slider(res, f, max(0, v))
+		}
+	case .Confirm:
+		if g.row < len(Field) {
+			res.locked[Field(g.row)] = !res.locked[Field(g.row)]
+		} else {
+			g.mode = .Map
+		}
+	case .Cancel:
+		g.mode = .Map
+	case .End_Turn:
+		g.mode = .Map
+		next_turn(g)
+	}
 }
 
 // ---- The colony screen: five slider rows, then the ship order, yer ships there, and Back ----
@@ -241,28 +299,62 @@ open_fleet :: proc(g: ^Game, star: int) {
 }
 
 // Up and Down pick a row, Left and Right change how many of that kind go, Enter/OK goes on to
-// choosing where, Escape/Back closes the list.
+// choosing where (or, on the "Pay" row, pays the fleet's upgrade fees), Escape/Back closes the list.
 fleet_command :: proc(g: ^Game, c: Command) {
 	rows, n := fleet_rows(g)
 	if n == 0 {
 		g.mode = .Map
 		return
 	}
+	total := n
+	src := fleet_at(g, g.source)
+	if src != nil && owed(g, src) > 0 {
+		total += 1 // the Pay row
+	}
 	#partial switch c {
 	case .North:
-		g.row = (g.row + n - 1) % n
+		g.row = (g.row + total - 1) % total
 	case .South:
-		g.row = (g.row + 1) % n
+		g.row = (g.row + 1) % total
 	case .West:
-		change_send(g, rows[g.row], -1)
+		if g.row < n {
+			change_send(g, rows[g.row], -1)
+		}
 	case .East:
-		change_send(g, rows[g.row], 1)
+		if g.row < n {
+			change_send(g, rows[g.row], 1)
+		}
 	case .Confirm:
+		if g.row == n {
+			pay_from_list(g)
+			return
+		}
 		choose_destination(g)
 	case .Cancel:
 		g.mode = .Map
 	case .End_Turn:
 		say(g, "Finish the orders first (Escape/Back closes them).")
+	}
+}
+
+pay_from_list :: proc(g: ^Game) {
+	src := fleet_at(g, g.source)
+	if src == nil {
+		return
+	}
+	due := owed(g, src)
+	if pay_upgrades(g, src) {
+		b: Text
+		add(&b, "Paid ")
+		add_int(&b, due)
+		add(&b, " BJ. The ships at Lot ")
+		add_int(&b, g.source + 1)
+		add(&b, " are up to date.")
+		say(g, text(&b))
+		_, n := fleet_rows(g)
+		g.row = min(g.row, n - 1)
+	} else {
+		say(g, "Not enough BJ for the upgrades.")
 	}
 }
 
@@ -378,6 +470,10 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		colony_pointer(g, sx, sy)
 		return
 	}
+	if g.mode == .Research {
+		research_pointer(g, sx, sy)
+		return
+	}
 	x, y, ok := screen_to_cell(g, sx, sy)
 	if !ok {
 		return
@@ -401,7 +497,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Colony, .Fleet:
+	case .Research, .Colony, .Fleet:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -471,9 +567,50 @@ colony_pointer :: proc(g: ^Game, sx, sy: int) {
 	}
 }
 
+// Where the research screen draws its rows: a field takes two lines.
+RESEARCH_TOP :: 36
+RESEARCH_H :: 26
+
+research_row_y :: proc(row: int) -> int {
+	return RESEARCH_TOP + row * RESEARCH_H
+}
+
+// A tap on the research screen: on a bar sets the field's slider there, on the lock toggles it,
+// on Back goes back.
+research_pointer :: proc(g: ^Game, sx, sy: int) {
+	res := &g.tech
+	cx := (sx - COLONY_X) / GLYPH_W
+	for row in 0 ..< RESEARCH_ROWS {
+		y := research_row_y(row)
+		if sy < y - 3 || sy >= y - 3 + RESEARCH_H {
+			continue
+		}
+		g.row = row
+		if row == RESEARCH_BACK_ROW {
+			g.mode = .Map
+			return
+		}
+		f := Field(row)
+		bar_x := COLONY_X + BAR_COL * GLYPH_W
+		if sx >= bar_x - 3 && sx < bar_x + BAR_CELLS * GLYPH_W + 3 {
+			v := (sx - bar_x) * 100 / (BAR_CELLS * GLYPH_W)
+			set_research_slider(res, f, (clamp(v, 0, 100) + SLIDER_STEP / 2) / SLIDER_STEP * SLIDER_STEP)
+		} else if cx >= LOCK_COL - 1 && cx <= LOCK_COL + 1 {
+			res.locked[f] = !res.locked[f]
+		}
+		return
+	}
+}
+
+RESEARCH_LINK_Y :: VIEW_H * TILE - 12 // "R: research" at the foot of the panel
+
 panel_pointer :: proc(g: ^Game, sx, sy: int) {
+	if on_row(sy, RESEARCH_LINK_Y) && (g.mode == .Map || g.mode == .Colony || g.mode == .Research) {
+		command(g, .Research)
+		return
+	}
 	switch g.mode {
-	case .Colony:
+	case .Research, .Colony:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)
@@ -482,6 +619,11 @@ panel_pointer :: proc(g: ^Game, sx, sy: int) {
 		}
 	case .Fleet:
 		rows, n := fleet_rows(g)
+		if src := fleet_at(g, g.source); src != nil && owed(g, src) > 0 && on_row(sy, FLEET_TOP + n * ROW_H + 4) {
+			g.row = n
+			pay_from_list(g)
+			return
+		}
 		for i in 0 ..< n {
 			if on_row(sy, FLEET_TOP + i * ROW_H) {
 				g.row = i
