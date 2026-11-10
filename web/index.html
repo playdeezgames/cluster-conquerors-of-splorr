@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cluster Conquerors of SPLORR!!</title>
+<style>
+	html, body { margin: 0; height: 100%; background: #1a1c2c; color: #94b0c2; overflow: hidden; }
+	body { display: flex; flex-direction: column; align-items: center; justify-content: center; font: 12px monospace; }
+	canvas {
+		image-rendering: pixelated;
+		width: min(100vw, calc((100vh - 40px) * 480 / 270));
+		height: min(calc(100vh - 40px), calc(100vw * 270 / 480));
+		touch-action: none;
+	}
+	footer { margin-top: 4px; text-align: center; max-width: 96vw; line-height: 1.3; }
+	footer a { color: #aaa; }
+	/* Touch controls: shown once the page sees a touch, over the screen's left and right edges. */
+	.pad { position: fixed; bottom: 48px; display: none; gap: 4px; z-index: 2; }
+	.pad.on { display: grid; }
+	#dpad { left: 8px; grid-template-columns: repeat(3, 44px); }
+	#acts { right: 8px; grid-template-columns: 56px; }
+	.pad button {
+		height: 44px; font: bold 14px monospace; color: #f4f4f4; background: rgba(51, 60, 87, 0.55);
+		border: 1px solid rgba(148, 176, 194, 0.6); border-radius: 6px; touch-action: none; user-select: none;
+		-webkit-user-select: none; padding: 0;
+	}
+	.pad button:active { background: rgba(65, 166, 246, 0.6); }
+	/* Short landscape screens (phones): a smaller footer, and pads sized to the bars beside the canvas. */
+	@media (max-height: 500px) {
+		footer { font-size: 8px; margin-top: 2px; line-height: 1.2; }
+		/* Leave 108px each side for the pads. */
+		canvas { width: min(calc(100vw - 216px), calc((100vh - 24px) * 480 / 270)); height: min(calc(100vh - 24px), calc((100vw - 216px) * 270 / 480)); }
+		.pad { bottom: 30px; gap: 2px; }
+		#dpad { left: 2px; grid-template-columns: repeat(3, 32px); }
+		#acts { right: 2px; grid-template-columns: 48px; }
+		.pad button { height: 32px; font-size: 12px; }
+	}
+</style>
+</head>
+<body>
+<canvas id="screen" width="480" height="270"></canvas>
+<div id="dpad" class="pad">
+	<button data-c="4">&#8598;</button><button data-c="0">&#8593;</button><button data-c="5">&#8599;</button>
+	<button data-c="2">&#8592;</button><button data-c="8">OK</button><button data-c="3">&#8594;</button>
+	<button data-c="6">&#8601;</button><button data-c="1">&#8595;</button><button data-c="7">&#8600;</button>
+</div>
+<div id="acts" class="pad">
+	<button data-c="8">OK</button><button data-c="9">Back</button><button data-c="10">Turn</button>
+</div>
+<footer>
+	Cluster Conquerors of SPLORR!! by TheGrumpyGameDev. Code made by an AI agent (Claude Code) at the author's direction.
+	Tiles: Urizen by vurmux (CC0). Font: DINOBYTE by mby (CC BY 4.0). Feedback by LootLocker.
+	<a href="#" id="feedback-link">Send feedback (F)</a> · <a href="https://thegrumpygamedev.itch.io/">itch.io</a> · <a href="https://playdeezgames.github.io/oeuvre-of-splorr/">more games</a>
+</footer>
+<script src="odin.js"></script>
+<script src="lootlocker.js"></script>
+<script>
+(async function () {
+	const canvas = document.getElementById("screen");
+	const ctx = canvas.getContext("2d");
+
+	// Feedback through the shared SPLORR!! LootLocker kit. The LootLocker game for this Metaphor is not set up
+	// yet (the user's console setup: Guest Login, CORS Allowlist, a Game feedback category); until domain and
+	// key are filled in, the form opens but cannot send.
+	const ll = LootLocker({ domain: "", key: "", version: "0.0.1", idKey: "ccos-ll-player" });
+	const feedback = ll.feedbackDialog({ game: "Cluster Conquerors of SPLORR!!" });
+	document.getElementById("feedback-link").addEventListener("click", (e) => { e.preventDefault(); feedback.open(); });
+
+	const memory = new odin.WasmMemoryInterface();
+	await odin.runWasm("game.wasm", null, {}, memory);
+	const ex = memory.exports;
+	const W = ex.platform_screen_w(), H = ex.platform_screen_h();
+
+	// game.Command order (src/game/game.odin): North South West East NorthWest NorthEast SouthWest SouthEast
+	// Confirm Cancel EndTurn.
+	const C = { N: 0, S: 1, W: 2, E: 3, NW: 4, NE: 5, SW: 6, SE: 7, CONFIRM: 8, CANCEL: 9, END_TURN: 10 };
+	const KEYS = {
+		ArrowUp: C.N, ArrowDown: C.S, ArrowLeft: C.W, ArrowRight: C.E,
+		Numpad8: C.N, Numpad2: C.S, Numpad4: C.W, Numpad6: C.E,
+		Numpad7: C.NW, Numpad9: C.NE, Numpad1: C.SW, Numpad3: C.SE,
+		Home: C.NW, PageUp: C.NE, End: C.SW, PageDown: C.SE,
+		Enter: C.CONFIRM, NumpadEnter: C.CONFIRM, Space: C.CONFIRM, Numpad5: C.CONFIRM,
+		Escape: C.CANCEL, Backspace: C.CANCEL, KeyT: C.END_TURN,
+	};
+	window.addEventListener("keydown", (e) => {
+		if (e.code === "KeyF" && !e.repeat) { e.preventDefault(); feedback.open(); return; }
+		if (!(e.code in KEYS)) return;
+		e.preventDefault();
+		const c = KEYS[e.code];
+		if (e.repeat && c > C.SE) return; // held keys repeat cursor moves only
+		ex.platform_command(c);
+	});
+
+	// Mouse and touch: a click or tap goes to the game in framebuffer pixels as a game.Pointer
+	// (0 mouse, 1 right mouse, 2 touch).
+	canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+	canvas.addEventListener("pointerdown", (e) => {
+		const r = canvas.getBoundingClientRect();
+		const x = Math.floor((e.clientX - r.left) * W / r.width), y = Math.floor((e.clientY - r.top) * H / r.height);
+		if (e.pointerType === "touch" || e.pointerType === "pen") { showPads(); ex.platform_pointer(x, y, 2); }
+		else ex.platform_pointer(x, y, e.button === 2 ? 1 : 0);
+	});
+
+	// Touch d-pad and action buttons. Held direction buttons repeat like held keys.
+	const pads = document.querySelectorAll(".pad");
+	function showPads() { pads.forEach((p) => p.classList.add("on")); }
+	if (window.matchMedia && matchMedia("(pointer: coarse)").matches) showPads();
+	window.addEventListener("touchstart", showPads, { once: true, passive: true });
+	let padHeld = null;
+	document.querySelectorAll(".pad button").forEach((b) => {
+		const c = Number(b.dataset.c);
+		b.addEventListener("pointerdown", (e) => {
+			e.preventDefault();
+			ex.platform_command(c);
+			if (c <= C.SE) {
+				clearInterval(padHeld);
+				const started = Date.now();
+				padHeld = setInterval(() => { if (Date.now() - started > 300) ex.platform_command(c); }, 110);
+			}
+		});
+		const release = () => { clearInterval(padHeld); padHeld = null; };
+		b.addEventListener("pointerup", release);
+		b.addEventListener("pointercancel", release);
+		b.addEventListener("pointerleave", release);
+		b.addEventListener("contextmenu", (e) => e.preventDefault());
+	});
+
+	// Gamepad (standard mapping): d-pad or left stick moves the cursor (diagonals from the stick), A confirm,
+	// B cancel, Start ends the turn. Held directions repeat after 12 frames, then every 6.
+	const pad = { held: -1, frames: 0, buttons: [] };
+	function stickCommand(gp) {
+		const b = (i) => gp.buttons[i] && gp.buttons[i].pressed;
+		let dx = (b(15) ? 1 : 0) - (b(14) ? 1 : 0), dy = (b(13) ? 1 : 0) - (b(12) ? 1 : 0);
+		if (!dx && !dy && gp.axes.length >= 2) {
+			const ax = gp.axes[0], ay = gp.axes[1];
+			if (Math.hypot(ax, ay) > 0.5) {
+				const a = Math.round(Math.atan2(ay, ax) / (Math.PI / 4));
+				dx = Math.round(Math.cos(a * Math.PI / 4)); dy = Math.round(Math.sin(a * Math.PI / 4));
+			}
+		}
+		const table = { "0,-1": C.N, "0,1": C.S, "-1,0": C.W, "1,0": C.E, "-1,-1": C.NW, "1,-1": C.NE, "-1,1": C.SW, "1,1": C.SE };
+		return (dx || dy) ? table[dx + "," + dy] : -1;
+	}
+	function pollPad() {
+		const gp = navigator.getGamepads ? Array.from(navigator.getGamepads()).find((g) => g) : null;
+		if (!gp) return;
+		const d = stickCommand(gp);
+		if (d !== pad.held) { pad.held = d; pad.frames = 0; if (d >= 0) ex.platform_command(d); }
+		else if (d >= 0 && ++pad.frames >= 12) { pad.frames = 6; ex.platform_command(d); }
+		[[0, C.CONFIRM], [1, C.CANCEL], [9, C.END_TURN]].forEach(([i, c]) => {
+			const now = !!(gp.buttons[i] && gp.buttons[i].pressed);
+			if (now && !pad.buttons[i]) ex.platform_command(c);
+			pad.buttons[i] = now;
+		});
+	}
+
+	// odin.js runs the game's step; this loop polls the gamepad and copies new frames.
+	const image = ctx.createImageData(W, H);
+	function frame() {
+		pollPad();
+		if (ex.platform_frame_ready()) {
+			// Read the buffer after the call: wasm memory may have grown.
+			image.data.set(new Uint8Array(memory.memory.buffer, ex.platform_frame_ptr(), W * H * 4));
+			ctx.putImageData(image, 0, 0);
+		}
+		requestAnimationFrame(frame);
+	}
+	requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
