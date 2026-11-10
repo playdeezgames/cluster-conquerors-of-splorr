@@ -120,4 +120,4 @@ The twelve proposals put to the user on November 10, 2026 are all answered; see 
 
 - **Numbers, to settle per playable slice:** galaxy sizes and star counts, fuel capacities and burn, slider effects, tech costs and the subset size, ship stats and upgrade fees, council timing, fines and the bylaw list, how often surveys lie, the moth's strength.
 - **Text, to draft for review:** the opening line, the HOA's complaint and bylaw wording, news items, the presidential duties, the computer leaders' personalities.
-- **The build plan** (`PLAN.md`), once the user says to build.
+- **The build plan** is in `PLAN.md` (drafted November 10, 2026); building starts when the user says so.
