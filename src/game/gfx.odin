@@ -2,12 +2,14 @@
 // Urizen 1-bit tileset by vurmux, https://vurmux.itch.io/urizen-onebit-tileset, CC0 1.0.
 package game
 
-GFX_COUNT :: 4
+GFX_COUNT :: 6
 
 // One 12x12 mask per picture, one bit per pixel: bit (y*12 + x) of the three u64s, 48 bits each.
-GFX := [4][3]u64{
+GFX := [6][3]u64{
 	{0x248404040000, 0x0E0BFA0E0040, 0x040404248040}, // Star (79, 21)
 	{0x150000000000, 0x0E05F40E0040, 0x000000150040}, // Star_Dim (78, 21)
 	{0x4043180E0000, 0x8CAF12BDA79C, 0x0E0318494694}, // Planet (78, 19)
 	{0xFFCFFCFFC000, 0x924924FFC000, 0x000FA8F8CFFC}, // Van (52, 7)
+	{0x4E047223C000, 0x1F63FE7FC6F8, 0x0003C44E2072}, // Wormhole (28, 13)
+	{0x4048024043F8, 0xDB6DB6C06BFA, 0x3F84049B25B4}, // Barrel (11, 36)
 }

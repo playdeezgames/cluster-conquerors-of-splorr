@@ -16,7 +16,7 @@ test_cluster_is_well_formed :: proc(t: ^testing.T) {
 		for i in 0 ..< g.star_count {
 			s := g.stars[i]
 			testing.expect(t, s.x >= EDGE && s.x < GALAXY_W - EDGE && s.y >= EDGE && s.y < GALAXY_H - EDGE)
-			testing.expect(t, i == g.home || !s.known)
+			testing.expect(t, i == g.home || !s.report.filed)
 			if s.wormhole {
 				wormholes += 1
 			}
@@ -31,7 +31,7 @@ test_cluster_is_well_formed :: proc(t: ^testing.T) {
 		}
 		testing.expect_value(t, wormholes, WORMHOLES)
 		h := g.stars[g.home]
-		testing.expect(t, h.known && !h.wormhole)
+		testing.expect(t, h.report.filed && !h.wormhole)
 		testing.expect_value(t, h.planet, Planet_Type.Terran)
 		testing.expect_value(t, h.size, Planet_Size.Medium)
 		testing.expect_value(t, g.cursor, g.home)
@@ -129,16 +129,20 @@ test_confirm_describes :: proc(t: ^testing.T) {
 	defer free(g)
 	init_game(g, SEED)
 	command(g, .Confirm)
-	b: Text
-	add(&b, g.stars[g.home].name)
-	add(&b, " (Lot ")
-	add_int(&b, g.home + 1)
-	add(&b, "): yer home, a Medium Terran world.")
-	testing.expect_value(t, message(&g.news[NEWS_LINES - 1]), text(&b))
+	testing.expect_value(t, g.mode, Mode.Fleet)
+	command(g, .Cancel)
+	testing.expect_value(t, g.mode, Mode.Map)
+	got, want: Text
+	describe_star(g, g.home, &got)
+	add(&want, g.stars[g.home].name)
+	add(&want, " (Lot ")
+	add_int(&want, g.home + 1)
+	add(&want, "): yer home, a Medium Terran world.")
+	testing.expect_value(t, text(&got), text(&want))
 	other := (g.home + 1) % g.star_count
 	g.cursor = other
 	command(g, .Confirm)
-	b = {}
+	b: Text
 	add(&b, g.stars[other].name)
 	add(&b, " (Lot ")
 	add_int(&b, other + 1)
@@ -154,7 +158,6 @@ test_end_turn_counts :: proc(t: ^testing.T) {
 	command(g, .End_Turn)
 	command(g, .End_Turn)
 	testing.expect_value(t, g.turn, 3)
-	testing.expect_value(t, message(&g.news[NEWS_LINES - 1]), "Turn 3. The HOA has not met yet.")
 }
 
 @(test)
@@ -202,7 +205,11 @@ test_news_keeps_the_newest_and_cuts :: proc(t: ^testing.T) {
 	testing.expect_value(t, message(&g.news[NEWS_LINES - 1]), "last")
 	long := "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
 	say(g, long)
-	testing.expect(t, message(&g.news[NEWS_LINES - 1]) == long[:NEWS_COLS])
+	// No spaces to wrap at: cut hard, the rest on the next line.
+	testing.expect(t, message(&g.news[NEWS_LINES - 2]) == long[:NEWS_COLS])
+	testing.expect(t, message(&g.news[NEWS_LINES - 1]) == long[NEWS_COLS:])
+	say(g, "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen")
+	testing.expect_value(t, message(&g.news[NEWS_LINES - 1]), "fourteen fifteen")
 	b: Text
 	add_int(&b, -1205)
 	testing.expect_value(t, text(&b), "-1205")

@@ -121,7 +121,8 @@ Star :: struct {
 	planet:   Planet_Type,
 	size:     Planet_Size,
 	special:  Special,
-	known:    bool, // surveyed (step 1: only the home star)
+	report:   Report, // what yer Inspectors filed about it (may be wrong, may be lost)
+	wormhole_known: bool, // something has been through it
 }
 
 // Straight star names, drawn without repeats for each cluster.
@@ -184,7 +185,13 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 	}
 	g.home = n > 0 ? candidates[rng_int(&r, n)] : rng_int(&r, g.star_count)
 	home := &g.stars[g.home]
-	home.planet, home.size, home.special, home.known = .Terran, .Medium, .None, true
+	home.planet, home.size, home.special = .Terran, .Medium, .None
+	home.report = {
+		filed   = true,
+		planet  = home.planet,
+		size    = home.size,
+		special = home.special,
+	}
 	// Wormholes: any stars but home.
 	for placed := 0; placed < WORMHOLES; {
 		i := rng_int(&r, g.star_count)

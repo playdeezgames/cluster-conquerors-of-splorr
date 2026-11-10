@@ -57,6 +57,8 @@ Gfx :: enum {
 	Star_Dim,
 	Planet,
 	Van,
+	Wormhole,
+	Barrel,
 }
 
 cls :: proc(f: ^Frame, c: u8) {

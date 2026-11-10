@@ -18,7 +18,9 @@ PICKS = [
     ('Star',        79, 21),  # yellow star with rays
     ('Star_Dim',    78, 21),  # small purple star (unknown, unsurveyed)
     ('Planet',      78, 19),  # green planet
-    ('Van',         52, 7),   # white van: the Moving Van, and a fleet marker for now
+    ('Van',         52, 7),   # white van: the Moving Van, and the marker for fleets in transit
+    ('Wormhole',    28, 13),  # purple vortex: a star known to be a wormhole
+    ('Barrel',      11, 36),  # barrel: the Gas Can
 ]
 
 def tile(col, row):
