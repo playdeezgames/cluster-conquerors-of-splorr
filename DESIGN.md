@@ -1,12 +1,30 @@
 # Cluster Conquerors of SPLORR!! — Design
 
-Started November 10, 2026. This file is the specification. Sections: what is **Decided** (the user's calls, dated), the two trope inventories this design draws on, **Proposed** (Claude's mash-up suggestions, waiting on the user) and **Open** questions. Only the user moves an item to Decided. Stay in design until the user says to build.
+Started November 10, 2026. This file is the specification. Sections: what is **Decided** (the user's calls, dated), the two trope inventories this design draws on, **Proposed** (Claude's mash-up suggestions; all answered November 10, 2026) and **Open** questions. Only the user moves an item to Decided. Stay in design until the user says to build.
 
 ## Decided
 
 - **Name: Cluster Conquerors of SPLORR!!** (November 10, 2026). The user's choice, after a list of Orion-flavoured names.
 - **An homage to Master of Orion, the original DOS version** (November 10, 2026, the user's words: "an homage to Masters of Orion, the original DOS version"). Inspired by its genre and systems; its races, names, story, text and art are not used (see `CLAUDE.md`).
 - **Method: the Blustery Bulwark approach** (November 10, 2026): list the tropes of the original, list the tropes of SPLORR!! games, and mash them up.
+
+The twelve proposals and four presentation questions were answered one at a time on November 10, 2026:
+
+- **The Metaphor: all four at once** (proposal 1, options A, B, C and D). *Conquest as paperwork*: every empire, yers included, runs on forms, levies and committees, and the sliders are a budget nobody can balance. *A clusterf\*\*\*, played straight*: everything goes wrong at once, every empire is in the same mess, and nobody ever says the word. *The Galactic Council is a homeowners' association*: it meets about yer lawn (pollution, a fleet parked in the wrong place), and winning the vote makes you its president, which is a punishment. *Everybody hates you* (the SIGMO rule): rivals start hostile and stay that way; yer the one nobody wants on the council.
+- **Scale: MoO-sized** (proposal 2, B): galaxy sizes up to huge, up to six empires, many evenings a game.
+- **Sliders: five per colony** (proposal 3, A): MoO's ships, defence, industry, ecology and technology, renamed in the Metaphor's words.
+- **The legendary system: the cheapest fit** (proposal 4, B): the Orion stand-in's guardian is the cheapest thing that technically fits the legend (a sign reading "Guardian", a very large space moth), still dangerous, as Bulwark's bosses are.
+- **Surveying first** (proposal 5, A): stars start unknown; a scout surveys them to show planet type and specials, and some are not what they look like (wormholes, a dead rock reported as Gaia by a bad sensor).
+- **Combat: MoO's tactical grid, rolls hidden** (proposal 6, A): stacks of identical ships on a grid; to-hit and damage worked out behind the scenes.
+- **Ships: fixed types** (proposal 7, B): a short fixed list of ship types that technology upgrades; no design screen.
+- **Range: fuel is the clock** (proposal 8, A): ships burn fuel away from yer colonies and are stranded at zero, as in Chaotic Space Mappers; refuel at colonies or surveyed stars.
+- **Races: original ones** (proposal 9, A): none of MoO's ten; each one sentence and one big trait, in the deadpan voice; the player picks one.
+- **Technology: MoO's six fields and a random subset** (proposal 10, A): six fields, renamed, funded by the technology slider; each game offers a random subset of each field's techs, so nobody gets everything.
+- **Diplomacy: MoO's full set** (proposal 11, A): treaties, trade, tribute, threats, and spies who steal, sabotage and frame a rival, all with empires that hate you anyway.
+- **Money: BJ, "billion jools"** (proposal 12, the user's own answer): MoO's BC becomes BJ.
+- **Art: the Urizen 1-bit tileset** (vurmux, CC0, 12 by 12). **Font: DINOBYTE** (mby, CC BY 4.0, 6 by 8; credit required).
+- **Interface: equal for all inputs, landscape only** (as Bulwark): every screen for mouse, keyboard, gamepad and touch from the start; phones play turned sideways.
+- **Story: light framing only**: no story arc; an opening line, race blurbs, council minutes and news items carry the Metaphor.
 
 ## Master of Orion (1993): the tropes
 
@@ -68,29 +86,11 @@ Gathered November 10, 2026 from the vault (`Concepts/Metaphor design.md`, `Conce
 - Odin to wasm, pure rules package with native tests, keyboard plus mouse plus gamepad plus touch, localStorage saves (often seed plus changes), simulators for balance (Skirmishers' `sim.sh`, Gods' 16-world runs).
 - GitHub Pages first, then itch.io at one release a day; footer back links, AI disclosure, feedback form.
 
-## Proposed (the user's to answer)
+## Proposed
 
-Each is a mash-up of a trope from each list. Options are lettered; pick one, several, or none.
-
-1. **What is the Metaphor?** The heart of it, as "blustery" was for Bulwark.
-   - A. *Conquest as paperwork*: every empire, yours included, runs on forms, levies and committees; the five sliders are a budget nobody can balance (FREEDOM Haters' bureaucracy, Investors' doublespeak).
-   - B. *A clusterf\*\*\*, played straight*: "cluster" is the double meaning; everything goes wrong at once and the empires are all in the same mess, and nobody ever says the word.
-   - C. *The council is a homeowners' association*: the Galactic Council meets about yer lawn (yer pollution, yer fleet parked in the wrong place), and winning the vote means becoming its president, which is a punishment.
-   - D. *Everybody hates you* (the SIGMO rule): the rivals start hostile and stay that way; the Metaphor is being the one nobody wants on the council.
-2. **Scale.** A. Small and quick: one cluster of about 12 to 20 stars, two to four empires, an evening a game. B. MoO-sized: up to huge galaxies, six empires, many evenings. C. Fixed: one hand-tuned cluster size.
-3. **The sliders.** A. Keep the five per colony, renamed in the Metaphor's words. B. One set of sliders for the whole empire (simpler on a phone). C. Fewer sliders (say three) per colony.
-4. **Orion's stand-in.** The legendary system and its guardian, twisted as Bulwark twisted its bosses. A. The legend is true and the guardian is real and hard. B. The cheapest thing that technically fits the legend (a sign reading "Guardian", a very large space moth). C. Everyone has heard of it; nobody can find it (it looks like an ordinary star, like a wormhole in Chaotic Space Mappers, until surveyed).
-5. **Surveying.** Stars start unknown; a scout surveys them to show planet type and specials, and some are not what they look like (wormholes, dead rocks reported as Gaia by a bad sensor). A. Yes. B. MoO's way: types visible in range, details on arrival.
-6. **Combat.** A. MoO-style tactical grid with ship stacks, rolls hidden. B. Tactical grid with SPLORR!! dice that only count on a six. C. Skirmishers' HeroQuest dice on the grid. D. Auto-resolved, with a battle report.
-7. **Ship design.** A. MoO's design screen: hull sizes, slots, at most six designs. B. A short fixed list of ship types that tech upgrades. C. MoO's screen, and ships wear out (the SPLORR!! gear rule) and need refitting at a shipyard.
-8. **Range and starvation.** A. Fuel as the clock: ships burn fuel away from colonies and are stranded at zero (Chaotic Space Mappers). B. MoO's hard range limit only. C. Both.
-9. **The races.** A. Original races, each one sentence and one trait, in the deadpan voice (none of MoO's ten). B. No races: every empire is the same kind of people, told apart only by the leader's personality. C. You play one fixed empire (a SIGMO-like satire); rivals have races.
-10. **Technology.** A. Six fields and a random subset per game, as in MoO, renamed. B. A short fixed tree. C. Random subset, and tech can only be had by trade, theft or conquest for the fields yer bad at.
-11. **Diplomacy and spies.** A. MoO's full set (treaties, trade, tribute, spies who can frame a rival). B. A few verbs only (trade, threaten, tribute). C. No diplomacy beyond the council vote.
-12. **Money.** A. Jools. B. Jools and a second coin with an exchange (Wonting). C. MoO's BC, renamed.
-
-Also needed later, as for Bulwark: art (Urizen or another CC0 set, or a text grid like FREEDOM Haters), font (DINOBYTE?), the interface on each input, landscape or portrait, and a story or ending if the Metaphor wants one.
+The twelve proposals put to the user on November 10, 2026 are all answered; see Decided. (Options not chosen: a small or fixed cluster; empire-wide or fewer sliders; a true-and-hard or unfindable legend; MoO's visible planet types; sixes-only or HeroQuest dice or auto-resolved battles; MoO's design screen, with or without wear; MoO's hard range limit; no races or one fixed empire; a fixed tree or closed weak fields; fewer diplomatic verbs or the vote only; plain Jools, two coins, or BC renamed.)
 
 ## Open
 
-- All twelve proposals above, and the presentation questions under them.
+- **Stack** (not asked; the vault default is Odin to `js_wasm32` with a canvas software framebuffer, as in Bulwark).
+- **Details to settle later:** the races and their traits; the slider, field and ship-type names in the Metaphor's words; the ship-type list; fuel numbers; the legend's guardian; council timing and HOA business; what the surveys can lie about; the computer rivals' behaviour; venue and Pages timing.

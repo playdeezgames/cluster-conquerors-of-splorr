@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 It is **an homage, not a remake** of Master of Orion. Do not reuse its races, race names, leader names, story, text, icons or art (no Psilons, Klackons, Darloks, Mrrshan, Sakkra, Silicoids, Alkari, Bulrathi, Meklars; no Orion or Guardian by those names). Genre mechanics (colony sliders, ship design, range, tech fields, a galactic council vote) are fair game.
 
-`DESIGN.md` is the specification. It records the user's decisions (dated, in their words), the two trope inventories and the open proposals; only the user moves an item to Decided. **Nothing is built yet: stay in design until the user says to build.**
+`DESIGN.md` is the specification. It records the user's decisions (dated, in their words; the twelve proposals were all decided November 10, 2026), the two trope inventories and what is still open; only the user moves an item to Decided. **Nothing is built yet: stay in design until the user says to build.**
 
 The vault at `/home/yermom/git/bok-of-splorr/splorr/` is the shared body of knowledge for all SPLORR!! games and holds the standing rules. Read its `Home.md` first. This game's note is `Games/Cluster Conquerors of SPLORR!!.md`. When a decision or a fact about the game changes, update that note and its `Home.md` row as well. `Gotchas.md` in the vault has the WebGL, wasm RNG and Odin lessons; read it before writing code. The likely stack (not decided) is the vault default: Odin to `js_wasm32`, a canvas software framebuffer, as in `Tech/Odin wasm recipe.md` and Blustery Bulwark's repo (`/home/yermom/git/blustery-bulwark-of-splorr`).
 
