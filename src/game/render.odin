@@ -4,7 +4,11 @@ package game
 
 draw_game :: proc(f: ^Frame, g: ^Game) {
 	cls(f, COLOR_BLACK)
-	draw_map(f, g)
+	if g.mode == .Colony {
+		draw_colony(f, g)
+	} else {
+		draw_map(f, g)
+	}
 	draw_panel(f, g)
 	draw_news(f, g)
 }
@@ -58,7 +62,7 @@ draw_map :: proc(f: ^Frame, g: ^Game) {
 		} else {
 			draw_gfx(f, .Star_Dim, sx, sy, COLOR_MID)
 		}
-		if i == g.home {
+		if colony_at(g, i) != nil {
 			frame_rect(f, sx - 1, sy - 1, TILE + 2, TILE + 2, COLOR_GREEN)
 		}
 		// Yer ships here: a little flag at the top right, red if they are out of fuel.
@@ -116,15 +120,21 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	add(&b, "Turn ")
 	add_int(&b, g.turn)
 	print(f, text(&b), x, 28, COLOR_LIGHT)
+	money: Text
+	add(&money, "BJ ")
+	add_int(&money, g.bj)
+	print(f, text(&money), x + 9 * GLYPH_W, 28, COLOR_YELLOW)
 	switch g.mode {
 	case .Map:
 		draw_star_panel(f, g)
+	case .Colony:
+		draw_empire_panel(f, g)
 	case .Fleet:
 		draw_fleet_panel(f, g)
 	case .Destination:
 		draw_destination_panel(f, g)
 	}
-	print(f, "Slice 1, step 2", x, VIEW_H * TILE - 12, COLOR_DARK)
+	print(f, "Slice 1, step 3", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
 // The star under the cursor and yer ships there.
@@ -153,8 +163,13 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			print(f, SPECIAL_NAMES[r.special], x, y, COLOR_YELLOW)
 			y += 10
 		}
-		if g.cursor == g.home {
-			print(f, "Yer home world", x, y, COLOR_GREEN)
+		if col := colony_at(g, g.cursor); col != nil {
+			pop: Text
+			add(&pop, g.cursor == g.home ? "Home, " : "Colony, ")
+			add_int(&pop, col.households)
+			add(&pop, "/")
+			add_int(&pop, col.max)
+			print(f, text(&pop), x, y, COLOR_GREEN)
 			y += 10
 		}
 	}
@@ -194,6 +209,10 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			draw_gfx(f, .Barrel, x, y - 2, COLOR_ORANGE)
 			print(f, text(&cans), x + 14, y, COLOR_MID)
 		}
+	}
+	if colony_at(g, g.cursor) != nil {
+		print(f, "Enter/OK: colony", x, ACTION_Y, COLOR_CYAN)
+	} else if fl != nil {
 		print(f, "Enter/OK: send", x, ACTION_Y, COLOR_CYAN)
 	} else if g.cursor != g.home {
 		// Straight-line distance from home, in cells.
@@ -319,4 +338,182 @@ isqrt :: proc(n: int) -> int {
 		r += 1
 	}
 	return r
+}
+
+// The empire's totals, beside the colony screen.
+draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
+	x := PANEL_TEXT_X
+	colonies, households, made, rp := 0, 0, 0, 0
+	for i in 0 ..< g.star_count {
+		if c := colony_at(g, i); c != nil {
+			colonies += 1
+			households += c.households
+			made += tax(g, i)
+			rp += research_points(g, i)
+		}
+	}
+	rows := [?]struct {
+		label: string,
+		value: int,
+	}{{"Colonies", colonies}, {"Households", households}, {"BJ a turn", made}, {"Research", g.research}, {"RP a turn", rp}}
+	for r, i in rows {
+		print(f, r.label, x, 44 + i * 11, COLOR_MID)
+		v: Text
+		add_int(&v, r.value)
+		print(f, text(&v), x + 11 * GLYPH_W, 44 + i * 11, COLOR_LIGHT)
+	}
+	print(f, "Research buys", x, 110, COLOR_DARK)
+	print(f, "nothing yet", x, 120, COLOR_DARK)
+	print(f, "(step 4).", x, 130, COLOR_DARK)
+}
+
+// Turns until `stored` plus `per_turn` a turn reaches `cost`; 0 if it never will.
+turns_to :: proc(stored, per_turn, cost: int) -> int {
+	if stored >= cost {
+		return 1
+	}
+	if per_turn <= 0 {
+		return 0
+	}
+	return (cost - stored + per_turn - 1) / per_turn
+}
+
+// One colony, drawn where the map goes: its numbers, the five sliders, the ship order and the way out.
+draw_colony :: proc(f: ^Frame, g: ^Game) {
+	col := colony_at(g, g.source)
+	if col == nil {
+		return
+	}
+	s := &g.stars[g.source]
+	x := COLONY_X
+	head: Text
+	add(&head, s.name)
+	add(&head, " (Lot ")
+	add_int(&head, g.source + 1)
+	add(&head, ")")
+	print(f, text(&head), x, 6, COLOR_WHITE)
+	kind: Text
+	add(&kind, SIZE_NAMES[s.size])
+	add(&kind, " ")
+	add(&kind, PLANET_NAMES[s.planet])
+	if s.report.special != .None {
+		add(&kind, ", ")
+		add(&kind, SPECIAL_NAMES[s.report.special])
+	}
+	draw_gfx(f, .Planet, x + 300, 4, PLANET_COLORS[s.planet])
+	print(f, text(&kind), x, 16, COLOR_LIGHT)
+
+	line1: Text
+	add(&line1, "Households ")
+	add_int(&line1, col.households)
+	add(&line1, "/")
+	add_int(&line1, col.max)
+	add(&line1, "   Factories ")
+	add_int(&line1, col.factories)
+	add(&line1, "/")
+	add_int(&line1, col.households * FACTORIES_PER_HOUSEHOLD)
+	add(&line1, "   Bases ")
+	add_int(&line1, col.bases)
+	print(f, text(&line1), x, 30, COLOR_LIGHT)
+	line2: Text
+	add(&line2, "Makes ")
+	add_int(&line2, production(g, g.source))
+	add(&line2, " a turn; ")
+	add_int(&line2, tax(g, g.source))
+	add(&line2, " to BJ. Waste ")
+	add_int(&line2, col.waste)
+	add(&line2, " (+")
+	add_int(&line2, waste_made(col))
+	add(&line2, " a turn)")
+	print(f, text(&line2), x, 40, COLOR_LIGHT)
+
+	for ch in Chore {
+		row := int(ch)
+		y := colony_row_y(row)
+		selected := g.row == row
+		if selected {
+			fill_rect(f, 0, y - 3, VIEW_W * TILE, SLIDER_H, COLOR_NAVY)
+		}
+		print(f, CHORE_NAMES[ch], x, y, selected ? COLOR_WHITE : COLOR_LIGHT)
+		bx := x + BAR_COL * GLYPH_W
+		bw := BAR_CELLS * GLYPH_W
+		frame_rect(f, bx - 1, y - 1, bw + 2, 10, COLOR_DARK)
+		fill_rect(f, bx, y, bw * col.slider[ch] / 100, 8, col.locked[ch] ? COLOR_MID : COLOR_CYAN)
+		pct: Text
+		add_int(&pct, col.slider[ch])
+		add(&pct, "%")
+		print(f, text(&pct), x + PCT_COL * GLYPH_W, y, COLOR_LIGHT)
+		print(f, col.locked[ch] ? "L" : "-", x + LOCK_COL * GLYPH_W, y, col.locked[ch] ? COLOR_ORANGE : COLOR_DARK)
+		print(f, chore_effect(g, g.source, ch), x + EFFECT_COL * GLYPH_W, y, COLOR_MID)
+	}
+
+	rows_y := colony_row_y(BUILD_ROW)
+	if g.row == BUILD_ROW {
+		fill_rect(f, 0, rows_y - 3, VIEW_W * TILE, SLIDER_H, COLOR_NAVY)
+	}
+	print(f, "Parking builds", x, rows_y, g.row == BUILD_ROW ? COLOR_WHITE : COLOR_LIGHT)
+	print(f, "<", x + BUILD_LEFT_COL * GLYPH_W, rows_y, COLOR_CYAN)
+	print(f, SHIPS[col.build].name, x + (BUILD_LEFT_COL + 2) * GLYPH_W, rows_y, COLOR_WHITE)
+	print(f, ">", x + BUILD_RIGHT_COL * GLYPH_W, rows_y, COLOR_CYAN)
+	cost: Text
+	add_int(&cost, SHIPS[col.build].cost)
+	add(&cost, " each")
+	print(f, text(&cost), x + EFFECT_COL * GLYPH_W, rows_y, COLOR_MID)
+
+	ships_y := colony_row_y(SHIPS_ROW)
+	if g.row == SHIPS_ROW {
+		fill_rect(f, 0, ships_y - 3, VIEW_W * TILE, SLIDER_H, COLOR_NAVY)
+	}
+	print(f, fleet_at(g, g.source) != nil ? "Ships parked here >" : "No ships parked here", x, ships_y, COLOR_CYAN)
+	back_y := colony_row_y(COLONY_BACK_ROW)
+	if g.row == COLONY_BACK_ROW {
+		fill_rect(f, 0, back_y - 3, VIEW_W * TILE, SLIDER_H, COLOR_NAVY)
+	}
+	print(f, "Back to the map", x, back_y, COLOR_MID)
+	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: lock.", x, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+// What a chore is doing this turn, in a few words.
+chore_effect :: proc(g: ^Game, star: int, ch: Chore) -> string {
+	@(static) b: Text
+	b = {}
+	col := colony_at(g, star)
+	pts := chore_points(g, star, ch)
+	switch ch {
+	case .Parking:
+		t := turns_to(col.stored[.Parking], pts, SHIPS[col.build].cost)
+		if t == 0 {
+			add(&b, "nothing")
+		} else {
+			add(&b, "ship in ")
+			add_int(&b, t)
+		}
+	case .Fencing:
+		t := turns_to(col.stored[.Fencing], pts, BASE_COST)
+		if t == 0 {
+			add(&b, "none")
+		} else {
+			add(&b, "base in ")
+			add_int(&b, t)
+		}
+	case .Home_Improvement:
+		if col.factories >= col.households * FACTORIES_PER_HOUSEHOLD {
+			add(&b, "full; to BJ")
+		} else {
+			add(&b, "+")
+			add_int(&b, (col.stored[.Home_Improvement] + pts) / FACTORY_COST)
+			add(&b, " factories")
+		}
+	case .Lawn_Care:
+		need := (col.waste + waste_made(col) + WASTE_CLEANED_PER_POINT - 1) / WASTE_CLEANED_PER_POINT
+		if pts >= need {
+			add(&b, "tidy")
+		} else {
+			add(&b, "messy")
+		}
+	case .Book_Club:
+		add_int(&b, research_points(g, star))
+		add(&b, " research")
+	}
+	return text(&b)
 }

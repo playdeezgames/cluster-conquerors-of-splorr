@@ -129,7 +129,7 @@ test_confirm_describes :: proc(t: ^testing.T) {
 	defer free(g)
 	init_game(g, SEED)
 	command(g, .Confirm)
-	testing.expect_value(t, g.mode, Mode.Fleet)
+	testing.expect_value(t, g.mode, Mode.Colony)
 	command(g, .Cancel)
 	testing.expect_value(t, g.mode, Mode.Map)
 	got, want: Text

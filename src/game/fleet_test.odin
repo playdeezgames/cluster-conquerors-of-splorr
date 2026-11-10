@@ -98,6 +98,8 @@ test_stranded_until_a_gas_can_comes :: proc(t: ^testing.T) {
 	g.stars[0] = {x = 0, y = 0}
 	g.stars[1] = {x = 0, y = 8} // 8 cells: Golf Carts (4 a turn) take 2 turns, Gas Cans (3 a turn) 3
 	g.home = 0
+	g.stars[0].planet, g.stars[0].size = .Terran, .Medium
+	found_colony(g, 0, 10)
 	home := new_fleet(g)
 	home.star = 0
 	home.ships = only(.Golf_Cart, 1)
@@ -153,6 +155,8 @@ test_wormhole_throws_and_is_known :: proc(t: ^testing.T) {
 				break
 			}
 		}
+		g.stars[g.home].colony.slider[.Home_Improvement] += g.stars[g.home].colony.slider[.Parking]
+		g.stars[g.home].colony.slider[.Parking] = 0 // no new ships this turn
 		f := new_fleet(g)
 		f.ships = only(.Inspector, 1)
 		f.from, f.to, f.left, f.total = g.home, hole, 1, 1
@@ -235,6 +239,12 @@ test_orders_by_keys :: proc(t: ^testing.T) {
 	defer free(g)
 	init_game(g, SEED)
 	command(g, .Confirm)
+	testing.expect_value(t, g.mode, Mode.Colony)
+	// Down to "Ships parked here" and in.
+	for _ in 0 ..< SHIPS_ROW {
+		command(g, .South)
+	}
+	command(g, .Confirm)
 	testing.expect_value(t, g.mode, Mode.Fleet)
 	rows, n := fleet_rows(g)
 	testing.expect_value(t, n, 4)
@@ -285,6 +295,8 @@ test_orders_by_pointer :: proc(t: ^testing.T) {
 	h := g.stars[g.home]
 	hx, hy := cell_px(g, h.x, h.y)
 	pointer(g, hx + 5, hy + 5, .Touch)
+	testing.expect_value(t, g.mode, Mode.Colony)
+	pointer(g, COLONY_X + 4, colony_row_y(SHIPS_ROW) + 3, .Touch)
 	testing.expect_value(t, g.mode, Mode.Fleet)
 	// The Inspector row's "<" takes one off.
 	pointer(g, PANEL_TEXT_X + COUNT_COL * GLYPH_W + 2, FLEET_TOP + 3, .Touch)
@@ -297,6 +309,8 @@ test_orders_by_pointer :: proc(t: ^testing.T) {
 	testing.expect_value(t, g.mode, Mode.Fleet)
 	pointer(g, PANEL_TEXT_X + 4, BACK_Y + 3, .Touch)
 	testing.expect_value(t, g.mode, Mode.Map)
+	// On a star with ships and no colony, the second tap opens the ships straight away.
+	g.mode = .Map
 }
 
 @(test)

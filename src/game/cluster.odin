@@ -123,6 +123,7 @@ Star :: struct {
 	special:  Special,
 	report:   Report, // what yer Inspectors filed about it (may be wrong, may be lost)
 	wormhole_known: bool, // something has been through it
+	colony:   Colony, // yers, if colony.owned
 }
 
 // Straight star names, drawn without repeats for each cluster.

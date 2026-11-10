@@ -1,7 +1,7 @@
 package game
 
-// The rules, independent of the platform. Slice 1 step 2 (PLAN.md): turns, fleets, fuel and surveying
-// over a generated cluster. Colonies, technology, rivals and the rest arrive in later steps.
+// The rules, independent of the platform. Slice 1 step 3 (PLAN.md): colonies, turns, fleets, fuel and
+// surveying over a generated cluster. Technology, rivals and the rest arrive in later steps.
 
 // Commands the page sends for keys, gamepad buttons and the touch pads (keep in step with
 // web/index.html). Directions move the cursor to the next star that way, or work a list.
@@ -40,9 +40,11 @@ Pointer :: enum i32 {
 	Touch,
 }
 
-// What the controls are doing: looking at the map, picking ships to send, or picking where.
+// What the controls are doing: looking at the map, running a colony, picking ships to send, or
+// picking where.
 Mode :: enum u8 {
 	Map,
+	Colony,
 	Fleet,
 	Destination,
 }
@@ -55,6 +57,8 @@ Game :: struct {
 	home:       int,
 	cursor:     int, // the star under the cursor; the panel shows it
 	turn:       int,
+	bj:         int, // billion jools, the empire's money
+	research:   int, // research points from Book Club (spent in step 4)
 	fleets:     [MAX_FLEETS]Fleet,
 	mode:       Mode,
 	source:     int, // the star ships are being sent from
@@ -70,6 +74,9 @@ init_game :: proc(g: ^Game, seed: u64) {
 	make_cluster(g, seed)
 	g.cursor = g.home
 	g.turn = 1
+	home := found_colony(g, g.home, HOME_HOUSEHOLDS)
+	home.factories = HOME_FACTORIES
+	home.slider = HOME_SLIDERS
 	f := new_fleet(g)
 	f.ships = START_SHIPS
 	f.star = g.home
@@ -79,13 +86,15 @@ init_game :: proc(g: ^Game, seed: u64) {
 	add(&b, g.stars[g.home].name)
 	add(&b, ". The Homeowners' Association has been notified.")
 	say(g, text(&b))
-	say(g, "(Slice 1, step 2: Enter/OK at home to send ships; T or Turn ends the turn.)")
+	say(g, "(Slice 1, step 3: Enter/OK on a colony runs it; T or Turn ends the turn.)")
 }
 
 command :: proc(g: ^Game, c: Command) {
 	switch g.mode {
 	case .Map:
 		map_command(g, c)
+	case .Colony:
+		colony_command(g, c)
 	case .Fleet:
 		fleet_command(g, c)
 	case .Destination:
@@ -98,6 +107,10 @@ map_command :: proc(g: ^Game, c: Command) {
 	case .North, .South, .West, .East, .North_West, .North_East, .South_West, .South_East:
 		move_cursor(g, c)
 	case .Confirm:
+		if colony_at(g, g.cursor) != nil {
+			open_colony(g, g.cursor)
+			return
+		}
 		if fleet_at(g, g.cursor) != nil {
 			open_fleet(g, g.cursor)
 			return
@@ -129,6 +142,76 @@ next_turn :: proc(g: ^Game) {
 	add(&b, ".")
 	say(g, text(&b))
 	end_turn(g)
+}
+
+// ---- The colony screen: five slider rows, then the ship order, yer ships there, and Back ----
+
+BUILD_ROW :: len(Chore)
+SHIPS_ROW :: BUILD_ROW + 1
+COLONY_BACK_ROW :: SHIPS_ROW + 1
+COLONY_ROWS :: COLONY_BACK_ROW + 1
+SLIDER_STEP :: 5 // percent a key press moves a slider
+
+open_colony :: proc(g: ^Game, star: int) {
+	g.mode = .Colony
+	g.source = star
+	g.row = 0
+}
+
+// Up and Down pick a row; Left and Right move a slider or change the ship order; Enter/OK locks or
+// unlocks a slider, or does what the row says; Escape/Back goes back to the map.
+colony_command :: proc(g: ^Game, c: Command) {
+	col := colony_at(g, g.source)
+	if col == nil {
+		g.mode = .Map
+		return
+	}
+	#partial switch c {
+	case .North:
+		g.row = (g.row + COLONY_ROWS - 1) % COLONY_ROWS
+	case .South:
+		g.row = (g.row + 1) % COLONY_ROWS
+	case .West, .East:
+		by := c == .West ? -1 : 1
+		if g.row < len(Chore) {
+			ch := Chore(g.row)
+			// Snap to the step, so repeated presses land on round numbers.
+			v := col.slider[ch]
+			v = by < 0 ? (v - 1) / SLIDER_STEP * SLIDER_STEP : (v / SLIDER_STEP + 1) * SLIDER_STEP
+			set_slider(col, ch, max(0, v))
+		} else if g.row == BUILD_ROW {
+			cycle_build(col, by)
+		}
+	case .Confirm:
+		colony_row_action(g, col, g.row)
+	case .Cancel:
+		g.mode = .Map
+	case .End_Turn:
+		g.mode = .Map
+		next_turn(g)
+	}
+}
+
+cycle_build :: proc(col: ^Colony, by: int) {
+	n := len(Ship_Type)
+	col.build = Ship_Type((int(col.build) + by + n) % n)
+}
+
+colony_row_action :: proc(g: ^Game, col: ^Colony, row: int) {
+	switch {
+	case row < len(Chore):
+		col.locked[Chore(row)] = !col.locked[Chore(row)]
+	case row == BUILD_ROW:
+		cycle_build(col, 1)
+	case row == SHIPS_ROW:
+		if fleet_at(g, g.source) != nil {
+			open_fleet(g, g.source)
+		} else {
+			say(g, "No ships parked here.")
+		}
+	case:
+		g.mode = .Map
+	}
 }
 
 // The ship types present in the fleet being sent from, in order; the rows of the list.
@@ -256,7 +339,7 @@ describe_star :: proc(g: ^Game, i: int, b: ^Text) {
 		add(b, ": not surveyed.")
 		return
 	}
-	add(b, i == g.home ? ": yer home, " : ": ")
+	add(b, i == g.home ? ": yer home, " : colony_at(g, i) != nil ? ": yer colony, " : ": ")
 	describe_report(b, &s.report)
 }
 
@@ -291,6 +374,10 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		panel_pointer(g, sx, sy)
 		return
 	}
+	if g.mode == .Colony {
+		colony_pointer(g, sx, sy)
+		return
+	}
 	x, y, ok := screen_to_cell(g, sx, sy)
 	if !ok {
 		return
@@ -302,6 +389,10 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 			say(g, "Empty space. Nobody owns it yet.")
 			return
 		}
+		if i == g.cursor && colony_at(g, i) != nil {
+			open_colony(g, i)
+			return
+		}
 		if i == g.cursor && fleet_at(g, i) != nil {
 			open_fleet(g, i)
 			return
@@ -310,7 +401,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Fleet:
+	case .Colony, .Fleet:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -327,10 +418,66 @@ on_row :: proc(sy, y: int) -> bool {
 	return sy >= y - 1 && sy < y + ROW_H - 1
 }
 
+// Where the colony screen draws its rows (in the map's place).
+COLONY_X :: 6
+SLIDER_TOP :: 66
+SLIDER_H :: 14
+BAR_COL :: 17 // the slider bar: 20 cells of a glyph's width from here
+BAR_CELLS :: 20
+PCT_COL :: 38
+LOCK_COL :: 43
+EFFECT_COL :: 46
+BUILD_LEFT_COL :: 16 // "<" of the ship order
+BUILD_RIGHT_COL :: 32 // ">" of the ship order
+
+colony_row_y :: proc(row: int) -> int {
+	return SLIDER_TOP + row * SLIDER_H
+}
+
+// A tap on the colony screen: on a bar sets the slider there, on the lock toggles it, on the ship
+// order's arrows changes it, on a row picks it (and does what it says if it is not a slider).
+colony_pointer :: proc(g: ^Game, sx, sy: int) {
+	col := colony_at(g, g.source)
+	if col == nil {
+		return
+	}
+	cx := (sx - COLONY_X) / GLYPH_W
+	for row in 0 ..< COLONY_ROWS {
+		y := colony_row_y(row)
+		if sy < y - 3 || sy >= y - 3 + SLIDER_H {
+			continue
+		}
+		g.row = row
+		switch {
+		case row < len(Chore):
+			ch := Chore(row)
+			bar_x := COLONY_X + BAR_COL * GLYPH_W
+			if sx >= bar_x - 3 && sx < bar_x + BAR_CELLS * GLYPH_W + 3 {
+				v := (sx - bar_x) * 100 / (BAR_CELLS * GLYPH_W)
+				set_slider(col, ch, (clamp(v, 0, 100) + SLIDER_STEP / 2) / SLIDER_STEP * SLIDER_STEP)
+			} else if cx >= LOCK_COL - 1 && cx <= LOCK_COL + 1 {
+				col.locked[ch] = !col.locked[ch]
+			}
+		case row == BUILD_ROW:
+			if cx >= BUILD_LEFT_COL - 1 && cx <= BUILD_LEFT_COL + 1 {
+				cycle_build(col, -1)
+			} else if cx >= BUILD_RIGHT_COL - 1 && cx <= BUILD_RIGHT_COL + 1 {
+				cycle_build(col, 1)
+			}
+		case:
+			colony_row_action(g, col, row)
+		}
+		return
+	}
+}
+
 panel_pointer :: proc(g: ^Game, sx, sy: int) {
 	switch g.mode {
+	case .Colony:
 	case .Map:
-		if on_row(sy, ACTION_Y) && fleet_at(g, g.cursor) != nil {
+		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
+			open_colony(g, g.cursor)
+		} else if on_row(sy, ACTION_Y) && fleet_at(g, g.cursor) != nil {
 			open_fleet(g, g.cursor)
 		}
 	case .Fleet:

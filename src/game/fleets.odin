@@ -111,9 +111,9 @@ stranded :: proc(g: ^Game, f: ^Fleet) -> bool {
 	return f.star != NO_STAR && !refuels_at(g, f.star) && fleet_range(f) == 0
 }
 
-// Where yer ships fill up: yer colonies (only home until step 3).
+// Where yer ships fill up: yer colonies.
 refuels_at :: proc(g: ^Game, star: int) -> bool {
-	return star == g.home
+	return colony_at(g, star) != nil
 }
 
 // Turns from one star to another at a speed: the fewest whole turns that cover the distance.
@@ -216,8 +216,12 @@ send_fleet :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) {
 	f.left = f.total
 }
 
-// Moves every fleet a turn, deals with arrivals, burns and refills fuel, and loses paperwork.
+// Runs the colonies, moves every fleet a turn, deals with arrivals, burns and refills fuel, and loses
+// paperwork.
 end_turn :: proc(g: ^Game) {
+	for i in 0 ..< g.star_count {
+		run_colony(g, i)
+	}
 	for &f in g.fleets {
 		if !f.used || f.star != NO_STAR {
 			continue
@@ -262,7 +266,7 @@ end_turn :: proc(g: ^Game) {
 	}
 	for i in 0 ..< g.star_count {
 		r := &g.stars[i].report
-		if i != g.home && r.filed && rng_int(&g.rng, 1000) < MISFILE_PER_MILLE {
+		if colony_at(g, i) == nil && r.filed && rng_int(&g.rng, 1000) < MISFILE_PER_MILLE {
 			r^ = {}
 			b: Text
 			add(&b, "The survey of Lot ")
@@ -273,7 +277,8 @@ end_turn :: proc(g: ^Game) {
 	}
 }
 
-// A fleet reaches a star: a wormhole throws it somewhere else; an Inspector files a survey.
+// A fleet reaches a star: a wormhole throws it somewhere else; an Inspector files a survey; a Moving
+// Van settles it if it can.
 arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	at := star
 	s := &g.stars[at]
@@ -293,8 +298,13 @@ arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 		add(&b, ".")
 		say(g, text(&b))
 	}
-	if f.ships[.Inspector] > 0 && at != g.home {
+	if f.ships[.Inspector] > 0 && colony_at(g, at) == nil {
 		survey(g, at)
+	}
+	movers_arrive(g, f, at)
+	if fleet_size(f) == 0 {
+		f^ = {}
+		return
 	}
 	dock(g, f, at)
 }
