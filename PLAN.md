@@ -81,9 +81,16 @@ Fuel counts turns spent away from a refuelling place (own colonies, a Gas Can in
 8. **The Clubhouse and the council:** the moth, the Clubhouse's lost tech, council meetings with complaints and fines, the vote, the presidency's slice-1 duty.
 9. **Saves and polish:** saves, a first balance pass (a native simulator playing computer against computer, as in Skirmishers), screenshots and the portal picture, the slice-1 notice of what is still coming, then Pages updated when the user says so.
 
-## Open for slice 1 (the user's to answer)
+## Decided for slice 1 (November 10, 2026, one at a time)
 
-- The 480 by 270 screen, the slice-1 races and their trait numbers, and every number above.
-- Whether tactical combat gets an auto-resolve button for the player.
-- Whether a captured colony's population stays its old race (as in Master of Orion) or becomes yers.
-- Star names: a list of suburban street names ("Lot 7", "Maple Close", "Cul-de-sac 3"), or straight star names for the deadpan contrast.
+- **Screen: 480 by 270** (80 by 33 DINOBYTE cells, 40 by 22 Urizen tiles).
+- **Races: the proposed four**: Beavers (+50 % factory output), Owls (+50 % research), Rabbits (+50 % growth), Geese (+20 % to hit). The other six arrive in slice 2.
+- **Star names: both**: stars carry straight names ("Vega Minor"); the HOA's paperwork (complaints, fines, news) refers to them by lot numbers ("Lot 7").
+- **Auto-resolve: yes**: the player may fight a battle on the grid or let it resolve with the same hidden rolls and read the report.
+- **Captured colonies keep their race and file complaints**: the people keep their race and its trait on that colony, and lodge a complaint against their new owner at every council meeting until assimilated over time (how long: a number for step 7).
+- **Numbers: start with the proposed ones, tune later**: build with the values above; each is reviewed in the step that adds it and in the step 9 balance pass, as with Bulwark.
+
+## Open for slice 1
+
+- Every number, for review step by step. Assimilation time for captured colonies (step 7).
+- The text drafts (opening line, race sentences, complaint wording, news, the moth's lines, the presidential notice), for review as each step lands.
