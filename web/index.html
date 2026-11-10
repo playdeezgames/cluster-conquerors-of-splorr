@@ -71,6 +71,11 @@
 	await odin.runWasm("game.wasm", null, {}, memory);
 	const ex = memory.exports;
 	const W = ex.platform_screen_w(), H = ex.platform_screen_h();
+	// A new cluster each load (saves arrive in step 9); ?seed=N in the URL replays one.
+	const seedParam = new URLSearchParams(location.search).get("seed");
+	const seed = seedParam !== null && /^\d+$/.test(seedParam) ? Number(seedParam) : Math.floor(Math.random() * 2 ** 31);
+	console.log("cluster seed", seed);
+	ex.platform_start(Math.floor(seed / 2 ** 32), seed % 2 ** 32);
 
 	// game.Command order (src/game/game.odin): North South West East NorthWest NorthEast SouthWest SouthEast
 	// Confirm Cancel EndTurn.

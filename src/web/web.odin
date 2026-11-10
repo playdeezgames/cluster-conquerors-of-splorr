@@ -15,7 +15,13 @@ state: struct {
 }
 
 main :: proc() {
-	game.init_game(&state.rules)
+}
+
+// Called once by the page with a fresh seed (or the one in the URL's ?seed=), split into two halves.
+@(export)
+platform_start :: proc "c" (seed_hi, seed_lo: i32) {
+	context = runtime.default_context()
+	game.init_game(&state.rules, u64(u32(seed_hi)) << 32 | u64(u32(seed_lo)))
 	state.dirty = true
 }
 

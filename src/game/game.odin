@@ -1,10 +1,10 @@
 package game
 
-// The rules, independent of the platform. Step 0 of slice 1 (PLAN.md): a placeholder cluster to prove
-// the layout and every input path. The generator, fleets, colonies and the rest arrive in later steps.
+// The rules, independent of the platform. Slice 1 step 1 (PLAN.md): a generated cluster to look at,
+// with a cursor that goes from star to star. Fleets, colonies and the rest arrive in later steps.
 
 // Commands the page sends for keys, gamepad buttons and the touch pads (keep in step with
-// web/index.html). Directions move the cursor across the star map.
+// web/index.html). Directions move the cursor to the next star that way.
 Command :: enum i32 {
 	North,
 	South,
@@ -40,82 +40,44 @@ Pointer :: enum i32 {
 	Touch,
 }
 
-// The star map, in cells. Bigger than the view, so the view scrolls.
-GALAXY_W :: 60
-GALAXY_H :: 40
-
-MAX_STARS :: 24
-
-Star :: struct {
-	x, y:  int,
-	name:  string, // straight star name; the HOA's paperwork uses the lot number (index + 1)
-	known: bool, // surveyed (step 0: only the home star)
-}
-
-NO_STAR :: -1
-
 Game :: struct {
+	seed:       u64,
 	stars:      [MAX_STARS]Star,
 	star_count: int,
 	home:       int,
-	cx, cy:     int, // cursor cell
-	selected:   int, // a star index or NO_STAR
+	cursor:     int, // the star under the cursor; the panel shows it
 	turn:       int,
 	news:       [NEWS_LINES]Message, // oldest first
 }
 
-// Placeholder names for step 0; step 1 draws names for a generated cluster.
-STAR_NAMES := [MAX_STARS]string {
-	"Vega Minor", "Kepler's Rest", "Altair", "Deneb Gate", "Procyon", "Mira",
-	"Castor", "Pollux", "Rigel Far", "Achernar", "Hadar", "Acrux",
-	"Spica", "Antares Low", "Fomalhaut", "Mimosa", "Regulus", "Adhara",
-	"Shaula", "Bellatrix", "Elnath", "Miaplacidus", "Alnilam", "Alnair",
-}
-
-init_game :: proc(g: ^Game) {
+init_game :: proc(g: ^Game, seed: u64) {
 	g^ = {}
-	// A fixed scatter of 20 stars, one per 12 by 10 block, nudged so they do not line up.
-	n := 0
-	for by in 0 ..< 4 {
-		for bx in 0 ..< 5 {
-			s := &g.stars[n]
-			s.x = bx * 12 + 2 + (bx * 7 + by * 5) % 8
-			s.y = by * 10 + 1 + (bx * 3 + by * 7) % 8
-			s.name = STAR_NAMES[n]
-			n += 1
-		}
-	}
-	g.star_count = n
-	g.home = 7
-	g.stars[g.home].known = true
-	g.cx, g.cy = g.stars[g.home].x, g.stars[g.home].y
-	g.selected = g.home
+	g.seed = seed
+	make_cluster(g, seed)
+	g.cursor = g.home
 	g.turn = 1
-	say(g, "Welcome to the cluster. The Homeowners' Association has been notified.")
-	say(g, "(Slice 1, step 0: a placeholder cluster. Move the cursor; Enter/OK selects.)")
-}
-
-// The star at a cell, or NO_STAR.
-star_at :: proc(g: ^Game, x, y: int) -> int {
-	for i in 0 ..< g.star_count {
-		if g.stars[i].x == x && g.stars[i].y == y {
-			return i
-		}
-	}
-	return NO_STAR
+	b: Text
+	add(&b, "Welcome to ")
+	add(&b, g.stars[g.home].name)
+	add(&b, ". The Homeowners' Association has been notified.")
+	say(g, text(&b))
+	say(g, "(Slice 1, step 1: arrows or d-pad go star to star; a click or tap picks one.)")
 }
 
 command :: proc(g: ^Game, c: Command) {
 	switch c {
 	case .North, .South, .West, .East, .North_West, .North_East, .South_West, .South_East:
 		d := DIRECTION[c]
-		g.cx = clamp(g.cx + d.x, 0, GALAXY_W - 1)
-		g.cy = clamp(g.cy + d.y, 0, GALAXY_H - 1)
+		next := star_toward(g, g.cursor, d.x, d.y)
+		if next != NO_STAR {
+			g.cursor = next
+		}
 	case .Confirm:
-		select_cell(g, g.cx, g.cy)
+		b: Text
+		describe_star(g, g.cursor, &b)
+		say(g, text(&b))
 	case .Cancel:
-		g.selected = NO_STAR
-		g.cx, g.cy = g.stars[g.home].x, g.stars[g.home].y
+		g.cursor = g.home
 		say(g, "Back to yer home star.")
 	case .End_Turn:
 		g.turn += 1
@@ -127,33 +89,26 @@ command :: proc(g: ^Game, c: Command) {
 	}
 }
 
-// Selects whatever is at a cell and says what it is.
-select_cell :: proc(g: ^Game, x, y: int) {
-	i := star_at(g, x, y)
-	g.selected = i
-	if i == NO_STAR {
-		say(g, "Empty space. Nobody owns it yet.")
-		return
-	}
-	b: Text
-	describe_star(g, i, &b)
-	say(g, text(&b))
-}
-
-// "Vega Minor (Lot 8), yer home." and the like.
+// "Pollux (Lot 8): yer home, a Medium Terran world." and the like.
 describe_star :: proc(g: ^Game, i: int, b: ^Text) {
 	s := &g.stars[i]
-	add(b, s.known ? s.name : "An unknown star")
+	add(b, s.name)
 	add(b, " (Lot ")
 	add_int(b, i + 1)
 	add(b, ")")
-	if i == g.home {
-		add(b, ", yer home.")
-	} else if !s.known {
-		add(b, ". Not surveyed.")
-	} else {
-		add(b, ".")
+	if !s.known {
+		add(b, ": not surveyed.")
+		return
 	}
+	add(b, i == g.home ? ": yer home, a " : ": a ")
+	if s.special != .None {
+		add(b, SPECIAL_NAMES[s.special])
+		add(b, ", ")
+	}
+	add(b, SIZE_NAMES[s.size])
+	add(b, " ")
+	add(b, PLANET_NAMES[s.planet])
+	add(b, " world.")
 }
 
 // The map cell under a screen pixel, if the pixel is on the map view.
@@ -165,20 +120,28 @@ screen_to_cell :: proc(g: ^Game, sx, sy: int) -> (x, y: int, ok: bool) {
 	return ox + (sx - MAP_X) / TILE, oy + (sy - MAP_Y) / TILE, true
 }
 
-// Top-left map cell of the view: the cursor in the middle, held inside the galaxy.
+// Top-left map cell of the view: the cursor's star in the middle, held inside the galaxy.
 view_origin :: proc(g: ^Game) -> (x, y: int) {
-	return clamp(g.cx - VIEW_W / 2, 0, GALAXY_W - VIEW_W), clamp(g.cy - VIEW_H / 2, 0, GALAXY_H - VIEW_H)
+	s := g.stars[g.cursor]
+	return clamp(s.x - VIEW_W / 2, 0, GALAXY_W - VIEW_W), clamp(s.y - VIEW_H / 2, 0, GALAXY_H - VIEW_H)
 }
 
-// A click or tap at a screen pixel. Any pointer on the map moves the cursor there and selects
-// that cell; a right click (or a tap) on a star also names it in the panel (the same as select for now).
+// A click or tap at a screen pixel. On or next to a star (one cell's slack, for fingers), it moves
+// the cursor there and names the star; on empty space it says so.
 pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 	x, y, ok := screen_to_cell(g, sx, sy)
 	if !ok {
 		return
 	}
-	g.cx, g.cy = x, y
-	select_cell(g, x, y)
+	i := star_near(g, x, y, 1)
+	if i == NO_STAR {
+		say(g, "Empty space. Nobody owns it yet.")
+		return
+	}
+	g.cursor = i
+	b: Text
+	describe_star(g, i, &b)
+	say(g, text(&b))
 }
 
 // ---- Messages and text without core:fmt ----

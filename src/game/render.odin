@@ -44,7 +44,8 @@ draw_map :: proc(f: ^Frame, g: ^Game) {
 		}
 	}
 	// The cursor: corner brackets, so the star under it stays visible.
-	cx, cy := MAP_X + (g.cx - ox) * TILE - 2, MAP_Y + (g.cy - oy) * TILE - 2
+	cur := g.stars[g.cursor]
+	cx, cy := MAP_X + (cur.x - ox) * TILE - 2, MAP_Y + (cur.y - oy) * TILE - 2
 	n := TILE + 4
 	for c in ([4][2]int{{0, 0}, {1, 0}, {0, 1}, {1, 1}}) {
 		x0, y0 := cx + c.x * (n - 4), cy + c.y * (n - 1)
@@ -66,28 +67,46 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	print(f, "BJ      --", x, 38, COLOR_MID)
 
 	y := 56
-	if g.selected == NO_STAR {
-		print(f, "Nothing selected.", x, y, COLOR_MID)
+	s := &g.stars[g.cursor]
+	draw_gfx(f, s.known ? .Star : .Star_Dim, x, y - 2, s.known ? COLOR_YELLOW : COLOR_MID)
+	print(f, s.name, x + 16, y, COLOR_WHITE)
+	lot: Text
+	add(&lot, "Lot ")
+	add_int(&lot, g.cursor + 1)
+	print(f, text(&lot), x + 16, y + 10, COLOR_MID)
+	y += 26
+	if !s.known {
+		print(f, "Not surveyed.", x, y, COLOR_MID)
 	} else {
-		s := &g.stars[g.selected]
-		draw_gfx(f, s.known ? .Star : .Star_Dim, x, y - 2, s.known ? COLOR_YELLOW : COLOR_MID)
-		print(f, s.known ? s.name : "Unknown star", x + 16, y, COLOR_WHITE)
-		lot: Text
-		add(&lot, "Lot ")
-		add_int(&lot, g.selected + 1)
-		print(f, text(&lot), x + 16, y + 10, COLOR_MID)
-		y += 26
-		if g.selected == g.home {
-			draw_gfx(f, .Planet, x, y - 2, COLOR_GREEN)
-			print(f, "Yer home world", x + 16, y, COLOR_LIGHT)
+		draw_gfx(f, .Planet, x, y - 2, PLANET_COLORS[s.planet])
+		kind: Text
+		add(&kind, SIZE_NAMES[s.size])
+		add(&kind, " ")
+		add(&kind, PLANET_NAMES[s.planet])
+		print(f, text(&kind), x + 16, y, COLOR_LIGHT)
+		y += 12
+		if s.special != .None {
+			print(f, SPECIAL_NAMES[s.special], x, y, COLOR_YELLOW)
+			y += 12
+		}
+		if g.cursor == g.home {
+			print(f, "Yer home world", x + 16, y, COLOR_GREEN)
 			y += 14
 			draw_gfx(f, .Van, x, y - 2, COLOR_WHITE)
 			print(f, "1 Moving Van", x + 16, y, COLOR_LIGHT)
-		} else if !s.known {
-			print(f, "Not surveyed.", x, y, COLOR_MID)
 		}
 	}
-	print(f, "Slice 1, step 0", x, VIEW_H * TILE - 12, COLOR_DARK)
+	if g.cursor != g.home {
+		// Straight-line distance from home, in cells; fleets and travel time arrive in step 2.
+		h := g.stars[g.home]
+		dx, dy := s.x - h.x, s.y - h.y
+		d := isqrt(dx * dx + dy * dy)
+		far: Text
+		add_int(&far, d)
+		add(&far, " ly from home")
+		print(f, text(&far), x, VIEW_H * TILE - 26, COLOR_MID)
+	}
+	print(f, "Slice 1, step 1", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
 draw_news :: proc(f: ^Frame, g: ^Game) {
@@ -96,4 +115,16 @@ draw_news :: proc(f: ^Frame, g: ^Game) {
 		color: u8 = i == NEWS_LINES - 1 ? COLOR_WHITE : COLOR_MID
 		print(f, message(&g.news[i]), NEWS_X, NEWS_Y + i * (GLYPH_H + 1), color)
 	}
+}
+
+// Whole-number square root, rounded to nearest.
+isqrt :: proc(n: int) -> int {
+	r := 0
+	for (r + 1) * (r + 1) <= n {
+		r += 1
+	}
+	if n - r * r > r {
+		r += 1
+	}
+	return r
 }
