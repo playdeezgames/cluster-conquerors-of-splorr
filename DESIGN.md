@@ -26,6 +26,32 @@ The twelve proposals and four presentation questions were answered one at a time
 - **Interface: equal for all inputs, landscape only** (as Bulwark): every screen for mouse, keyboard, gamepad and touch from the start; phones play turned sideways.
 - **Story: light framing only**: no story arc; an opening line, race blurbs, council minutes and news items carry the Metaphor.
 
+The details were then settled one at a time on November 10, 2026 (the user's choices from Claude's options):
+
+- **Stack: Odin to `js_wasm32`, web only**: canvas software framebuffer, pure rules package with native tests, localStorage saves (the vault default, as in Bulwark).
+- **Sliders, as HOA chores**: Parking (ships), Fencing (defence), Home Improvement (industry), Lawn Care (ecology), Book Club (technology). Five per colony.
+- **Tech fields, as HOA hobbies**: Spreadsheets (computers), Renovation (construction), Fences (force fields), Landscaping (planetology), Commuting (propulsion), Disputes (weapons). A random subset of each field's techs per game.
+- **The legendary system is the Clubhouse**: everyone has heard of the amenities; nobody has a key. Its guardian (the cheapest fit) is **a very large space moth**, drawn by the Clubhouse's porch light: huge, mindless, and it hits hard.
+- **Ship types, seven, HOA names**: Inspector (scout; does the surveying), Moving Van (colony ship), Carpool (troop transport), Gas Can (tanker), and three warships from small to large: Golf Cart, Pickup, Monster Truck.
+- **Upgrades: automatic, with a fee**: when a tech arrives every ship of the affected types upgrades at once and a per-ship upgrade fee in BJ is billed; ships whose fee goes unpaid keep the old tech.
+- **Fuel: stranded ships wait for a Gas Can**: a ship that runs dry sits where it is, forever if need be, until a Gas Can reaches it or a colony is founded nearby. **Refuelling** at yer own colonies, from a Gas Can in the same system, and at the colonies of an empire you hold a treaty with (rare). Surveyed stars do **not** refuel.
+- **Surveys can lie in all four ways**: a wormhole looks exactly like an unsurveyed star and throws the ship somewhere random; an Inspector's sensor can misreport planet type or size (the truth shows when a Moving Van arrives); specials such as "rich" or "ancient artifacts" are sometimes just estate-agent language; and a survey report can be lost in filing, the star reverting to unknown.
+- **The HOA council does all three**: each meeting hears complaints (mostly against you: pollution, fleets parked in the wrong place) and levies fines in BJ, passes a new bylaw that binds every empire for a while (no warships over a size, quiet hours on research), and some meetings hold the presidential vote.
+- **The presidency: the game goes on, with duties**: being elected counts as a win, but play continues and the president must rule on every complaint and pay for the meetings. Conquest still ends the game.
+- **Rivals: everyone hates everyone**: the computer empires hate each other too and fight among themselves; you just get it worst.
+- **Races: animals, played straight**, one per MoO trait slot, one sentence each (roster approved as drafted):
+  - *Owls*: read everything, finish nothing. Best research.
+  - *Raccoons*: masked, into everything. Best spies.
+  - *Beavers*: build whether or not anyone asked. Most industry.
+  - *Ants*: a hundred to a job. Each worker runs more factories.
+  - *Rabbits*: you know. Fastest growth.
+  - *Tardigrades*: live on any rock, grow slowly.
+  - *Geese*: honk, then attack. Better ship attack.
+  - *Tortoises*: the shell is the plan. Better ship defence.
+  - *Badgers*: dig in. Best ground troops.
+  - *Dogs*: like everybody. Best at trade and treaties (everybody still hates them).
+- **Venue: a normal release, Pages early** (as Bulwark): GitHub Pages as soon as a galaxy map can be explored, each push on the user's word; itch.io later on a Coxswain-booked day once the user is happy.
+
 ## Master of Orion (1993): the tropes
 
 Gathered November 10, 2026 from Claude's knowledge of the game (SimTex, designed by Steve Barcia, published by MicroProse, DOS, 1993); not checked against an outside source yet. Master of Orion II (1996) is a different game and is left out on purpose (no Antareans, no leaders, no buildings).
@@ -92,5 +118,6 @@ The twelve proposals put to the user on November 10, 2026 are all answered; see 
 
 ## Open
 
-- **Stack** (not asked; the vault default is Odin to `js_wasm32` with a canvas software framebuffer, as in Bulwark).
-- **Details to settle later:** the races and their traits; the slider, field and ship-type names in the Metaphor's words; the ship-type list; fuel numbers; the legend's guardian; council timing and HOA business; what the surveys can lie about; the computer rivals' behaviour; venue and Pages timing.
+- **Numbers, to settle per playable slice:** galaxy sizes and star counts, fuel capacities and burn, slider effects, tech costs and the subset size, ship stats and upgrade fees, council timing, fines and the bylaw list, how often surveys lie, the moth's strength.
+- **Text, to draft for review:** the opening line, the HOA's complaint and bylaw wording, news items, the presidential duties, the computer leaders' personalities.
+- **The build plan** (`PLAN.md`), once the user says to build.
