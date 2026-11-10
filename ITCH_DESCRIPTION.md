@@ -11,7 +11,7 @@ Conquer the cluster. Everybody hates you. The Homeowners' Association meets ever
 
 ## Page text
 
-**Latest version:** (GitHub Pages link to add once it is live: https://playdeezgames.github.io/cluster-conquerors-of-splorr/)
+**Latest version:** https://playdeezgames.github.io/cluster-conquerors-of-splorr/ (live since November 10, 2026; also add it as an external link on the page)
 
 **Cluster Conquerors of SPLORR!!** is a metaphor about paperwork, in the shape of a turn-based space strategy game.
 
