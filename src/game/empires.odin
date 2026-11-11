@@ -42,6 +42,7 @@ Empire :: struct {
 	met:      [MAX_EMPIRES]bool, // has seen this empire's colonies or ships
 	sees:     [MAX_STARS]bool, // stars in sight this turn
 	intel:    [MAX_STARS]Intel, // what it last saw at each star
+	out:      bool, // no colonies left
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.
@@ -49,6 +50,7 @@ Intel :: struct {
 	seen:     bool,
 	owner:    int, // the colony's owner, or NO_OWNER
 	strength: int, // hits of everything armed there that is not the watcher's (bases count)
+	households: int, // the colony's, if there is one
 }
 
 // Hits of everything armed at a star that is not `except`'s: bases and armed ships.
@@ -135,9 +137,10 @@ update_sight :: proc(g: ^Game) {
 				owner = c.owner
 			}
 			g.empires[o].intel[i] = {
-				seen     = true,
-				owner    = owner,
-				strength = strength_at(g, i, o),
+				seen       = true,
+				owner      = owner,
+				strength   = strength_at(g, i, o),
+				households = owner == NO_OWNER ? 0 : any_colony(g, i).households,
 			}
 		}
 	}

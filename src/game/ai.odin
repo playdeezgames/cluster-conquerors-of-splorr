@@ -26,6 +26,8 @@ ai_turn :: proc(g: ^Game, owner: int) {
 			break
 		}
 	}
+	prey, need := invasion_target(g, owner, e.home)
+	carpools := ships_owned(g, owner, .Carpool)
 	for i in 0 ..< g.star_count {
 		c := colony_of(g, i, owner)
 		if c == nil {
@@ -35,6 +37,8 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		switch {
 		case threat:
 			c.build = i == e.home ? .Pickup : .Golf_Cart
+		case prey != NO_STAR && i == e.home && carpools < need && c.households > CARPOOL_LOAD * 2:
+			c.build = .Carpool
 		case !have_van && target_exists:
 			c.build = .Moving_Van
 			have_van = true // one colony at a time builds the next van
@@ -48,6 +52,50 @@ ai_turn :: proc(g: ^Game, owner: int) {
 	ai_fleets(g, owner)
 	if !threat {
 		ai_attack(g, owner)
+		if prey != NO_STAR {
+			ai_invade(g, owner, prey, need)
+		}
+	}
+}
+
+// The nearest enemy colony the empire remembers with nothing left to defend it, that Carpools from
+// home can reach, and how many Carpools it would want for it (half as many again as its militia).
+invasion_target :: proc(g: ^Game, owner, from: int) -> (target, need: int) {
+	e := &g.empires[owner]
+	target = NO_STAR
+	best_d := max(int)
+	for t in 0 ..< g.star_count {
+		in_ := e.intel[t]
+		if !in_.seen || in_.owner == NO_OWNER || in_.owner == owner || in_.strength > 0 {
+			continue
+		}
+		trial := Fleet {
+			ships = ship_one(.Carpool),
+		}
+		if trip_turns(g, from, t, fleet_speed(&trial)) > fleet_range(&trial) {
+			continue
+		}
+		a, b := g.stars[from], g.stars[t]
+		d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
+		if d < best_d {
+			target, best_d = t, d
+			militia := (in_.households + 1) / 2
+			need = (militia * 3 / 2) / CARPOOL_LOAD + 1
+		}
+	}
+	return
+}
+
+// Sends the Carpools at home once there are enough of them.
+ai_invade :: proc(g: ^Game, owner, target, need: int) {
+	home := g.empires[owner].home
+	f := fleet_of(g, home, owner)
+	if f == nil || f.ships[.Carpool] < need {
+		return
+	}
+	cars := ship_n(.Carpool, f.ships[.Carpool])
+	if send_problem(g, owner, home, target, cars) == "" {
+		send_fleet(g, owner, home, target, cars)
 	}
 }
 

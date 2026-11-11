@@ -5,6 +5,8 @@ package game
 draw_game :: proc(f: ^Frame, g: ^Game) {
 	cls(f, COLOR_BLACK)
 	switch g.mode {
+	case .Game_Over:
+		draw_game_over(f, g)
 	case .Battle:
 		draw_battle(f, g)
 	case .Choose_Race:
@@ -144,6 +146,7 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	add_int(&money, g.empires[PLAYER].bj)
 	print(f, text(&money), x + 9 * GLYPH_W, 28, COLOR_YELLOW)
 	switch g.mode {
+	case .Game_Over:
 	case .Battle:
 		draw_battle_panel(f, g)
 	case .Choose_Race:
@@ -197,6 +200,15 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			add_int(&pop, colony_max(g, g.cursor))
 			print(f, text(&pop), x, y, COLOR_GREEN)
 			y += 10
+			if col.captured > 0 {
+				who: Text
+				add(&who, RACES[col.race].name)
+				add(&who, ", for ")
+				add_int(&who, ASSIMILATE_TURNS + 1 - col.captured)
+				add(&who, " turns")
+				print(f, text(&who), x, y, COLOR_ORANGE)
+				y += 10
+			}
 		}
 	}
 	if g.empires[PLAYER].sees[g.cursor] {
@@ -206,6 +218,13 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			add(&who, empire_name(g, c.owner))
 			add(&who, "' colony")
 			print(f, text(&who), x, y, EMPIRE_COLORS[c.owner])
+			y += 10
+			what: Text
+			add_int(&what, c.households)
+			add(&what, " households, ")
+			add_int(&what, c.bases)
+			add(&what, c.bases == 1 ? " base" : " bases")
+			print(f, text(&what), x, y, COLOR_LIGHT)
 			y += 10
 		}
 		for e in 1 ..< g.empire_count {
@@ -410,7 +429,8 @@ isqrt :: proc(n: int) -> int {
 // The empire's totals, beside the colony screen.
 draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 	x := PANEL_TEXT_X
-	print(f, RACES[g.empires[PLAYER].race].name, x + 13 * GLYPH_W, 28, COLOR_GREEN)
+	print(f, "Species", x, 44, COLOR_MID)
+	print(f, RACES[g.empires[PLAYER].race].name, x + 11 * GLYPH_W, 44, COLOR_GREEN)
 	colonies, households, made, rp := 0, 0, 0, 0
 	for i in 0 ..< g.star_count {
 		if c := colony_at(g, i); c != nil {
@@ -425,26 +445,26 @@ draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 		value: int,
 	}{{"Colonies", colonies}, {"Households", households}, {"BJ a turn", made}, {"RP a turn", rp}}
 	for r, i in rows {
-		print(f, r.label, x, 44 + i * 11, COLOR_MID)
+		print(f, r.label, x, 55 + i * 11, COLOR_MID)
 		v: Text
 		add_int(&v, r.value)
-		print(f, text(&v), x + 11 * GLYPH_W, 44 + i * 11, COLOR_LIGHT)
+		print(f, text(&v), x + 11 * GLYPH_W, 55 + i * 11, COLOR_LIGHT)
 	}
 	// What a ship built today carries.
-	print(f, "Ship kit:", x, 96, COLOR_WHITE)
+	print(f, "Ship kit:", x, 104, COLOR_WHITE)
 	kit := empire_kit(g, PLAYER)
 	for s, i in Kit_Stat {
-		print(f, KIT_NAMES[s], x, 108 + int(i) * 10, COLOR_MID)
+		print(f, KIT_NAMES[s], x, 116 + int(i) * 10, COLOR_MID)
 		v: Text
 		add(&v, "+")
 		add_int(&v, kit[s])
-		print(f, text(&v), x + 11 * GLYPH_W, 108 + int(i) * 10, kit[s] > 0 ? COLOR_LIGHT : COLOR_DARK)
+		print(f, text(&v), x + 11 * GLYPH_W, 116 + int(i) * 10, kit[s] > 0 ? COLOR_LIGHT : COLOR_DARK)
 	}
 	extra: Text
 	add(&extra, "Factories ")
 	add_int(&extra, factory_cost(g, PLAYER))
 	add(&extra, " each")
-	print(f, text(&extra), x, 172, COLOR_MID)
+	print(f, text(&extra), x, 180, COLOR_MID)
 }
 
 // The six fields, each with its slider, its next tech and how far along it is.
@@ -536,6 +556,13 @@ draw_colony :: proc(f: ^Frame, g: ^Game) {
 	if s.reports[PLAYER].special != .None {
 		add(&kind, ", ")
 		add(&kind, SPECIAL_NAMES[s.reports[PLAYER].special])
+	}
+	add(&kind, ". ")
+	add(&kind, RACES[col.race].name)
+	if col.captured > 0 {
+		add(&kind, ", captured: ")
+		add_int(&kind, ASSIMILATE_TURNS + 1 - col.captured)
+		add(&kind, " turns to settle in")
 	}
 	draw_gfx(f, .Planet, x + 300, 4, PLANET_COLORS[s.planet])
 	print(f, text(&kind), x, 16, COLOR_LIGHT)
@@ -762,4 +789,28 @@ draw_battle_panel :: proc(f: ^Frame, g: ^Game) {
 		}
 		print(f, BATTLE_ROW_NAMES[row], x, ry, COLOR_CYAN)
 	}
+}
+
+// The end: conquered, or out.
+draw_game_over :: proc(f: ^Frame, g: ^Game) {
+	x := COLONY_X
+	won := g.outcome == .Won
+	print(f, won ? "The cluster is yers." : "Yer empire is no more.", x, 40, won ? COLOR_YELLOW : COLOR_RED)
+	lines: [3]string
+	if won {
+		lines = {"Every other species has been moved out.", "The Homeowners' Association has been notified.", "Nobody is left to read the notice."}
+	} else {
+		lines = {"Yer last colony has changed hands.", "The Homeowners' Association has been notified.", "Yer dues are paid up to the end of the month."}
+	}
+	for l, i in lines {
+		print(f, l, x, 62 + i * 12, COLOR_LIGHT)
+	}
+	t: Text
+	add(&t, "Turn ")
+	add_int(&t, g.turn)
+	add(&t, ". Colonies: ")
+	add_int(&t, colonies_of(g, PLAYER))
+	add(&t, ".")
+	print(f, text(&t), x, 110, COLOR_MID)
+	print(f, "Enter/OK or a tap: a new cluster.", x, 140, COLOR_CYAN)
 }

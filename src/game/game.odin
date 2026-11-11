@@ -53,6 +53,7 @@ Mode :: enum u8 {
 	Fleet,
 	Destination,
 	Battle,
+	Game_Over,
 }
 
 Game :: struct {
@@ -70,6 +71,7 @@ Game :: struct {
 	source:     int, // the star ships are being sent from
 	send:       [Ship_Type]int, // how many of each are going
 	row:        int, // the highlighted row of the ship list
+	outcome:    Outcome, // still playing, won or lost
 	battle:     Battle, // the player's battle on screen
 	pending:    [8][2]int, // the player's battles this turn: star, enemy
 	pending_n:  int,
@@ -103,7 +105,7 @@ init_game :: proc(g: ^Game, seed: u64) {
 	add(&b, g.stars[g.home].name)
 	add(&b, ". The Homeowners' Association has been notified.")
 	say(g, text(&b))
-	say(g, "(Slice 1, step 6: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
+	say(g, "(Slice 1, step 7: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
 }
 
 // A new game in the browser starts on the species screen; tests start straight on the map as Geese.
@@ -115,6 +117,11 @@ start_choosing :: proc(g: ^Game) {
 choose_race :: proc(g: ^Game, r: Race) {
 	g.empires[PLAYER].race = r
 	assign_rivals(g)
+	for i in 0 ..< g.star_count {
+		if c := any_colony(g, i); c != nil {
+			c.race = g.empires[c.owner].race
+		}
+	}
 	g.mode = .Map
 	b: Text
 	add(&b, "Yer the ")
@@ -151,6 +158,13 @@ command :: proc(g: ^Game, c: Command) {
 		return
 	}
 	switch g.mode {
+	case .Game_Over:
+		// Enter/OK starts a new cluster.
+		if c == .Confirm {
+			seed := g.seed + 1
+			init_game(g, seed)
+			start_choosing(g)
+		}
 	case .Battle:
 		battle_command(g, c)
 	case .Choose_Race:
@@ -560,6 +574,10 @@ COUNT_COL :: 13 // the column where "<n>" starts in a ship row
 // moves the cursor there; on the star already under the cursor with yer ships, opens them. While
 // choosing where: a star moves the cursor, the same star again sends. The panel's rows act too.
 pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
+	if g.mode == .Game_Over {
+		command(g, .Confirm)
+		return
+	}
 	if g.mode == .Battle {
 		battle_pointer(g, sx, sy)
 		return
@@ -613,7 +631,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Battle, .Choose_Race, .Research, .Colony, .Fleet:
+	case .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -770,7 +788,7 @@ panel_pointer :: proc(g: ^Game, sx, sy: int) {
 		return
 	}
 	switch g.mode {
-	case .Battle, .Choose_Race, .Research, .Colony:
+	case .Game_Over, .Battle, .Choose_Race, .Research, .Colony:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)

@@ -48,6 +48,7 @@ test_choosing_a_species :: proc(t: ^testing.T) {
 		command(g, .Confirm)
 		testing.expect_value(t, g.mode, Mode.Map)
 		testing.expect_value(t, g.empires[PLAYER].race, r)
+		testing.expect_value(t, colony_at(g, g.home).race, r)
 		a, b := g.empires[1].race, g.empires[2].race
 		testing.expect(t, a != r && b != r && a != b)
 	}
@@ -65,20 +66,21 @@ test_species_traits :: proc(t: ^testing.T) {
 	g := new(Game)
 	defer free(g)
 	init_game(g, SEED)
+	// The trait follows the colony's people.
+	c := colony_at(g, g.home)
 	plain_p := production(g, g.home)
 	plain_r := research_points(g, g.home)
-	g.empires[PLAYER].race = .Beavers
+	c.race = .Beavers
 	testing.expect_value(t, production(g, g.home), 25 + 45) // 30 worked factories make 45
-	g.empires[PLAYER].race = .Owls
+	c.race = .Owls
 	testing.expect_value(t, production(g, g.home), plain_p)
 	testing.expect_value(t, research_points(g, g.home), plain_r * 3 / 2)
 	// Rabbits grow faster from the same start.
-	c := colony_at(g, g.home)
-	g.empires[PLAYER].race = .Geese
+	c.race = .Geese
 	c.households = 20
 	run_colony(g, g.home)
 	geese := c.households
-	g.empires[PLAYER].race = .Rabbits
+	c.race = .Rabbits
 	c.households = 20
 	run_colony(g, g.home)
 	testing.expect(t, c.households > geese)

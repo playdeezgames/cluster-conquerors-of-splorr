@@ -366,12 +366,21 @@ send_fleet :: proc(g: ^Game, owner, from, to: int, ships: [Ship_Type]int) {
 	f.left = f.total
 }
 
-// The computer empires decide, then every colony runs, research is shared out, every fleet moves a
+// Carpools that reached undefended colonies land, captured people assimilate, the defeated drop out;
+// then the computer empires decide, every colony runs, research is shared out, every fleet moves a
 // turn, arrivals are dealt with, fuel burns and refills, paperwork is lost, sight is updated, and
 // whoever meets an enemy fights (computer battles at once; yers on the battle screen).
 end_turn :: proc(g: ^Game) {
+	land_troops(g)
+	assimilate(g)
+	check_conquest(g)
+	if g.outcome != .Playing {
+		return
+	}
 	for e in 1 ..< g.empire_count {
-		ai_turn(g, e)
+		if !g.empires[e].out {
+			ai_turn(g, e)
+		}
 	}
 	for i in 0 ..< g.star_count {
 		run_colony(g, i)

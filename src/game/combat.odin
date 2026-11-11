@@ -523,6 +523,9 @@ finish_battle :: proc(g: ^Game, bt: ^Battle) {
 // player are fought out at once; the player's wait for the battle screen, one after another.
 find_battles :: proc(g: ^Game) {
 	g.pending_n = 0
+	if g.outcome != .Playing {
+		return
+	}
 	for i in 0 ..< g.star_count {
 		for a in 0 ..< g.empire_count {
 			for b in a + 1 ..< g.empire_count {

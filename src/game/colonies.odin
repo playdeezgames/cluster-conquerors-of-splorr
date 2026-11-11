@@ -63,6 +63,8 @@ TYPE_PERCENT := [Planet_Type]int {
 Colony :: struct {
 	owned:     bool,
 	owner:     int, // whose it is
+	race:      Race, // the people living there (captured colonies keep theirs until assimilated)
+	captured:  int, // turns since it changed hands, while its people are not yet the owner's species
 	households: int,
 	wear:      int, // households of room that waste has taken off the planet
 	factories: int,
@@ -149,6 +151,7 @@ found_colony :: proc(g: ^Game, star: int, households: int, owner := PLAYER) -> ^
 	s.colony = {
 		owned      = true,
 		owner      = owner,
+		race       = g.empires[owner].race,
 		households = households,
 		slider     = NEW_SLIDERS,
 		build      = .Inspector,
@@ -157,14 +160,14 @@ found_colony :: proc(g: ^Game, star: int, households: int, owner := PLAYER) -> ^
 }
 
 // What a colony makes in a turn: half a point per household, a point per worked factory (half as much
-// again for Beavers), more on a Rich world and less on a Poor one.
+// again where the people are Beavers), more on a Rich world and less on a Poor one.
 production :: proc(g: ^Game, star: int) -> int {
 	c := any_colony(g, star)
 	if c == nil {
 		return 0
 	}
 	worked := min(c.factories, c.households)
-	if g.empires[c.owner].race == .Beavers {
+	if c.race == .Beavers {
 		worked = worked * 3 / 2
 	}
 	p := c.households / 2 + worked
@@ -191,13 +194,14 @@ chore_points :: proc(g: ^Game, star: int, ch: Chore) -> int {
 	return (p - p * TAX_PERCENT / 100) * c.slider[ch] / 100
 }
 
-// Research points: Book Club, doubled by Ancient Artifacts, half as much again for Owls.
+// Research points: Book Club, doubled by Ancient Artifacts, half as much again where the people are
+// Owls.
 research_points :: proc(g: ^Game, star: int) -> int {
 	r := chore_points(g, star, .Book_Club)
 	if g.stars[star].special == .Artifacts {
 		r *= 2
 	}
-	if c := any_colony(g, star); c != nil && g.empires[c.owner].race == .Owls {
+	if c := any_colony(g, star); c != nil && c.race == .Owls {
 		r = r * 3 / 2
 	}
 	return r
@@ -316,7 +320,7 @@ run_colony :: proc(g: ^Game, star: int) {
 	if c.households < room {
 		grow := 1 + c.households * (room - c.households) / (room * 8)
 		grow += spare / GROWTH_PER_POINT
-		if e.race == .Rabbits {
+		if c.race == .Rabbits {
 			grow = grow * 3 / 2
 		}
 		c.households = min(room, c.households + grow)
@@ -328,6 +332,13 @@ run_colony :: proc(g: ^Game, star: int) {
 	c.stored[.Parking] += chore_points(g, star, .Parking)
 	cost := SHIPS[c.build].cost
 	for c.stored[.Parking] >= cost {
+		// A Carpool takes its households from the colony; one too small to spare them waits.
+		if c.build == .Carpool && c.households <= CARPOOL_LOAD {
+			break
+		}
+		if c.build == .Carpool {
+			c.households -= CARPOOL_LOAD
+		}
 		c.stored[.Parking] -= cost
 		f := new_fleet(g, c.owner)
 		if f == nil {
