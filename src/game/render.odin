@@ -5,6 +5,8 @@ package game
 draw_game :: proc(f: ^Frame, g: ^Game) {
 	cls(f, COLOR_BLACK)
 	switch g.mode {
+	case .Battle:
+		draw_battle(f, g)
 	case .Choose_Race:
 		draw_races(f, g)
 	case .Colony:
@@ -142,6 +144,8 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	add_int(&money, g.empires[PLAYER].bj)
 	print(f, text(&money), x + 9 * GLYPH_W, 28, COLOR_YELLOW)
 	switch g.mode {
+	case .Battle:
+		draw_battle_panel(f, g)
 	case .Choose_Race:
 	case .Map:
 		draw_star_panel(f, g)
@@ -668,4 +672,94 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 		print(f, info.trait, x + 2 * GLYPH_W, y + 22, COLOR_CYAN)
 	}
 	print(f, "Up/Down: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+SHIP_GFX := [Ship_Type]Gfx {
+	.Inspector     = .Scooter,
+	.Moving_Van    = .Van,
+	.Carpool       = .Bus,
+	.Gas_Can       = .Barrel,
+	.Golf_Cart     = .Car,
+	.Pickup        = .Truck,
+	.Monster_Truck = .Tank,
+}
+
+stack_name :: proc(s: ^Stack) -> string {
+	return s.base ? "Defence base" : SHIPS[s.kind].name
+}
+
+// The battle grid: each stack as its picture in its empire's colour, with its count beneath; the
+// target in red brackets.
+draw_battle :: proc(f: ^Frame, g: ^Game) {
+	bt := &g.battle
+	s := &g.stars[bt.star]
+	head: Text
+	add(&head, "Battle at ")
+	add(&head, s.name)
+	add(&head, " (Lot ")
+	add_int(&head, bt.star + 1)
+	add(&head, "), round ")
+	add_int(&head, bt.round + 1)
+	print(f, text(&head), BATTLE_X, 6, COLOR_WHITE)
+	vs: Text
+	add(&vs, "Yer ")
+	add(&vs, RACES[g.empires[PLAYER].race].name)
+	add(&vs, " against the ")
+	add(&vs, empire_name(g, bt.owners[1]))
+	print(f, text(&vs), BATTLE_X, 15, COLOR_LIGHT)
+	for gy in 0 ..< GRID_H {
+		for gx in 0 ..< GRID_W {
+			frame_rect(f, BATTLE_X + gx * BATTLE_CELL, BATTLE_Y + gy * BATTLE_CELL, BATTLE_CELL + 1, BATTLE_CELL + 1, COLOR_DARK)
+		}
+	}
+	for i in 0 ..< bt.n {
+		st := &bt.stacks[i]
+		if !alive(st) {
+			continue
+		}
+		cx, cy := BATTLE_X + st.x * BATTLE_CELL, BATTLE_Y + st.y * BATTLE_CELL
+		color := EMPIRE_COLORS[bt.owners[st.side]]
+		draw_gfx(f, st.base ? .Wall : SHIP_GFX[st.kind], cx + 6, cy + 2, color)
+		n: Text
+		add_int(&n, st.count)
+		print(f, text(&n), cx + (BATTLE_CELL - text_width(text(&n))) / 2, cy + 15, COLOR_WHITE)
+		if i == bt.target {
+			frame_rect(f, cx + 1, cy + 1, BATTLE_CELL - 1, BATTLE_CELL - 1, COLOR_RED)
+		}
+	}
+	print(f, "Left/Right: target. Up/Down: pick. Enter/OK: do it.", BATTLE_X, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+// Both sides' stacks, the target, and what to do.
+draw_battle_panel :: proc(f: ^Frame, g: ^Game) {
+	bt := &g.battle
+	x := PANEL_TEXT_X
+	y := 44
+	for side in 0 ..< 2 {
+		print(f, side == 0 ? "Yers:" : "Theirs:", x, y, EMPIRE_COLORS[bt.owners[side]])
+		y += 10
+		for i in 0 ..< bt.n {
+			st := &bt.stacks[i]
+			if st.side != side || !alive(st) {
+				continue
+			}
+			if y > BATTLE_ACTION_Y - 22 {
+				break // a long list is cut short rather than run into the actions
+			}
+			line: Text
+			add_int(&line, st.count)
+			add(&line, " ")
+			add(&line, stack_name(st))
+			print(f, text(&line), x + 6, y, i == bt.target ? COLOR_RED : COLOR_LIGHT)
+			y += 9
+		}
+		y += 4
+	}
+	for row in 0 ..< BATTLE_ROWS {
+		ry := battle_action_y(row)
+		if bt.row == row {
+			fill_rect(f, x - 2, ry - 1, PANEL_W - 2, ROW_H, COLOR_NAVY)
+		}
+		print(f, BATTLE_ROW_NAMES[row], x, ry, COLOR_CYAN)
+	}
 }

@@ -3,8 +3,8 @@ package game
 // The computer empires (slice 1 step 5): simple and honest (PLAN.md). They see only what their own
 // colonies and ships see, know only what their own Inspectors filed, obey the same fuel and range
 // rules, and settle with the same Moving Vans. Each turn, before the turn runs, they set their
-// sliders, choose what to build, pay their upgrade fees and send their ships. Attacking arrives with
-// combat in step 6.
+// sliders, choose what to build, pay their upgrade fees, send their ships, and attack where they saw
+// something weaker than themselves.
 
 THREAT_RANGE :: 10 // cells: a hostile fleet this close to a colony means build warships
 
@@ -46,6 +46,71 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		}
 	}
 	ai_fleets(g, owner)
+	if !threat {
+		ai_attack(g, owner)
+	}
+}
+
+ATTACK_MARGIN :: 2 // a computer empire attacks only with at least this many times the hits it saw there
+
+warship_hits :: proc(f: ^Fleet) -> int {
+	n := 0
+	for c, t in f.ships {
+		if COMBAT[t].weapons > 0 {
+			n += c * COMBAT[t].hp
+		}
+	}
+	return n
+}
+
+warships_of :: proc(f: ^Fleet) -> (ships: [Ship_Type]int) {
+	for c, t in f.ships {
+		if COMBAT[t].weapons > 0 {
+			ships[t] = c
+		}
+	}
+	return
+}
+
+// Warships at a colony go after the nearest enemy colony or fleet they remember seeing, if they are
+// clearly stronger than what they saw there and can reach it; warships idling away from home with
+// nothing to fight come home.
+ai_attack :: proc(g: ^Game, owner: int) {
+	e := &g.empires[owner]
+	for i in 0 ..< g.star_count {
+		f := fleet_of(g, i, owner)
+		if f == nil || stranded(g, f) || warship_hits(f) == 0 {
+			continue
+		}
+		if colony_of(g, i, owner) == nil {
+			if strength_at(g, i, owner) == 0 {
+				go_home(g, owner, i, warships_of(f))
+			}
+			continue
+		}
+		mine := warship_hits(f)
+		best, best_d := NO_STAR, max(int)
+		for t in 0 ..< g.star_count {
+			in_ := e.intel[t]
+			if t == i || !in_.seen || in_.strength == 0 {
+				continue
+			}
+			if in_.owner == owner || mine < ATTACK_MARGIN * in_.strength {
+				continue
+			}
+			if send_problem(g, owner, i, t, warships_of(f)) != "" {
+				continue
+			}
+			a, b := g.stars[i], g.stars[t]
+			d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
+			if d < best_d {
+				best, best_d = t, d
+			}
+		}
+		if best != NO_STAR {
+			send_fleet(g, owner, i, best, warships_of(f))
+		}
+	}
 }
 
 // Rules of thumb: enough Lawn Care to stay tidy, a fifth to Book Club, ships when threatened or once
@@ -152,7 +217,7 @@ best_settle_target :: proc(g: ^Game, owner, from: int, taken: ^[MAX_STARS]bool) 
 }
 
 // Inspectors go to the nearest star nobody of theirs has surveyed; Moving Vans go to the best place
-// to settle; warships and Gas Cans stay put (combat arrives in step 6).
+// to settle; Gas Cans stay put (warships are ai_attack's).
 ai_fleets :: proc(g: ^Game, owner: int) {
 	taken: [MAX_STARS]bool
 	for &f in g.fleets {

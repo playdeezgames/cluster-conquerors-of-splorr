@@ -59,6 +59,12 @@ Gfx :: enum {
 	Van,
 	Wormhole,
 	Barrel,
+	Scooter,
+	Car,
+	Truck,
+	Bus,
+	Tank,
+	Wall,
 }
 
 cls :: proc(f: ^Frame, c: u8) {

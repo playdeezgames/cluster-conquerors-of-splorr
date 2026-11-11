@@ -52,6 +52,7 @@ Mode :: enum u8 {
 	Colony,
 	Fleet,
 	Destination,
+	Battle,
 }
 
 Game :: struct {
@@ -69,6 +70,10 @@ Game :: struct {
 	source:     int, // the star ships are being sent from
 	send:       [Ship_Type]int, // how many of each are going
 	row:        int, // the highlighted row of the ship list
+	battle:     Battle, // the player's battle on screen
+	pending:    [8][2]int, // the player's battles this turn: star, enemy
+	pending_n:  int,
+	pending_i:  int,
 	news:       [NEWS_LINES]Message, // oldest first
 }
 
@@ -98,7 +103,7 @@ init_game :: proc(g: ^Game, seed: u64) {
 	add(&b, g.stars[g.home].name)
 	add(&b, ". The Homeowners' Association has been notified.")
 	say(g, text(&b))
-	say(g, "(Slice 1, step 5: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
+	say(g, "(Slice 1, step 6: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
 }
 
 // A new game in the browser starts on the species screen; tests start straight on the map as Geese.
@@ -146,6 +151,8 @@ command :: proc(g: ^Game, c: Command) {
 		return
 	}
 	switch g.mode {
+	case .Battle:
+		battle_command(g, c)
 	case .Choose_Race:
 		race_command(g, c)
 	case .Map:
@@ -203,6 +210,54 @@ next_turn :: proc(g: ^Game) {
 	add(&b, ".")
 	say(g, text(&b))
 	end_turn(g)
+}
+
+// ---- The battle screen: pick a target, then fight a round, fight it out, or retreat ----
+
+BATTLE_ROWS :: 3 // Fight a round, Fight it out, Retreat
+BATTLE_ROW_NAMES := [BATTLE_ROWS]string{"Fight a round", "Fight it out", "Retreat"}
+
+// Up and Down pick an action, Left and Right change the target, Enter/OK does the action.
+battle_command :: proc(g: ^Game, c: Command) {
+	bt := &g.battle
+	#partial switch c {
+	case .North:
+		bt.row = (bt.row + BATTLE_ROWS - 1) % BATTLE_ROWS
+	case .South:
+		bt.row = (bt.row + 1) % BATTLE_ROWS
+	case .West, .East:
+		cycle_target(bt, c == .West ? -1 : 1)
+	case .Confirm:
+		battle_action(g, bt.row)
+	}
+}
+
+// Steps the target through the live enemy stacks.
+cycle_target :: proc(bt: ^Battle, by: int) {
+	start := max(bt.target, 0)
+	for k in 1 ..= bt.n {
+		i := ((start + by * k) % bt.n + bt.n) % bt.n
+		if bt.stacks[i].side == 1 && alive(&bt.stacks[i]) {
+			bt.target = i
+			return
+		}
+	}
+}
+
+battle_action :: proc(g: ^Game, row: int) {
+	bt := &g.battle
+	switch row {
+	case 0:
+		battle_round(g, bt)
+	case 1:
+		fight_it_out(g, bt)
+	case 2:
+		player_retreat(g, bt)
+	}
+	if bt.over {
+		finish_battle(g, bt)
+		next_battle(g)
+	}
 }
 
 // ---- The research screen: six field rows, then Back ----
@@ -505,6 +560,10 @@ COUNT_COL :: 13 // the column where "<n>" starts in a ship row
 // moves the cursor there; on the star already under the cursor with yer ships, opens them. While
 // choosing where: a star moves the cursor, the same star again sends. The panel's rows act too.
 pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
+	if g.mode == .Battle {
+		battle_pointer(g, sx, sy)
+		return
+	}
 	if g.mode == .Choose_Race {
 		for i in 0 ..< len(Race) {
 			y := race_row_y(i)
@@ -554,7 +613,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Choose_Race, .Research, .Colony, .Fleet:
+	case .Battle, .Choose_Race, .Research, .Colony, .Fleet:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -624,6 +683,42 @@ colony_pointer :: proc(g: ^Game, sx, sy: int) {
 	}
 }
 
+// Where the battle screen draws: the grid of 24-pixel cells, and the action rows in the panel.
+BATTLE_X :: 6
+BATTLE_Y :: 26
+BATTLE_CELL :: 24
+BATTLE_ACTION_Y :: 190
+
+battle_action_y :: proc(row: int) -> int {
+	return BATTLE_ACTION_Y + row * 12
+}
+
+// A tap on an enemy stack targets it; a tap on an action row does it.
+battle_pointer :: proc(g: ^Game, sx, sy: int) {
+	bt := &g.battle
+	if sx >= PANEL_X {
+		for row in 0 ..< BATTLE_ROWS {
+			if on_row(sy, battle_action_y(row)) {
+				bt.row = row
+				battle_action(g, row)
+				return
+			}
+		}
+		return
+	}
+	gx, gy := (sx - BATTLE_X) / BATTLE_CELL, (sy - BATTLE_Y) / BATTLE_CELL
+	if sx < BATTLE_X || sy < BATTLE_Y || gx >= GRID_W || gy >= GRID_H {
+		return
+	}
+	for i in 0 ..< bt.n {
+		s := &bt.stacks[i]
+		if s.side == 1 && alive(s) && s.x == gx && s.y == gy {
+			bt.target = i
+			return
+		}
+	}
+}
+
 // Where the species screen draws its rows: name, blurb and trait on three lines.
 RACE_TOP :: 40
 RACE_H :: 40
@@ -675,7 +770,7 @@ panel_pointer :: proc(g: ^Game, sx, sy: int) {
 		return
 	}
 	switch g.mode {
-	case .Choose_Race, .Research, .Colony:
+	case .Battle, .Choose_Race, .Research, .Colony:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)

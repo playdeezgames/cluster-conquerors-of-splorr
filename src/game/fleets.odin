@@ -367,7 +367,8 @@ send_fleet :: proc(g: ^Game, owner, from, to: int, ships: [Ship_Type]int) {
 }
 
 // The computer empires decide, then every colony runs, research is shared out, every fleet moves a
-// turn, arrivals are dealt with, fuel burns and refills, paperwork is lost, and sight is updated.
+// turn, arrivals are dealt with, fuel burns and refills, paperwork is lost, sight is updated, and
+// whoever meets an enemy fights (computer battles at once; yers on the battle screen).
 end_turn :: proc(g: ^Game) {
 	for e in 1 ..< g.empire_count {
 		ai_turn(g, e)
@@ -434,6 +435,7 @@ end_turn :: proc(g: ^Game) {
 		}
 	}
 	update_sight(g)
+	find_battles(g)
 }
 
 // A fleet reaches a star: a wormhole throws it somewhere else; an Inspector files a survey; a Moving

@@ -21,6 +21,12 @@ PICKS = [
     ('Van',         52, 7),   # white van: the Moving Van, and the marker for fleets in transit
     ('Wormhole',    28, 13),  # purple vortex: a star known to be a wormhole
     ('Barrel',      11, 36),  # barrel: the Gas Can
+    ('Scooter',     73, 7),   # orange scooter: the Inspector
+    ('Car',         59, 7),   # green car, front: the Golf Cart
+    ('Truck',       54, 7),   # truck cab: the Pickup
+    ('Bus',         64, 7),   # green bus, front: the Carpool
+    ('Tank',        68, 7),   # tank: the Monster Truck
+    ('Wall',        0, 2),    # grey cobblestone: a defence base
 ]
 
 def tile(col, row):

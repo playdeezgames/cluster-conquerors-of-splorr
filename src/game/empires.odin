@@ -41,6 +41,32 @@ Empire :: struct {
 	tech:     Research,
 	met:      [MAX_EMPIRES]bool, // has seen this empire's colonies or ships
 	sees:     [MAX_STARS]bool, // stars in sight this turn
+	intel:    [MAX_STARS]Intel, // what it last saw at each star
+}
+
+// What an empire last saw at a star: whose colony, and how much there could fight back.
+Intel :: struct {
+	seen:     bool,
+	owner:    int, // the colony's owner, or NO_OWNER
+	strength: int, // hits of everything armed there that is not the watcher's (bases count)
+}
+
+// Hits of everything armed at a star that is not `except`'s: bases and armed ships.
+strength_at :: proc(g: ^Game, star, except: int) -> int {
+	n := 0
+	if c := any_colony(g, star); c != nil && c.owner != except {
+		n += c.bases * BASE_COMBAT.hp
+	}
+	for &f in g.fleets {
+		if f.used && f.star == star && f.owner != except {
+			for c, t in f.ships {
+				if COMBAT[t].weapons > 0 {
+					n += c * COMBAT[t].hp
+				}
+			}
+		}
+	}
+	return n
 }
 
 // Messages for the news ticker only matter when they are about you.
@@ -97,6 +123,22 @@ update_sight :: proc(g: ^Game) {
 		if f.used {
 			x, y := fleet_cell(g, &f)
 			look(g, f.owner, x, y)
+		}
+	}
+	for o in 0 ..< g.empire_count {
+		for i in 0 ..< g.star_count {
+			if !g.empires[o].sees[i] {
+				continue
+			}
+			owner := NO_OWNER
+			if c := any_colony(g, i); c != nil {
+				owner = c.owner
+			}
+			g.empires[o].intel[i] = {
+				seen     = true,
+				owner    = owner,
+				strength = strength_at(g, i, o),
+			}
 		}
 	}
 	// First contact: an empire's colony or ships in another's sight.
