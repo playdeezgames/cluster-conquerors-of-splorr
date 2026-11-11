@@ -204,6 +204,30 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 		}
 		g.empires[e].home = best
 	}
+	// The Clubhouse: the star farthest from every home, a Large Garden world with Ancient Artifacts,
+	// guarded by a very large space moth.
+	{
+		best, best_d := NO_STAR, -1
+		for i in 0 ..< g.star_count {
+			if is_home(g, i) {
+				continue
+			}
+			d := max(int)
+			for e in 0 ..< g.empire_count {
+				h := g.stars[g.empires[e].home]
+				dx, dy := g.stars[i].x - h.x, g.stars[i].y - h.y
+				d = min(d, dx * dx + dy * dy)
+			}
+			if d > best_d {
+				best, best_d = i, d
+			}
+		}
+		g.clubhouse = best
+		club := &g.stars[best]
+		club.name = "The Clubhouse"
+		club.planet, club.size, club.special = .Garden, .Large, .Artifacts
+		g.moth_alive = true
+	}
 	for e in 0 ..< g.empire_count {
 		home := &g.stars[g.empires[e].home]
 		home.planet, home.size, home.special = .Terran, .Medium, .None
@@ -217,7 +241,7 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 	// Wormholes: any stars but homes.
 	for placed := 0; placed < WORMHOLES; {
 		i := rng_int(&r, g.star_count)
-		if !is_home(g, i) && !g.stars[i].wormhole {
+		if !is_home(g, i) && i != g.clubhouse && !g.stars[i].wormhole {
 			g.stars[i].wormhole = true
 			placed += 1
 		}

@@ -387,6 +387,9 @@ movers_arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	if f.ships[.Moving_Van] == 0 || s.wormhole || any_colony(g, star) != nil {
 		return
 	}
+	if star == g.clubhouse && g.moth_alive {
+		return // nobody unpacks under the moth
+	}
 	r := &s.reports[f.owner]
 	special := r.filed ? r.special : Special.None
 	r^ = {
@@ -419,4 +422,44 @@ movers_arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	add(&b, PLANET_NAMES[s.planet])
 	add(&b, " world. Welcome to the neighbourhood.")
 	tell(g, f.owner, text(&b))
+	if star == g.clubhouse {
+		lost_tech(g, f.owner)
+	}
+}
+
+LOST_TECHS :: 3
+
+// Whoever settles the Clubhouse finds three techs nobody else has, from any field, offered or not.
+lost_tech :: proc(g: ^Game, owner: int) {
+	res := &g.empires[owner].tech
+	tell(g, owner, "Behind the bar at the Clubhouse: three binders of lost technology.")
+	for given := 0; given < LOST_TECHS; {
+		unknown := 0
+		for f in Field {
+			for k in res.known[f] {
+				if !k {
+					unknown += 1
+				}
+			}
+		}
+		if unknown == 0 {
+			return
+		}
+		pick := rng_int(&g.rng, unknown)
+		done := false
+		for f in Field {
+			for i in 0 ..< TECHS_PER_FIELD {
+				if res.known[f][i] {
+					continue
+				}
+				if pick == 0 && !done {
+					res.offered[f][i] = true
+					learn(g, owner, f, i)
+					done = true
+				}
+				pick -= 1
+			}
+		}
+		given += 1
+	}
 }

@@ -165,7 +165,7 @@ test_rich_and_artifacts :: proc(t: ^testing.T) {
 van_target :: proc(g: ^Game, planet: Planet_Type) -> int {
 	to := NO_STAR
 	for i in 0 ..< g.star_count {
-		if i != g.home && !g.stars[i].wormhole && send_problem(g, PLAYER, g.home, i, only(.Moving_Van, 1)) == "" {
+		if i != g.home && i != g.clubhouse && !g.stars[i].wormhole && send_problem(g, PLAYER, g.home, i, only(.Moving_Van, 1)) == "" {
 			to = i
 			break
 		}

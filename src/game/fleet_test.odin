@@ -10,7 +10,7 @@ nearest_other :: proc(g: ^Game) -> int {
 	for i in 0 ..< g.star_count {
 		s := g.stars[i]
 		d := (s.x - h.x) * (s.x - h.x) + (s.y - h.y) * (s.y - h.y)
-		if i != g.home && !s.wormhole && d < best_d {
+		if i != g.home && i != g.clubhouse && !s.wormhole && d < best_d {
 			best, best_d = i, d
 		}
 	}

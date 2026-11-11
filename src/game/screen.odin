@@ -65,6 +65,10 @@ Gfx :: enum {
 	Bus,
 	Tank,
 	Wall,
+	Moth_TL,
+	Moth_TR,
+	Moth_BL,
+	Moth_BR,
 }
 
 cls :: proc(f: ^Frame, c: u8) {

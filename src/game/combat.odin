@@ -34,10 +34,14 @@ COMBAT := [Ship_Type]Combat_Info {
 }
 
 BASE_COMBAT :: Combat_Info{15, 2, 4, 0} // a defence base: never moves
+MOTH_COMBAT :: Combat_Info{72, 12, 4, 0} // the very large space moth: about three Monster Trucks, never leaves
+MOTH_DAMAGE :: 4
+MOTH_HIT :: 50
 
 Stack :: struct {
 	side:    int, // 0 or 1
 	base:    bool, // defence bases rather than ships
+	moth:    bool, // the Clubhouse's guardian
 	kind:    Ship_Type,
 	count:   int,
 	start:   int, // count when the battle began
@@ -155,6 +159,24 @@ setup_battle :: proc(g: ^Game, star, a, b: int) -> Battle {
 				}
 				bt.n += 1
 			}
+		}
+		if owner == MOTH {
+			bt.stacks[bt.n] = {
+				side    = side,
+				moth    = true,
+				count   = 1,
+				start   = 1,
+				hp      = MOTH_COMBAT.hp,
+				full    = MOTH_COMBAT.hp,
+				x       = back - 1,
+				y       = free_row(&used, back - 1, BASE_ROWS[:]),
+				weapons = MOTH_COMBAT.weapons,
+				range   = MOTH_COMBAT.range,
+				to_hit  = MOTH_HIT,
+				damage  = MOTH_DAMAGE,
+			}
+			bt.n += 1
+			continue
 		}
 		if c := colony_of(g, star, owner); c != nil && c.bases > 0 && bt.n < MAX_STACKS {
 			d := bonus(g, owner, .Base_Defence)
@@ -470,6 +492,21 @@ finish_battle :: proc(g: ^Game, bt: ^Battle) {
 			}
 		}
 	}
+	for i in 0 ..< bt.n {
+		if bt.stacks[i].moth && bt.stacks[i].count == 0 && g.moth_alive {
+			g.moth_alive = false
+			who := bt.owners[1 - bt.stacks[i].side]
+			b: Text
+			if who == PLAYER {
+				add(&b, "The moth is gone. The porch light is still on. The Clubhouse is anybody's.")
+			} else {
+				add(&b, "The ")
+				add(&b, empire_name(g, who))
+				add(&b, " have seen off the moth. The Clubhouse is anybody's.")
+			}
+			say(g, text(&b))
+		}
+	}
 	if bt.retreat >= 0 {
 		owner := bt.owners[bt.retreat]
 		to := retreat_to(g, bt, bt.retreat)
@@ -493,9 +530,13 @@ finish_battle :: proc(g: ^Game, bt: ^Battle) {
 		add_int(&b, lost[mine])
 		add(&b, ", the ")
 		add(&b, empire_name(g, bt.owners[1 - mine]))
-		add(&b, " lost ")
-		add_int(&b, lost[1 - mine])
-		add(&b, ".")
+		if bt.owners[1 - mine] == MOTH {
+			add(&b, g.moth_alive ? " lost nothing it would miss." : " lost its appetite.")
+		} else {
+			add(&b, " lost ")
+			add_int(&b, lost[1 - mine])
+			add(&b, ".")
+		}
 		if bt.retreat == mine {
 			add(&b, " Yer ships withdrew.")
 		} else if bt.retreat == 1 - mine {
@@ -526,6 +567,22 @@ find_battles :: proc(g: ^Game) {
 	if g.outcome != .Playing {
 		return
 	}
+	// Whoever parks at the Clubhouse meets the moth first.
+	if g.moth_alive {
+		for e in 0 ..< g.empire_count {
+			if fleet_of(g, g.clubhouse, e) == nil {
+				continue
+			}
+			if e == PLAYER {
+				g.pending[g.pending_n] = {g.clubhouse, MOTH}
+				g.pending_n += 1
+				continue
+			}
+			bt := setup_battle(g, g.clubhouse, e, MOTH)
+			fight_it_out(g, &bt)
+			finish_battle(g, &bt)
+		}
+	}
 	for i in 0 ..< g.star_count {
 		for a in 0 ..< g.empire_count {
 			for b in a + 1 ..< g.empire_count {
@@ -554,23 +611,29 @@ next_battle :: proc(g: ^Game) {
 	for g.pending_i < g.pending_n {
 		p := g.pending[g.pending_i]
 		g.pending_i += 1
-		if present(g, p.x, PLAYER) && present(g, p.x, p.y) && will_fight(g, p.x, PLAYER, p.y) {
+		moth := p.y == MOTH && g.moth_alive && fleet_at(g, p.x) != nil
+		if moth || (p.y != MOTH && present(g, p.x, PLAYER) && present(g, p.x, p.y) && will_fight(g, p.x, PLAYER, p.y)) {
 			g.battle = setup_battle(g, p.x, PLAYER, p.y)
 			g.mode = .Battle
 			g.cursor = p.x
 			b: Text
-			add(&b, "The ")
-			add(&b, empire_name(g, p.y))
-			add(&b, " at ")
-			add(&b, g.stars[p.x].name)
-			add(&b, " (Lot ")
-			add_int(&b, p.x + 1)
-			add(&b, "). They hate you. Battle stations.")
-			say(g, text(&b))
+			if moth {
+				say(g, "Something very large is drawn to the Clubhouse's porch light. It is a moth.")
+			} else {
+				add(&b, "The ")
+				add(&b, empire_name(g, p.y))
+				add(&b, " at ")
+				add(&b, g.stars[p.x].name)
+				add(&b, " (Lot ")
+				add_int(&b, p.x + 1)
+				add(&b, "). They hate you. Battle stations.")
+				say(g, text(&b))
+			}
 			return
 		}
 	}
 	if g.mode == .Battle {
 		g.mode = .Map
+		show_waiting_meeting(g)
 	}
 }

@@ -140,6 +140,9 @@ ai_attack :: proc(g: ^Game, owner: int) {
 		best, best_d := NO_STAR, max(int)
 		for t in 0 ..< g.star_count {
 			in_ := e.intel[t]
+			if t == g.clubhouse && g.moth_alive && !in_.seen {
+				in_ = {seen = true, owner = NO_OWNER, strength = MOTH_COMBAT.hp} // the legend everyone has heard
+			}
 			if t == i || !in_.seen || in_.strength == 0 {
 				continue
 			}
@@ -247,6 +250,9 @@ best_settle_target :: proc(g: ^Game, owner, from: int, taken: ^[MAX_STARS]bool) 
 		if !r.filed || s.wormhole_known[owner] || (taken != nil && taken[i]) {
 			continue
 		}
+		if i == g.clubhouse && g.moth_alive {
+			continue // everyone has heard about the moth
+		}
 		if e.sees[i] && any_colony(g, i) != nil {
 			continue
 		}
@@ -346,6 +352,9 @@ nearest_unsurveyed :: proc(g: ^Game, owner, from: int, taken: ^[MAX_STARS]bool) 
 	for i in 0 ..< g.star_count {
 		s := &g.stars[i]
 		if i == from || s.reports[owner].filed || s.wormhole_known[owner] || taken[i] {
+			continue
+		}
+		if i == g.clubhouse && g.moth_alive {
 			continue
 		}
 		if send_problem(g, owner, from, i, ship_one(.Inspector)) != "" {

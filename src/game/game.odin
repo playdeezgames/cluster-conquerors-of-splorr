@@ -53,6 +53,7 @@ Mode :: enum u8 {
 	Fleet,
 	Destination,
 	Battle,
+	Council,
 	Game_Over,
 }
 
@@ -62,6 +63,8 @@ Game :: struct {
 	stars:      [MAX_STARS]Star,
 	star_count: int,
 	home:       int, // yer home star
+	clubhouse:  int, // the legendary star
+	moth_alive: bool, // its guardian
 	cursor:     int, // the star under the cursor; the panel shows it
 	turn:       int,
 	empires:    [MAX_EMPIRES]Empire, // yers first, then the computer rivals
@@ -72,6 +75,7 @@ Game :: struct {
 	send:       [Ship_Type]int, // how many of each are going
 	row:        int, // the highlighted row of the ship list
 	outcome:    Outcome, // still playing, won or lost
+	council:    Council, // the Homeowners' Association
 	battle:     Battle, // the player's battle on screen
 	pending:    [8][2]int, // the player's battles this turn: star, enemy
 	pending_n:  int,
@@ -99,13 +103,14 @@ init_game :: proc(g: ^Game, seed: u64) {
 	g.cursor = g.home
 	g.turn = 1
 	g.mode = .Map
+	g.council.president = NO_OWNER
 	update_sight(g)
 	b: Text
 	add(&b, "Welcome to ")
 	add(&b, g.stars[g.home].name)
 	add(&b, ". The Homeowners' Association has been notified.")
 	say(g, text(&b))
-	say(g, "(Slice 1, step 7: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
+	say(g, "(Slice 1, step 8: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
 }
 
 // A new game in the browser starts on the species screen; tests start straight on the map as Geese.
@@ -158,6 +163,8 @@ command :: proc(g: ^Game, c: Command) {
 		return
 	}
 	switch g.mode {
+	case .Council:
+		council_command(g, c)
 	case .Game_Over:
 		// Enter/OK starts a new cluster.
 		if c == .Confirm {
@@ -578,6 +585,10 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		command(g, .Confirm)
 		return
 	}
+	if g.mode == .Council {
+		council_pointer(g, sx, sy)
+		return
+	}
 	if g.mode == .Battle {
 		battle_pointer(g, sx, sy)
 		return
@@ -631,7 +642,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -737,6 +748,30 @@ battle_pointer :: proc(g: ^Game, sx, sy: int) {
 	}
 }
 
+// Where the council screen draws: the minutes from the top, the vote's choices near the foot.
+MINUTES_Y :: 8
+VOTE_Y :: 176
+
+vote_row_y :: proc(row: int) -> int {
+	return VOTE_Y + row * 12
+}
+
+// A tap on a vote's choice votes it; anywhere else closes the minutes once the vote is done.
+council_pointer :: proc(g: ^Game, sx, sy: int) {
+	c := &g.council
+	if c.voting {
+		for row in 0 ..< COUNCIL_CHOICES {
+			if on_row(sy, vote_row_y(row)) {
+				c.choice = row
+				cast_votes(g, council_vote_of(row))
+				return
+			}
+		}
+		return
+	}
+	g.mode = .Map
+}
+
 // Where the species screen draws its rows: name, blurb and trait on three lines.
 RACE_TOP :: 40
 RACE_H :: 40
@@ -788,7 +823,7 @@ panel_pointer :: proc(g: ^Game, sx, sy: int) {
 		return
 	}
 	switch g.mode {
-	case .Game_Over, .Battle, .Choose_Race, .Research, .Colony:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)

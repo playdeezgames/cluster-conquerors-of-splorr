@@ -27,6 +27,10 @@ PICKS = [
     ('Bus',         64, 7),   # green bus, front: the Carpool
     ('Tank',        68, 7),   # tank: the Monster Truck
     ('Wall',        0, 2),    # grey cobblestone: a defence base
+    ('Moth_TL',     40, 48),  # the very large space moth, 2 by 2: top left
+    ('Moth_TR',     41, 48),
+    ('Moth_BL',     40, 49),
+    ('Moth_BR',     41, 49),
 ]
 
 def tile(col, row):

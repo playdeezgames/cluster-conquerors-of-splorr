@@ -5,6 +5,8 @@ package game
 draw_game :: proc(f: ^Frame, g: ^Game) {
 	cls(f, COLOR_BLACK)
 	switch g.mode {
+	case .Council:
+		draw_council(f, g)
 	case .Game_Over:
 		draw_game_over(f, g)
 	case .Battle:
@@ -146,6 +148,8 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	add_int(&money, g.empires[PLAYER].bj)
 	print(f, text(&money), x + 9 * GLYPH_W, 28, COLOR_YELLOW)
 	switch g.mode {
+	case .Council:
+		draw_empire_panel(f, g)
 	case .Game_Over:
 	case .Battle:
 		draw_battle_panel(f, g)
@@ -173,6 +177,13 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 	s := &g.stars[g.cursor]
 	draw_star_heading(f, g, g.cursor, y)
 	y += 24
+	if g.cursor == g.clubhouse && g.moth_alive {
+		print(f, "Guarded by a", x, y, COLOR_ORANGE)
+		print(f, "very large moth.", x, y + 9, COLOR_ORANGE)
+		print(f, "Drawn by the", x, y + 18, COLOR_DARK)
+		print(f, "porch light.", x, y + 27, COLOR_DARK)
+		y += 40
+	}
 	r := &s.reports[PLAYER]
 	if s.wormhole_known[PLAYER] {
 		print(f, "A wormhole.", x, y, COLOR_PURPLE)
@@ -712,7 +723,7 @@ SHIP_GFX := [Ship_Type]Gfx {
 }
 
 stack_name :: proc(s: ^Stack) -> string {
-	return s.base ? "Defence base" : SHIPS[s.kind].name
+	return s.moth ? "Space moth" : s.base ? "Defence base" : SHIPS[s.kind].name
 }
 
 // The battle grid: each stack as its picture in its empire's colour, with its count beneath; the
@@ -731,8 +742,10 @@ draw_battle :: proc(f: ^Frame, g: ^Game) {
 	vs: Text
 	add(&vs, "Yer ")
 	add(&vs, RACES[g.empires[PLAYER].race].name)
-	add(&vs, " against the ")
-	add(&vs, empire_name(g, bt.owners[1]))
+	add(&vs, bt.owners[1] == MOTH ? " against a very large space moth" : " against the ")
+	if bt.owners[1] != MOTH {
+		add(&vs, empire_name(g, bt.owners[1]))
+	}
 	print(f, text(&vs), BATTLE_X, 15, COLOR_LIGHT)
 	for gy in 0 ..< GRID_H {
 		for gx in 0 ..< GRID_W {
@@ -745,7 +758,17 @@ draw_battle :: proc(f: ^Frame, g: ^Game) {
 			continue
 		}
 		cx, cy := BATTLE_X + st.x * BATTLE_CELL, BATTLE_Y + st.y * BATTLE_CELL
-		color := EMPIRE_COLORS[bt.owners[st.side]]
+		color := owner_color(bt.owners[st.side])
+		if st.moth {
+			draw_gfx(f, .Moth_TL, cx, cy, color)
+			draw_gfx(f, .Moth_TR, cx + TILE, cy, color)
+			draw_gfx(f, .Moth_BL, cx, cy + TILE, color)
+			draw_gfx(f, .Moth_BR, cx + TILE, cy + TILE, color)
+			if i == bt.target {
+				frame_rect(f, cx + 1, cy + 1, BATTLE_CELL - 1, BATTLE_CELL - 1, COLOR_RED)
+			}
+			continue
+		}
 		draw_gfx(f, st.base ? .Wall : SHIP_GFX[st.kind], cx + 6, cy + 2, color)
 		n: Text
 		add_int(&n, st.count)
@@ -763,7 +786,7 @@ draw_battle_panel :: proc(f: ^Frame, g: ^Game) {
 	x := PANEL_TEXT_X
 	y := 44
 	for side in 0 ..< 2 {
-		print(f, side == 0 ? "Yers:" : "Theirs:", x, y, EMPIRE_COLORS[bt.owners[side]])
+		print(f, side == 0 ? "Yers:" : "Theirs:", x, y, owner_color(bt.owners[side]))
 		y += 10
 		for i in 0 ..< bt.n {
 			st := &bt.stacks[i]
@@ -813,4 +836,38 @@ draw_game_over :: proc(f: ^Frame, g: ^Game) {
 	add(&t, ".")
 	print(f, text(&t), x, 110, COLOR_MID)
 	print(f, "Enter/OK or a tap: a new cluster.", x, 140, COLOR_CYAN)
+}
+
+// The minutes of a meeting, and the vote if there is one.
+draw_council :: proc(f: ^Frame, g: ^Game) {
+	c := &g.council
+	x := COLONY_X
+	for i in 0 ..< c.lines {
+		color: u8 = i == 0 ? COLOR_WHITE : COLOR_LIGHT
+		print(f, message(&c.minutes[i]), x, MINUTES_Y + i * 10, color)
+	}
+	if c.voting {
+		print(f, "Yer vote:", x, VOTE_Y - 14, COLOR_WHITE)
+		for row in 0 ..< COUNCIL_CHOICES {
+			y := vote_row_y(row)
+			if c.choice == row {
+				fill_rect(f, 0, y - 2, VIEW_W * TILE, 11, COLOR_NAVY)
+			}
+			b: Text
+			if row < 2 {
+				cand := c.candidates[row]
+				add(&b, "Vote for ")
+				add(&b, cand == PLAYER ? "yerselves" : who(g, cand))
+			} else {
+				add(&b, "Abstain")
+			}
+			print(f, text(&b), x, y, COLOR_CYAN)
+		}
+		print(f, "Up/Down: pick. Enter/OK or a tap: vote.", x, VIEW_H * TILE - 12, COLOR_DARK)
+	} else {
+		print(f, "Enter/OK or a tap: close the minutes.", x, VIEW_H * TILE - 12, COLOR_CYAN)
+	}
+	if c.ever_won {
+		print(f, "You have been President. That counts as winning.", x, VIEW_H * TILE - 24, COLOR_YELLOW)
+	}
 }

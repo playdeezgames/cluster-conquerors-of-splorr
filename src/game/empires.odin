@@ -56,6 +56,9 @@ Intel :: struct {
 // Hits of everything armed at a star that is not `except`'s: bases and armed ships.
 strength_at :: proc(g: ^Game, star, except: int) -> int {
 	n := 0
+	if star == g.clubhouse && g.moth_alive {
+		n += MOTH_COMBAT.hp
+	}
 	if c := any_colony(g, star); c != nil && c.owner != except {
 		n += c.bases * BASE_COMBAT.hp
 	}
@@ -78,8 +81,17 @@ tell :: proc(g: ^Game, owner: int, s: string) {
 	}
 }
 
+MOTH :: -2 // the Clubhouse's guardian, as a side in a battle
+
 empire_name :: proc(g: ^Game, owner: int) -> string {
+	if owner == MOTH {
+		return "moth"
+	}
 	return RACES[g.empires[owner].race].name
+}
+
+owner_color :: proc(owner: int) -> u8 {
+	return owner == MOTH ? COLOR_LIGHT : EMPIRE_COLORS[owner]
 }
 
 // Picks the rivals' species once you have chosen yers: two of the other three, at random.
