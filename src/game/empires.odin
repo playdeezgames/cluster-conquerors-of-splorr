@@ -1,0 +1,181 @@
+package game
+
+// Empires (slice 1 step 5): you and two computer rivals, each an animal species played straight, each
+// with its own BJ, research, survey reports and sight. Everybody hates everybody.
+
+PLAYER :: 0
+MAX_EMPIRES :: 3
+NO_OWNER :: -1
+SIGHT_RANGE :: 7 // cells an empire can see from its colonies and ships
+
+Race :: enum u8 {
+	Beavers, // industry
+	Owls, // research
+	Rabbits, // growth
+	Geese, // ship attack
+}
+
+Race_Info :: struct {
+	name:  string, // "Beavers"
+	one:   string, // "Beaver"
+	blurb: string,
+	trait: string,
+}
+
+// The slice-1 four (PLAN.md); the other six arrive in slice 2.
+RACES := [Race]Race_Info {
+	.Beavers = {"Beavers", "Beaver", "Build whether or not anyone asked.", "Factories make half as much again."},
+	.Owls    = {"Owls", "Owl", "Read everything, finish nothing.", "Research comes half as fast again."},
+	.Rabbits = {"Rabbits", "Rabbit", "You know.", "Households grow half as fast again."},
+	.Geese   = {"Geese", "Goose", "Honk, then attack.", "Ships aim a fifth better (in battle, step 6)."},
+}
+
+// The colour each empire's colonies and ships are drawn in.
+EMPIRE_COLORS := [MAX_EMPIRES]u8{COLOR_GREEN, COLOR_RED, COLOR_ORANGE}
+
+Empire :: struct {
+	race:     Race,
+	home:     int,
+	bj:       int, // billion jools
+	research: int, // this turn's research points, shared out at the turn's end
+	tech:     Research,
+	met:      [MAX_EMPIRES]bool, // has seen this empire's colonies or ships
+	sees:     [MAX_STARS]bool, // stars in sight this turn
+}
+
+// Messages for the news ticker only matter when they are about you.
+tell :: proc(g: ^Game, owner: int, s: string) {
+	if owner == PLAYER {
+		say(g, s)
+	}
+}
+
+empire_name :: proc(g: ^Game, owner: int) -> string {
+	return RACES[g.empires[owner].race].name
+}
+
+// Picks the rivals' species once you have chosen yers: two of the other three, at random.
+assign_rivals :: proc(g: ^Game) {
+	mine := g.empires[PLAYER].race
+	others: [len(Race) - 1]Race
+	n := 0
+	for r in Race {
+		if r != mine {
+			others[n] = r
+			n += 1
+		}
+	}
+	for i := n - 1; i > 0; i -= 1 {
+		j := rng_int(&g.rng, i + 1)
+		others[i], others[j] = others[j], others[i]
+	}
+	for e in 1 ..< g.empire_count {
+		g.empires[e].race = others[e - 1]
+	}
+}
+
+// Where an empire's eyes are: its colonies and its ships, docked or on the way.
+update_sight :: proc(g: ^Game) {
+	for e in 0 ..< g.empire_count {
+		g.empires[e].sees = {}
+	}
+	look :: proc(g: ^Game, owner, x, y: int) {
+		for i in 0 ..< g.star_count {
+			s := g.stars[i]
+			dx, dy := s.x - x, s.y - y
+			if dx * dx + dy * dy <= SIGHT_RANGE * SIGHT_RANGE {
+				g.empires[owner].sees[i] = true
+			}
+		}
+	}
+	for i in 0 ..< g.star_count {
+		if c := any_colony(g, i); c != nil {
+			look(g, c.owner, g.stars[i].x, g.stars[i].y)
+		}
+	}
+	for &f in g.fleets {
+		if f.used {
+			x, y := fleet_cell(g, &f)
+			look(g, f.owner, x, y)
+		}
+	}
+	// First contact: an empire's colony or ships in another's sight.
+	for a in 0 ..< g.empire_count {
+		for b in 0 ..< g.empire_count {
+			if a == b || g.empires[a].met[b] {
+				continue
+			}
+			spot := NO_STAR
+			for i in 0 ..< g.star_count {
+				if !g.empires[a].sees[i] {
+					continue
+				}
+				if c := any_colony(g, i); c != nil && c.owner == b {
+					spot = i
+					break
+				}
+				if fleet_of(g, i, b) != nil {
+					spot = i
+					break
+				}
+			}
+			if spot == NO_STAR {
+				for &f in g.fleets {
+					if f.used && f.owner == b && f.star == NO_STAR && sees_cell(g, a, &f) {
+						spot = f.to
+						break
+					}
+				}
+			}
+			if spot == NO_STAR {
+				continue
+			}
+			g.empires[a].met[b] = true
+			if a == PLAYER {
+				t: Text
+				add(&t, "First contact: the ")
+				add(&t, empire_name(g, b))
+				add(&t, ", near ")
+				add(&t, g.stars[spot].name)
+				add(&t, " (Lot ")
+				add_int(&t, spot + 1)
+				add(&t, "). They hate you. The Homeowners' Association has been notified.")
+				say(g, text(&t))
+			}
+		}
+	}
+}
+
+// Whether a fleet in transit is close enough to anything of the owner's to be seen.
+sees_cell :: proc(g: ^Game, owner: int, f: ^Fleet) -> bool {
+	x, y := fleet_cell(g, f)
+	for i in 0 ..< g.star_count {
+		s := g.stars[i]
+		if !g.empires[owner].sees[i] {
+			continue
+		}
+		mine := false
+		if c := any_colony(g, i); c != nil && c.owner == owner {
+			mine = true
+		}
+		if fleet_of(g, i, owner) != nil {
+			mine = true
+		}
+		dx, dy := s.x - x, s.y - y
+		if mine && dx * dx + dy * dy <= SIGHT_RANGE * SIGHT_RANGE {
+			return true
+		}
+	}
+	return false
+}
+
+// The map cell a fleet is at (part way along, if in transit).
+fleet_cell :: proc(g: ^Game, f: ^Fleet) -> (x, y: int) {
+	if f.star != NO_STAR {
+		return g.stars[f.star].x, g.stars[f.star].y
+	}
+	a, b := g.stars[f.from], g.stars[f.to]
+	done := f.total - f.left
+	t := max(1, f.total)
+	return a.x + (b.x - a.x) * done / t, a.y + (b.y - a.y) * done / t
+}

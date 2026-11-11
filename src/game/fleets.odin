@@ -23,7 +23,7 @@ Ship_Info :: struct {
 // Starting values from PLAN.md; speeds are Claude's (not in the plan), for review.
 SHIPS := [Ship_Type]Ship_Info {
 	.Inspector     = {"Inspector", 10, 6, 4},
-	.Moving_Van    = {"Moving Van", 60, 4, 2},
+	.Moving_Van    = {"Moving Van", 60, 4, 3},
 	.Carpool       = {"Carpool", 20, 4, 3},
 	.Gas_Can       = {"Gas Can", 25, 8, 3},
 	.Golf_Cart     = {"Golf Cart", 20, 4, 4},
@@ -83,6 +83,7 @@ KIT_NAMES := [Kit_Stat]string {
 
 Fleet :: struct {
 	used:    bool,
+	owner:   int, // whose ships these are
 	kit:     Kit, // the technology its ships have been upgraded to (and paid for)
 	ships:   [Ship_Type]int,
 	star:    int, // docked at this star, or NO_STAR while in transit
@@ -132,10 +133,10 @@ fleet_speed :: proc(f: ^Fleet) -> int {
 	return best == max(int) ? 1 : best + f.kit[.Speed]
 }
 
-// The kit yer technology gives a ship built today.
-empire_kit :: proc(g: ^Game) -> (k: Kit) {
+// The kit an empire's technology gives a ship built today.
+empire_kit :: proc(g: ^Game, owner: int) -> (k: Kit) {
 	for s in Kit_Stat {
-		k[s] = bonus(g, KIT_EFFECT[s])
+		k[s] = bonus(g, owner, KIT_EFFECT[s])
 	}
 	return
 }
@@ -161,7 +162,7 @@ affected :: proc(f: ^Fleet, s: Kit_Stat) -> int {
 
 // BJ a fleet still owes for upgrades it has not had (it keeps its old kit until paid).
 owed :: proc(g: ^Game, f: ^Fleet) -> int {
-	now := empire_kit(g)
+	now := empire_kit(g, f.owner)
 	n := 0
 	for s in Kit_Stat {
 		if f.kit[s] < now[s] {
@@ -171,27 +172,29 @@ owed :: proc(g: ^Game, f: ^Fleet) -> int {
 	return n
 }
 
-// Pays what a fleet owes, if there is the BJ for it, and brings its kit up to date.
+// Pays what a fleet owes, if its empire has the BJ for it, and brings its kit up to date.
 pay_upgrades :: proc(g: ^Game, f: ^Fleet) -> bool {
+	e := &g.empires[f.owner]
 	due := owed(g, f)
-	if due == 0 || g.bj < due {
+	if due == 0 || e.bj < due {
 		return false
 	}
-	g.bj -= due
-	f.kit = empire_kit(g)
+	e.bj -= due
+	f.kit = empire_kit(g, f.owner)
 	return true
 }
 
-// A tech has just changed the empire's kit from `before`: every fleet that was up to date is billed
-// for the upgrade, ship by ship; a fleet the BJ cannot cover keeps its old kit and is Unpaid.
-bill_upgrades :: proc(g: ^Game, before: Kit) {
-	now := empire_kit(g)
+// A tech has just changed an empire's kit from `before`: every fleet of its that was up to date is
+// billed for the upgrade, ship by ship; a fleet the BJ cannot cover keeps its old kit and is Unpaid.
+bill_upgrades :: proc(g: ^Game, owner: int, before: Kit) {
+	now := empire_kit(g, owner)
 	if now == before {
 		return
 	}
+	e := &g.empires[owner]
 	billed, ships, unpaid := 0, 0, 0
 	for &f in g.fleets {
-		if !f.used || f.kit != before {
+		if !f.used || f.owner != owner || f.kit != before {
 			continue
 		}
 		fee := 0
@@ -206,8 +209,8 @@ bill_upgrades :: proc(g: ^Game, before: Kit) {
 			f.kit = now
 			continue
 		}
-		if g.bj >= fee {
-			g.bj -= fee
+		if e.bj >= fee {
+			e.bj -= fee
 			f.kit = now
 			billed += fee
 			ships += n
@@ -222,13 +225,13 @@ bill_upgrades :: proc(g: ^Game, before: Kit) {
 		add(&b, " BJ for ")
 		add_int(&b, ships)
 		add(&b, ships == 1 ? " ship." : " ships.")
-		say(g, text(&b))
+		tell(g, owner, text(&b))
 	}
 	if unpaid > 0 {
 		b: Text
 		add_int(&b, unpaid)
 		add(&b, unpaid == 1 ? " ship is Unpaid and keeps its old kit." : " ships are Unpaid and keep their old kit.")
-		say(g, text(&b))
+		tell(g, owner, text(&b))
 	}
 }
 
@@ -239,12 +242,12 @@ fleet_range :: proc(f: ^Fleet) -> int {
 
 // A fleet with no fuel left, away from anywhere to refuel. It waits.
 stranded :: proc(g: ^Game, f: ^Fleet) -> bool {
-	return f.star != NO_STAR && !refuels_at(g, f.star) && fleet_range(f) == 0
+	return f.star != NO_STAR && !refuels_at(g, f.star, f.owner) && fleet_range(f) == 0
 }
 
-// Where yer ships fill up: yer colonies.
-refuels_at :: proc(g: ^Game, star: int) -> bool {
-	return colony_at(g, star) != nil
+// Where an empire's ships fill up: its own colonies (treaties come in slice 2).
+refuels_at :: proc(g: ^Game, star, owner: int) -> bool {
+	return colony_of(g, star, owner) != nil
 }
 
 // Turns from one star to another at a speed: the fewest whole turns that cover the distance.
@@ -258,24 +261,30 @@ trip_turns :: proc(g: ^Game, from, to, speed: int) -> int {
 	return t
 }
 
-// Yer fleet docked at a star, or nil.
-fleet_at :: proc(g: ^Game, star: int) -> ^Fleet {
+// An empire's fleet docked at a star, or nil.
+fleet_of :: proc(g: ^Game, star, owner: int) -> ^Fleet {
 	for &f in g.fleets {
-		if f.used && f.star == star {
+		if f.used && f.star == star && f.owner == owner {
 			return &f
 		}
 	}
 	return nil
 }
 
-new_fleet :: proc(g: ^Game) -> ^Fleet {
+// Yer fleet docked at a star, or nil.
+fleet_at :: proc(g: ^Game, star: int) -> ^Fleet {
+	return fleet_of(g, star, PLAYER)
+}
+
+new_fleet :: proc(g: ^Game, owner := PLAYER) -> ^Fleet {
 	for &f in g.fleets {
 		if !f.used {
 			f = {
-				used = true,
-				star = NO_STAR,
-				from = NO_STAR,
-				to   = NO_STAR,
+				used  = true,
+				owner = owner,
+				star  = NO_STAR,
+				from  = NO_STAR,
+				to    = NO_STAR,
 			}
 			return &f
 		}
@@ -283,12 +292,12 @@ new_fleet :: proc(g: ^Game) -> ^Fleet {
 	return nil
 }
 
-// Puts a fleet down at a star, joining any fleet already there (the joined fleet goes as far as its
-// emptiest tank, so it keeps the larger `away`).
+// Puts a fleet down at a star, joining any fleet of the same empire already there (the joined fleet
+// goes as far as its emptiest tank, so it keeps the larger `away`, and with the oldest kit).
 dock :: proc(g: ^Game, f: ^Fleet, star: int) {
 	f.star, f.from, f.to, f.left, f.total = star, NO_STAR, NO_STAR, 0, 0
 	for &o in g.fleets {
-		if o.used && &o != f && o.star == star {
+		if o.used && &o != f && o.star == star && o.owner == f.owner {
 			for c, t in f.ships {
 				o.ships[t] += c
 			}
@@ -303,8 +312,8 @@ dock :: proc(g: ^Game, f: ^Fleet, star: int) {
 	}
 }
 
-// Why a fleet cannot be sent from `from` to `to` with these ships, or "" if it can.
-send_problem :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) -> string {
+// Why an empire cannot send these ships from `from` to `to`, or "" if it can.
+send_problem :: proc(g: ^Game, owner, from, to: int, ships: [Ship_Type]int) -> string {
 	if to == from {
 		return "They are already here."
 	}
@@ -314,9 +323,14 @@ send_problem :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) -> string {
 	if fleet_size(&trial) == 0 {
 		return "Nobody is going."
 	}
-	f := fleet_at(g, from)
+	f := fleet_of(g, from, owner)
 	if f == nil {
 		return "Nobody is here."
+	}
+	for c, t in ships {
+		if c > f.ships[t] {
+			return "Not that many here."
+		}
 	}
 	trial.away = f.away
 	trial.kit = f.kit
@@ -326,10 +340,10 @@ send_problem :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) -> string {
 	return ""
 }
 
-// Sends some of the ships at `from` towards `to`. The caller has checked send_problem.
-send_fleet :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) {
-	src := fleet_at(g, from)
-	f := new_fleet(g)
+// Sends some of an empire's ships at `from` towards `to`. The caller has checked send_problem.
+send_fleet :: proc(g: ^Game, owner, from, to: int, ships: [Ship_Type]int) {
+	src := fleet_of(g, from, owner)
+	f := new_fleet(g, owner)
 	if src == nil || f == nil {
 		return
 	}
@@ -352,13 +366,18 @@ send_fleet :: proc(g: ^Game, from, to: int, ships: [Ship_Type]int) {
 	f.left = f.total
 }
 
-// Runs the colonies, moves every fleet a turn, deals with arrivals, burns and refills fuel, and loses
-// paperwork.
+// The computer empires decide, then every colony runs, research is shared out, every fleet moves a
+// turn, arrivals are dealt with, fuel burns and refills, paperwork is lost, and sight is updated.
 end_turn :: proc(g: ^Game) {
+	for e in 1 ..< g.empire_count {
+		ai_turn(g, e)
+	}
 	for i in 0 ..< g.star_count {
 		run_colony(g, i)
 	}
-	research_turn(g)
+	for e in 0 ..< g.empire_count {
+		research_turn(g, e)
+	}
 	for &f in g.fleets {
 		if !f.used || f.star != NO_STAR {
 			continue
@@ -373,7 +392,7 @@ end_turn :: proc(g: ^Game) {
 			continue
 		}
 		was_stranded := stranded(g, &f)
-		if f.star != NO_STAR && refuels_at(g, f.star) {
+		if f.star != NO_STAR && refuels_at(g, f.star, f.owner) {
 			f.away = 0
 			f.refills = f.ships[.Gas_Can] * GAS_CAN_REFILLS
 			continue
@@ -389,7 +408,7 @@ end_turn :: proc(g: ^Game) {
 				add(&b, " fills everyone up. ")
 				add_int(&b, f.refills)
 				add(&b, " refills left.")
-				say(g, text(&b))
+				tell(g, f.owner, text(&b))
 			}
 			continue
 		}
@@ -398,20 +417,23 @@ end_turn :: proc(g: ^Game) {
 			add(&b, "Yer ships at Lot ")
 			add_int(&b, f.star + 1)
 			add(&b, " are out of fuel. They will wait for a Gas Can.")
-			say(g, text(&b))
+			tell(g, f.owner, text(&b))
 		}
 	}
-	for i in 0 ..< g.star_count {
-		r := &g.stars[i].report
-		if colony_at(g, i) == nil && r.filed && rng_int(&g.rng, 1000) < MISFILE_PER_MILLE {
-			r^ = {}
-			b: Text
-			add(&b, "The survey of Lot ")
-			add_int(&b, i + 1)
-			add(&b, " has been misfiled.")
-			say(g, text(&b))
+	for e in 0 ..< g.empire_count {
+		for i in 0 ..< g.star_count {
+			r := &g.stars[i].reports[e]
+			if colony_of(g, i, e) == nil && r.filed && rng_int(&g.rng, 1000) < MISFILE_PER_MILLE {
+				r^ = {}
+				b: Text
+				add(&b, "The survey of Lot ")
+				add_int(&b, i + 1)
+				add(&b, " has been misfiled.")
+				tell(g, e, text(&b))
+			}
 		}
 	}
+	update_sight(g)
 }
 
 // A fleet reaches a star: a wormhole throws it somewhere else; an Inspector files a survey; a Moving
@@ -420,7 +442,7 @@ arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	at := star
 	s := &g.stars[at]
 	if s.wormhole {
-		s.wormhole_known = true
+		s.wormhole_known[f.owner] = true
 		for {
 			at = rng_int(&g.rng, g.star_count)
 			if !g.stars[at].wormhole {
@@ -433,10 +455,10 @@ arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 		add(&b, " was a wormhole. Yer ships came out at Lot ")
 		add_int(&b, at + 1)
 		add(&b, ".")
-		say(g, text(&b))
+		tell(g, f.owner, text(&b))
 	}
-	if f.ships[.Inspector] > 0 && colony_at(g, at) == nil {
-		survey(g, at)
+	if f.ships[.Inspector] > 0 && colony_of(g, at, f.owner) == nil {
+		survey(g, f.owner, at)
 	}
 	movers_arrive(g, f, at)
 	if fleet_size(f) == 0 {
@@ -446,8 +468,8 @@ arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	dock(g, f, at)
 }
 
-// Files a fresh report on a star, which may be wrong in the ways the plan allows.
-survey :: proc(g: ^Game, i: int) {
+// Files a fresh report on a star for an empire, which may be wrong in the ways the plan allows.
+survey :: proc(g: ^Game, owner, i: int) {
 	s := &g.stars[i]
 	r := Report {
 		filed   = true,
@@ -455,7 +477,7 @@ survey :: proc(g: ^Game, i: int) {
 		size    = s.size,
 		special = s.special,
 	}
-	if rng_int(&g.rng, 100) < max(0, BAD_READING_PERCENT - SURVEY_STEP * bonus(g, .Survey)) {
+	if rng_int(&g.rng, 100) < max(0, BAD_READING_PERCENT - SURVEY_STEP * bonus(g, owner, .Survey)) {
 		if rng_int(&g.rng, 2) == 0 {
 			r.planet = Planet_Type((int(s.planet) + 1 + rng_int(&g.rng, len(Planet_Type) - 1)) % len(Planet_Type))
 		} else {
@@ -465,15 +487,15 @@ survey :: proc(g: ^Game, i: int) {
 	if s.special == .None && rng_int(&g.rng, FAKE_SPECIAL_IN) == 0 {
 		r.special = rng_int(&g.rng, 2) == 0 ? .Rich : .Artifacts
 	}
-	s.report = r
+	s.reports[owner] = r
 	b: Text
 	add(&b, "Survey filed: ")
 	add(&b, s.name)
 	add(&b, " (Lot ")
 	add_int(&b, i + 1)
 	add(&b, "), ")
-	describe_report(&b, &s.report)
-	say(g, text(&b))
+	describe_report(&b, &s.reports[owner])
+	tell(g, owner, text(&b))
 }
 
 // "a Rich, Large Ocean world." from a report.

@@ -171,12 +171,12 @@ known_count :: proc(res: ^Research, f: Field) -> int {
 	return n
 }
 
-// The sum of a kind of effect over every known tech.
-bonus :: proc(g: ^Game, e: Effect) -> int {
+// The sum of a kind of effect over every tech an empire knows.
+bonus :: proc(g: ^Game, owner: int, e: Effect) -> int {
 	n := 0
 	for f in Field {
 		for i in 0 ..< TECHS_PER_FIELD {
-			if g.tech.known[f][i] && TECHS[f][i].effect == e {
+			if g.empires[owner].tech.known[f][i] && TECHS[f][i].effect == e {
 				n += TECHS[f][i].amount
 			}
 		}
@@ -184,14 +184,14 @@ bonus :: proc(g: ^Game, e: Effect) -> int {
 	return n
 }
 
-can_settle :: proc(g: ^Game, planet: Planet_Type) -> bool {
+can_settle :: proc(g: ^Game, owner: int, planet: Planet_Type) -> bool {
 	if TYPE_PERCENT[planet] > 0 {
 		return true
 	}
 	for f in Field {
 		for i in 0 ..< TECHS_PER_FIELD {
 			t := TECHS[f][i]
-			if g.tech.known[f][i] && t.effect == .Settle && t.planet == planet {
+			if g.empires[owner].tech.known[f][i] && t.effect == .Settle && t.planet == planet {
 				return true
 			}
 		}
@@ -203,11 +203,12 @@ set_research_slider :: proc(res: ^Research, f: Field, value: int) {
 	set_share(slice.enumerated_array(&res.slider), slice.enumerated_array(&res.locked), int(f), value)
 }
 
-// Shares out this turn's research and finishes whatever techs it pays for.
-research_turn :: proc(g: ^Game) {
-	res := &g.tech
-	pool := g.research
-	g.research = 0
+// Shares out an empire's research this turn and finishes whatever techs it pays for.
+research_turn :: proc(g: ^Game, owner: int) {
+	e := &g.empires[owner]
+	res := &e.tech
+	pool := e.research
+	e.research = 0
 	given := 0
 	for f in Field {
 		share := pool * res.slider[f] / 100
@@ -228,15 +229,15 @@ research_turn :: proc(g: ^Game) {
 				break
 			}
 			res.stored[f] -= tech_cost(i + 1)
-			learn(g, f, i)
+			learn(g, owner, f, i)
 		}
 	}
 }
 
-// A tech is learned: say so, and bill the upgrades it brings to ships.
-learn :: proc(g: ^Game, f: Field, i: int) {
-	before := empire_kit(g)
-	g.tech.known[f][i] = true
+// A tech is learned: say so (if it is yers), and bill the upgrades it brings to ships.
+learn :: proc(g: ^Game, owner: int, f: Field, i: int) {
+	before := empire_kit(g, owner)
+	g.empires[owner].tech.known[f][i] = true
 	t := TECHS[f][i]
 	b: Text
 	add(&b, "Book Club finishes ")
@@ -246,8 +247,8 @@ learn :: proc(g: ^Game, f: Field, i: int) {
 	add(&b, "): ")
 	add(&b, describe_effect(t))
 	add(&b, ".")
-	say(g, text(&b))
-	bill_upgrades(g, before)
+	tell(g, owner, text(&b))
+	bill_upgrades(g, owner, before)
 }
 
 // What a tech does, in a few words.

@@ -62,6 +62,7 @@ TYPE_PERCENT := [Planet_Type]int {
 
 Colony :: struct {
 	owned:     bool,
+	owner:     int, // whose it is
 	households: int,
 	wear:      int, // households of room that waste has taken off the planet
 	factories: int,
@@ -107,34 +108,47 @@ HOSTILE_PERCENT := [Planet_Type]int {
 	.Radiated = 30,
 }
 
-// Households a planet holds with what yer Landscaping knows; 0 if it cannot be settled yet.
-planet_max :: proc(g: ^Game, planet: Planet_Type, size: Planet_Size) -> int {
-	if !can_settle(g, planet) {
+// Households a planet holds with what an empire's Landscaping knows; 0 if it cannot be settled yet.
+planet_max :: proc(g: ^Game, owner: int, planet: Planet_Type, size: Planet_Size) -> int {
+	if !can_settle(g, owner, planet) {
 		return 0
 	}
 	pct := TYPE_PERCENT[planet] > 0 ? TYPE_PERCENT[planet] : HOSTILE_PERCENT[planet]
-	return SIZE_HOUSEHOLDS[size] * pct * (100 + bonus(g, .Households)) / 10000
+	return SIZE_HOUSEHOLDS[size] * pct * (100 + bonus(g, owner, .Households)) / 10000
 }
 
 // A colony's room: the planet's, less what waste has worn away.
 colony_max :: proc(g: ^Game, star: int) -> int {
 	s := &g.stars[star]
-	return max(1, planet_max(g, s.planet, s.size) - s.colony.wear)
+	return max(1, planet_max(g, s.colony.owner, s.planet, s.size) - s.colony.wear)
 }
 
-factory_cost :: proc(g: ^Game) -> int {
-	return max(4, FACTORY_COST - bonus(g, .Factory_Cost))
+factory_cost :: proc(g: ^Game, owner: int) -> int {
+	return max(4, FACTORY_COST - bonus(g, owner, .Factory_Cost))
 }
 
-colony_at :: proc(g: ^Game, star: int) -> ^Colony {
+// Whoever's colony is at a star, or nil.
+any_colony :: proc(g: ^Game, star: int) -> ^Colony {
 	c := &g.stars[star].colony
 	return c.owned ? c : nil
 }
 
-found_colony :: proc(g: ^Game, star: int, households: int) -> ^Colony {
+// An empire's colony at a star, or nil.
+colony_of :: proc(g: ^Game, star, owner: int) -> ^Colony {
+	c := any_colony(g, star)
+	return c != nil && c.owner == owner ? c : nil
+}
+
+// Yer colony at a star, or nil.
+colony_at :: proc(g: ^Game, star: int) -> ^Colony {
+	return colony_of(g, star, PLAYER)
+}
+
+found_colony :: proc(g: ^Game, star: int, households: int, owner := PLAYER) -> ^Colony {
 	s := &g.stars[star]
 	s.colony = {
 		owned      = true,
+		owner      = owner,
 		households = households,
 		slider     = NEW_SLIDERS,
 		build      = .Inspector,
@@ -142,14 +156,18 @@ found_colony :: proc(g: ^Game, star: int, households: int) -> ^Colony {
 	return &s.colony
 }
 
-// What a colony makes in a turn: half a point per household, a point per worked factory, more on a
-// Rich world and less on a Poor one.
+// What a colony makes in a turn: half a point per household, a point per worked factory (half as much
+// again for Beavers), more on a Rich world and less on a Poor one.
 production :: proc(g: ^Game, star: int) -> int {
-	c := colony_at(g, star)
+	c := any_colony(g, star)
 	if c == nil {
 		return 0
 	}
-	p := c.households / 2 + min(c.factories, c.households)
+	worked := min(c.factories, c.households)
+	if g.empires[c.owner].race == .Beavers {
+		worked = worked * 3 / 2
+	}
+	p := c.households / 2 + worked
 	#partial switch g.stars[star].special {
 	case .Rich:
 		p = p * 3 / 2
@@ -165,7 +183,7 @@ tax :: proc(g: ^Game, star: int) -> int {
 
 // Production a chore gets this turn.
 chore_points :: proc(g: ^Game, star: int, ch: Chore) -> int {
-	c := colony_at(g, star)
+	c := any_colony(g, star)
 	if c == nil {
 		return 0
 	}
@@ -173,17 +191,20 @@ chore_points :: proc(g: ^Game, star: int, ch: Chore) -> int {
 	return (p - p * TAX_PERCENT / 100) * c.slider[ch] / 100
 }
 
-// Research points: Book Club, doubled by Ancient Artifacts.
+// Research points: Book Club, doubled by Ancient Artifacts, half as much again for Owls.
 research_points :: proc(g: ^Game, star: int) -> int {
 	r := chore_points(g, star, .Book_Club)
 	if g.stars[star].special == .Artifacts {
 		r *= 2
 	}
+	if c := any_colony(g, star); c != nil && g.empires[c.owner].race == .Owls {
+		r = r * 3 / 2
+	}
 	return r
 }
 
 waste_made :: proc(g: ^Game, c: ^Colony) -> int {
-	return c.factories / (WASTE_PER_FACTORIES * (1 + bonus(g, .Less_Waste)))
+	return c.factories / (WASTE_PER_FACTORIES * (1 + bonus(g, c.owner, .Less_Waste)))
 }
 
 // Sets one slider and shares out the rest among the unlocked others in proportion to what they had
@@ -243,23 +264,24 @@ set_share :: proc(values: []int, locked: []bool, ch: int, value: int) {
 
 // One turn of a colony: tax, then each chore spends its share.
 run_colony :: proc(g: ^Game, star: int) {
-	c := colony_at(g, star)
+	c := any_colony(g, star)
 	if c == nil {
 		return
 	}
 	s := &g.stars[star]
-	g.bj += tax(g, star)
-	g.research += research_points(g, star)
+	e := &g.empires[c.owner]
+	e.bj += tax(g, star)
+	e.research += research_points(g, star)
 
 	// Home Improvement: factories, up to what the households can work; the surplus goes to BJ.
 	c.stored[.Home_Improvement] += chore_points(g, star, .Home_Improvement)
 	cap := c.households * FACTORIES_PER_HOUSEHOLD
-	for c.stored[.Home_Improvement] >= factory_cost(g) && c.factories < cap {
-		c.stored[.Home_Improvement] -= factory_cost(g)
+	for c.stored[.Home_Improvement] >= factory_cost(g, c.owner) && c.factories < cap {
+		c.stored[.Home_Improvement] -= factory_cost(g, c.owner)
 		c.factories += 1
 	}
 	if c.factories >= cap {
-		g.bj += c.stored[.Home_Improvement]
+		e.bj += c.stored[.Home_Improvement]
 		c.stored[.Home_Improvement] = 0
 	}
 
@@ -286,7 +308,7 @@ run_colony :: proc(g: ^Game, star: int) {
 		add(&b, " (Lot ")
 		add_int(&b, star + 1)
 		add(&b, ") are a mess. Room for one household fewer.")
-		say(g, text(&b))
+		tell(g, c.owner, text(&b))
 	}
 
 	// Households grow towards the maximum (slower as it fills), plus whatever spare Lawn Care buys.
@@ -294,6 +316,9 @@ run_colony :: proc(g: ^Game, star: int) {
 	if c.households < room {
 		grow := 1 + c.households * (room - c.households) / (room * 8)
 		grow += spare / GROWTH_PER_POINT
+		if e.race == .Rabbits {
+			grow = grow * 3 / 2
+		}
 		c.households = min(room, c.households + grow)
 	} else if c.households > room {
 		c.households = room
@@ -304,12 +329,12 @@ run_colony :: proc(g: ^Game, star: int) {
 	cost := SHIPS[c.build].cost
 	for c.stored[.Parking] >= cost {
 		c.stored[.Parking] -= cost
-		f := new_fleet(g)
+		f := new_fleet(g, c.owner)
 		if f == nil {
 			break
 		}
 		f.ships[c.build] = 1
-		f.kit = empire_kit(g)
+		f.kit = empire_kit(g, c.owner)
 		f.refills = c.build == .Gas_Can ? GAS_CAN_REFILLS : 0
 		dock(g, f, star)
 		b: Text
@@ -320,45 +345,47 @@ run_colony :: proc(g: ^Game, star: int) {
 		add(&b, " (Lot ")
 		add_int(&b, star + 1)
 		add(&b, ").")
-		say(g, text(&b))
+		tell(g, c.owner, text(&b))
 	}
 
 	// A new colony finds out about its special after a few turns.
 	c.age += 1
-	if c.age == SPECIAL_FOUND_OUT && s.report.special != s.special {
+	r := &s.reports[c.owner]
+	if c.age == SPECIAL_FOUND_OUT && r.special != s.special {
 		b: Text
 		add(&b, s.name)
 		add(&b, " (Lot ")
 		add_int(&b, star + 1)
 		if s.special == .None {
 			add(&b, ") turns out not to be ")
-			add(&b, SPECIAL_NAMES[s.report.special])
+			add(&b, SPECIAL_NAMES[r.special])
 			add(&b, ". The listing was optimistic.")
 		} else {
 			add(&b, ") turns out to be ")
 			add(&b, SPECIAL_NAMES[s.special])
 			add(&b, ".")
 		}
-		say(g, text(&b))
-		s.report.special = s.special
+		tell(g, c.owner, text(&b))
+		r.special = s.special
 	}
 }
 
 // A Moving Van reaches a star: the movers see the planet as it is, and settle it if they can.
 movers_arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	s := &g.stars[star]
-	if f.ships[.Moving_Van] == 0 || s.wormhole || colony_at(g, star) != nil {
+	if f.ships[.Moving_Van] == 0 || s.wormhole || any_colony(g, star) != nil {
 		return
 	}
-	special := s.report.filed ? s.report.special : Special.None
-	s.report = {
+	r := &s.reports[f.owner]
+	special := r.filed ? r.special : Special.None
+	r^ = {
 		filed   = true,
 		planet  = s.planet,
 		size    = s.size,
 		special = special,
 	}
 	b: Text
-	if !can_settle(g, s.planet) {
+	if !can_settle(g, f.owner, s.planet) {
 		add(&b, "The movers took one look at ")
 		add(&b, s.name)
 		add(&b, " (Lot ")
@@ -366,11 +393,11 @@ movers_arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 		add(&b, "): a ")
 		add(&b, PLANET_NAMES[s.planet])
 		add(&b, " world. They are waiting in the van.")
-		say(g, text(&b))
+		tell(g, f.owner, text(&b))
 		return
 	}
 	f.ships[.Moving_Van] -= 1
-	found_colony(g, star, NEW_COLONY_HOUSEHOLDS)
+	found_colony(g, star, NEW_COLONY_HOUSEHOLDS, f.owner)
 	add(&b, "The movers have unpacked at ")
 	add(&b, s.name)
 	add(&b, " (Lot ")
@@ -380,5 +407,5 @@ movers_arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	add(&b, " ")
 	add(&b, PLANET_NAMES[s.planet])
 	add(&b, " world. Welcome to the neighbourhood.")
-	say(g, text(&b))
+	tell(g, f.owner, text(&b))
 }

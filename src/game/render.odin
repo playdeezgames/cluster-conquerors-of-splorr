@@ -5,6 +5,8 @@ package game
 draw_game :: proc(f: ^Frame, g: ^Game) {
 	cls(f, COLOR_BLACK)
 	switch g.mode {
+	case .Choose_Race:
+		draw_races(f, g)
 	case .Colony:
 		draw_colony(f, g)
 	case .Research:
@@ -46,7 +48,7 @@ draw_map :: proc(f: ^Frame, g: ^Game) {
 	}
 	// While choosing where, a dotted line from the ships to the cursor: cyan if they can make it.
 	if g.mode == .Destination && g.cursor != g.source {
-		color: u8 = send_problem(g, g.source, g.cursor, g.send) == "" ? COLOR_CYAN : COLOR_RED
+		color: u8 = send_problem(g, PLAYER, g.source, g.cursor, g.send) == "" ? COLOR_CYAN : COLOR_RED
 		a, b := g.stars[g.source], g.stars[g.cursor]
 		ax, ay := cell_px(g, a.x, a.y)
 		bx, by := cell_px(g, b.x, b.y)
@@ -58,15 +60,24 @@ draw_map :: proc(f: ^Frame, g: ^Game) {
 		if !on_map(sx, sy) {
 			continue
 		}
-		if s.wormhole_known {
+		if s.wormhole_known[PLAYER] {
 			draw_gfx(f, .Wormhole, sx, sy, COLOR_PURPLE)
-		} else if s.report.filed {
+		} else if s.reports[PLAYER].filed {
 			draw_gfx(f, .Star, sx, sy, COLOR_YELLOW)
 		} else {
 			draw_gfx(f, .Star_Dim, sx, sy, COLOR_MID)
 		}
-		if colony_at(g, i) != nil {
-			frame_rect(f, sx - 1, sy - 1, TILE + 2, TILE + 2, COLOR_GREEN)
+		if c := any_colony(g, i); c != nil && (c.owner == PLAYER || g.empires[PLAYER].sees[i]) {
+			frame_rect(f, sx - 1, sy - 1, TILE + 2, TILE + 2, EMPIRE_COLORS[c.owner])
+		}
+		// Rivals' ships here, if in sight: a flag at the top left in their colour.
+		if g.empires[PLAYER].sees[i] {
+			for e in 1 ..< g.empire_count {
+				if fleet_of(g, i, e) != nil {
+					fill_rect(f, sx, sy - 3, 1, 6, COLOR_LIGHT)
+					fill_rect(f, sx - 3, sy - 3, 3, 3, EMPIRE_COLORS[e])
+				}
+			}
 		}
 		// Yer ships here: a little flag at the top right, red if they are out of fuel.
 		if fl := fleet_at(g, i); fl != nil {
@@ -75,9 +86,12 @@ draw_map :: proc(f: ^Frame, g: ^Game) {
 			fill_rect(f, sx + TILE, sy - 3, 3, 3, color)
 		}
 	}
-	// Fleets in transit, part of the way along.
+	// Fleets in transit, part of the way along: yers, and rivals' that are in sight.
 	for &fl in g.fleets {
 		if !fl.used || fl.star != NO_STAR {
+			continue
+		}
+		if fl.owner != PLAYER && !sees_cell(g, PLAYER, &fl) {
 			continue
 		}
 		a, b := g.stars[fl.from], g.stars[fl.to]
@@ -86,7 +100,7 @@ draw_map :: proc(f: ^Frame, g: ^Game) {
 		y := a.y * TILE + (b.y - a.y) * TILE * done / max(1, fl.total)
 		sx, sy := MAP_X + x - ox * TILE, MAP_Y + y - oy * TILE
 		if on_map(sx + 6, sy + 6) {
-			draw_gfx(f, .Van, sx, sy, COLOR_WHITE)
+			draw_gfx(f, .Van, sx, sy, fl.owner == PLAYER ? COLOR_WHITE : EMPIRE_COLORS[fl.owner])
 		}
 	}
 	// The cursor: corner brackets, so the star under it stays visible.
@@ -125,9 +139,10 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	print(f, text(&b), x, 28, COLOR_LIGHT)
 	money: Text
 	add(&money, "BJ ")
-	add_int(&money, g.bj)
+	add_int(&money, g.empires[PLAYER].bj)
 	print(f, text(&money), x + 9 * GLYPH_W, 28, COLOR_YELLOW)
 	switch g.mode {
+	case .Choose_Race:
 	case .Map:
 		draw_star_panel(f, g)
 	case .Colony, .Research:
@@ -151,8 +166,8 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 	s := &g.stars[g.cursor]
 	draw_star_heading(f, g, g.cursor, y)
 	y += 24
-	r := &s.report
-	if s.wormhole_known {
+	r := &s.reports[PLAYER]
+	if s.wormhole_known[PLAYER] {
 		print(f, "A wormhole.", x, y, COLOR_PURPLE)
 		y += 12
 	} else if !r.filed {
@@ -180,6 +195,27 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			y += 10
 		}
 	}
+	if g.empires[PLAYER].sees[g.cursor] {
+		if c := any_colony(g, g.cursor); c != nil && c.owner != PLAYER {
+			who: Text
+			add(&who, "The ")
+			add(&who, empire_name(g, c.owner))
+			add(&who, "' colony")
+			print(f, text(&who), x, y, EMPIRE_COLORS[c.owner])
+			y += 10
+		}
+		for e in 1 ..< g.empire_count {
+			if o := fleet_of(g, g.cursor, e); o != nil {
+				who: Text
+				add_int(&who, fleet_size(o))
+				add(&who, " ")
+				add(&who, RACES[g.empires[e].race].one)
+				add(&who, " ships")
+				print(f, text(&who), x, y, EMPIRE_COLORS[e])
+				y += 10
+			}
+		}
+	}
 	y += 4
 	fl := fleet_at(g, g.cursor)
 	if fl != nil {
@@ -198,7 +234,7 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 		}
 		y += 2
 		fuel: Text
-		if refuels_at(g, g.cursor) {
+		if refuels_at(g, g.cursor, PLAYER) {
 			add(&fuel, "Tanks full.")
 		} else if stranded(g, fl) {
 			add(&fuel, "Out of fuel.")
@@ -258,9 +294,9 @@ draw_star_heading :: proc(f: ^Frame, g: ^Game, i: int, y: int) {
 	s := &g.stars[i]
 	gfx := Gfx.Star_Dim
 	color: u8 = COLOR_MID
-	if s.wormhole_known {
+	if s.wormhole_known[PLAYER] {
 		gfx, color = .Wormhole, COLOR_PURPLE
-	} else if s.report.filed {
+	} else if s.reports[PLAYER].filed {
 		gfx, color = .Star, COLOR_YELLOW
 	}
 	draw_gfx(f, gfx, x, y - 2, color)
@@ -303,7 +339,7 @@ draw_fleet_panel :: proc(f: ^Frame, g: ^Game) {
 			pay: Text
 			add(&pay, "Pay upgrades: ")
 			add_int(&pay, due)
-			print(f, text(&pay), x, y, g.bj >= due ? COLOR_ORANGE : COLOR_RED)
+			print(f, text(&pay), x, y, g.empires[PLAYER].bj >= due ? COLOR_ORANGE : COLOR_RED)
 		}
 	}
 	print(f, "Choose where >", x, ACTION_Y, COLOR_CYAN)
@@ -336,10 +372,10 @@ draw_destination_panel :: proc(f: ^Frame, g: ^Game) {
 		add_int(&fuel, fleet_range(&trial))
 		add(&fuel, fleet_range(&trial) == 1 ? " turn" : " turns")
 		print(f, text(&fuel), x, y + 10, COLOR_LIGHT)
-		problem := send_problem(g, g.source, g.cursor, g.send)
+		problem := send_problem(g, PLAYER, g.source, g.cursor, g.send)
 		if problem != "" {
 			print(f, problem, x, y + 24, COLOR_RED)
-		} else if !refuels_at(g, g.cursor) && turns == fleet_range(&trial) {
+		} else if !refuels_at(g, g.cursor, PLAYER) && turns == fleet_range(&trial) {
 			print(f, "Arrives empty.", x, y + 24, COLOR_ORANGE)
 		}
 	}
@@ -370,6 +406,7 @@ isqrt :: proc(n: int) -> int {
 // The empire's totals, beside the colony screen.
 draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 	x := PANEL_TEXT_X
+	print(f, RACES[g.empires[PLAYER].race].name, x + 13 * GLYPH_W, 28, COLOR_GREEN)
 	colonies, households, made, rp := 0, 0, 0, 0
 	for i in 0 ..< g.star_count {
 		if c := colony_at(g, i); c != nil {
@@ -391,7 +428,7 @@ draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 	}
 	// What a ship built today carries.
 	print(f, "Ship kit:", x, 96, COLOR_WHITE)
-	kit := empire_kit(g)
+	kit := empire_kit(g, PLAYER)
 	for s, i in Kit_Stat {
 		print(f, KIT_NAMES[s], x, 108 + int(i) * 10, COLOR_MID)
 		v: Text
@@ -401,14 +438,14 @@ draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 	}
 	extra: Text
 	add(&extra, "Factories ")
-	add_int(&extra, factory_cost(g))
+	add_int(&extra, factory_cost(g, PLAYER))
 	add(&extra, " each")
 	print(f, text(&extra), x, 172, COLOR_MID)
 }
 
 // The six fields, each with its slider, its next tech and how far along it is.
 draw_research :: proc(f: ^Frame, g: ^Game) {
-	res := &g.tech
+	res := &g.empires[PLAYER].tech
 	x := COLONY_X
 	print(f, "Book Club research", x, 6, COLOR_WHITE)
 	total := 0
@@ -492,9 +529,9 @@ draw_colony :: proc(f: ^Frame, g: ^Game) {
 	add(&kind, SIZE_NAMES[s.size])
 	add(&kind, " ")
 	add(&kind, PLANET_NAMES[s.planet])
-	if s.report.special != .None {
+	if s.reports[PLAYER].special != .None {
 		add(&kind, ", ")
-		add(&kind, SPECIAL_NAMES[s.report.special])
+		add(&kind, SPECIAL_NAMES[s.reports[PLAYER].special])
 	}
 	draw_gfx(f, .Planet, x + 300, 4, PLANET_COLORS[s.planet])
 	print(f, text(&kind), x, 16, COLOR_LIGHT)
@@ -612,4 +649,23 @@ chore_effect :: proc(g: ^Game, star: int, ch: Chore) -> string {
 		add(&b, " research")
 	}
 	return text(&b)
+}
+
+// The four species to choose from, each with its line and its trait.
+draw_races :: proc(f: ^Frame, g: ^Game) {
+	x := COLONY_X
+	print(f, "Choose yer species", x, 6, COLOR_WHITE)
+	print(f, "Two of the others will be yer neighbours. They will hate you.", x, 18, COLOR_LIGHT)
+	for r in Race {
+		row := int(r)
+		y := race_row_y(row)
+		if g.row == row {
+			fill_rect(f, 0, y - 3, VIEW_W * TILE, RACE_H - 4, COLOR_NAVY)
+		}
+		info := RACES[r]
+		print(f, info.name, x, y, g.row == row ? COLOR_WHITE : COLOR_LIGHT)
+		print(f, info.blurb, x + 2 * GLYPH_W, y + 11, COLOR_MID)
+		print(f, info.trait, x + 2 * GLYPH_W, y + 22, COLOR_CYAN)
+	}
+	print(f, "Up/Down: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }

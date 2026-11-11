@@ -32,7 +32,7 @@ test_starting_fleet :: proc(t: ^testing.T) {
 	testing.expect(t, f.ships == START_SHIPS)
 	testing.expect_value(t, f.refills, GAS_CAN_REFILLS)
 	testing.expect_value(t, fleet_fuel(f), 4) // Moving Van and Golf Carts hold 4
-	testing.expect_value(t, fleet_speed(f), 2) // the Moving Van is slowest
+	testing.expect_value(t, fleet_speed(f), 3) // the Moving Van and the Gas Can are slowest
 }
 
 @(test)
@@ -55,9 +55,9 @@ test_send_travel_and_survey :: proc(t: ^testing.T) {
 	init_game(g, SEED)
 	to := nearest_other(g)
 	ships := only(.Inspector, 1)
-	testing.expect_value(t, send_problem(g, g.home, to, ships), "")
+	testing.expect_value(t, send_problem(g, PLAYER, g.home, to, ships), "")
 	turns := trip_turns(g, g.home, to, SHIPS[.Inspector].speed)
-	send_fleet(g, g.home, to, ships)
+	send_fleet(g, PLAYER, g.home, to, ships)
 	testing.expect_value(t, fleet_at(g, g.home).ships[.Inspector], 1)
 	for _ in 0 ..< turns - 1 {
 		end_turn(g)
@@ -68,7 +68,7 @@ test_send_travel_and_survey :: proc(t: ^testing.T) {
 	testing.expect(t, f != nil)
 	testing.expect_value(t, f.ships[.Inspector], 1)
 	testing.expect_value(t, f.away, turns)
-	testing.expect(t, g.stars[to].report.filed)
+	testing.expect(t, g.stars[to].reports[PLAYER].filed)
 }
 
 @(test)
@@ -77,16 +77,16 @@ test_out_of_range_refused :: proc(t: ^testing.T) {
 	defer free(g)
 	g.star_count = 3
 	g.stars[0] = {x = 0, y = 0}
-	g.stars[1] = {x = 0, y = 9} // 9 cells: a Moving Van (2 a turn, 4 turns of fuel) needs 5 turns
-	g.stars[2] = {x = 0, y = 8} // 8 cells: 4 turns, just enough
+	g.stars[1] = {x = 0, y = 13} // 13 cells: a Moving Van (3 a turn, 4 turns of fuel) needs 5 turns
+	g.stars[2] = {x = 0, y = 12} // 12 cells: 4 turns, just enough
 	g.home = 0
 	f := new_fleet(g)
 	f.star = 0
 	f.ships = only(.Moving_Van, 1)
-	testing.expect_value(t, send_problem(g, 0, 1, only(.Moving_Van, 1)), "Out of range.")
-	testing.expect_value(t, send_problem(g, 0, 2, only(.Moving_Van, 1)), "")
-	testing.expect_value(t, send_problem(g, 0, 2, only(.Moving_Van, 0)), "Nobody is going.")
-	testing.expect_value(t, send_problem(g, 0, 0, only(.Moving_Van, 1)), "They are already here.")
+	testing.expect_value(t, send_problem(g, PLAYER, 0, 1, only(.Moving_Van, 1)), "Out of range.")
+	testing.expect_value(t, send_problem(g, PLAYER, 0, 2, only(.Moving_Van, 1)), "")
+	testing.expect_value(t, send_problem(g, PLAYER, 0, 2, only(.Moving_Van, 0)), "Nobody is going.")
+	testing.expect_value(t, send_problem(g, PLAYER, 0, 0, only(.Moving_Van, 1)), "They are already here.")
 }
 
 @(test)
@@ -105,7 +105,7 @@ test_stranded_until_a_gas_can_comes :: proc(t: ^testing.T) {
 	home.ships = only(.Golf_Cart, 1)
 	home.ships[.Gas_Can] = 1
 	home.refills = GAS_CAN_REFILLS
-	send_fleet(g, 0, 1, only(.Golf_Cart, 1))
+	send_fleet(g, PLAYER, 0, 1, only(.Golf_Cart, 1))
 	for _ in 0 ..< 3 {
 		end_turn(g)
 	}
@@ -116,12 +116,12 @@ test_stranded_until_a_gas_can_comes :: proc(t: ^testing.T) {
 	end_turn(g)
 	cart = fleet_at(g, 1)
 	testing.expect(t, stranded(g, cart))
-	testing.expect_value(t, send_problem(g, 1, 0, only(.Golf_Cart, 1)), "Out of range.")
+	testing.expect_value(t, send_problem(g, PLAYER, 1, 0, only(.Golf_Cart, 1)), "Out of range.")
 	for _ in 0 ..< 10 {
 		end_turn(g)
 	}
 	testing.expect(t, stranded(g, fleet_at(g, 1))) // it waits, forever if need be
-	send_fleet(g, 0, 1, only(.Gas_Can, 1))
+	send_fleet(g, PLAYER, 0, 1, only(.Gas_Can, 1))
 	testing.expect_value(t, fleet_at(g, 0), (^Fleet)(nil))
 	for _ in 0 ..< 3 {
 		end_turn(g)
@@ -133,7 +133,7 @@ test_stranded_until_a_gas_can_comes :: proc(t: ^testing.T) {
 	testing.expect_value(t, joined.away, 0)
 	testing.expect_value(t, joined.refills, GAS_CAN_REFILLS - 1)
 	// Home again: the tanks and the Gas Can fill up.
-	send_fleet(g, 1, 0, joined.ships)
+	send_fleet(g, PLAYER, 1, 0, joined.ships)
 	for _ in 0 ..< 3 {
 		end_turn(g)
 	}
@@ -161,12 +161,12 @@ test_wormhole_throws_and_is_known :: proc(t: ^testing.T) {
 		f.ships = only(.Inspector, 1)
 		f.from, f.to, f.left, f.total = g.home, hole, 1, 1
 		end_turn(g)
-		testing.expect(t, g.stars[hole].wormhole_known)
+		testing.expect(t, g.stars[hole].wormhole_known[PLAYER])
 		testing.expect(t, fleet_at(g, hole) == nil)
 		// The thrown Inspector came out at a star that is not a wormhole (perhaps home, joining the fleet there).
 		inspectors := 0
 		for &o in g.fleets {
-			if o.used {
+			if o.used && o.owner == PLAYER {
 				testing.expect(t, o.star != NO_STAR && !g.stars[o.star].wormhole)
 				inspectors += o.ships[.Inspector]
 			}
@@ -190,9 +190,9 @@ test_survey_lie_rates :: proc(t: ^testing.T) {
 		}
 		s := &g.stars[i]
 		truth := s^
-		survey(g, i)
+		survey(g, PLAYER, i)
 		testing.expect(t, s.planet == truth.planet && s.size == truth.size && s.special == truth.special)
-		r := s.report
+		r := s.reports[PLAYER]
 		if r.planet != s.planet || r.size != s.size {
 			bad += 1
 		}
@@ -216,20 +216,20 @@ test_reports_get_misfiled_but_home_does_not :: proc(t: ^testing.T) {
 	defer free(g)
 	init_game(g, SEED)
 	for i in 0 ..< g.star_count {
-		survey(g, i)
+		survey(g, PLAYER, i)
 	}
-	g.stars[g.home].report = {filed = true, planet = .Terran, size = .Medium}
+	g.stars[g.home].reports[PLAYER] = {filed = true, planet = .Terran, size = .Medium}
 	for _ in 0 ..< 300 {
 		end_turn(g)
 	}
 	lost := 0
 	for i in 0 ..< g.star_count {
-		if !g.stars[i].report.filed {
+		if !g.stars[i].reports[PLAYER].filed {
 			lost += 1
 		}
 	}
 	testing.expect(t, lost > 0)
-	testing.expect(t, g.stars[g.home].report.filed)
+	testing.expect(t, g.stars[g.home].reports[PLAYER].filed)
 }
 
 // The whole order by keys: open the ships at home, send one Inspector, choose a star, send.
@@ -266,7 +266,7 @@ test_orders_by_keys :: proc(t: ^testing.T) {
 	sent := false
 	for c in Command.North ..= Command.South_East {
 		command(g, c)
-		if g.cursor != g.home && send_problem(g, g.home, g.cursor, g.send) == "" {
+		if g.cursor != g.home && send_problem(g, PLAYER, g.home, g.cursor, g.send) == "" {
 			command(g, .Confirm)
 			sent = true
 			break

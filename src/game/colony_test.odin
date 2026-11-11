@@ -72,7 +72,7 @@ test_home_starts_settled :: proc(t: ^testing.T) {
 	testing.expect_value(t, production(g, g.home), 55) // 25 from households, 30 from factories
 	testing.expect_value(t, tax(g, g.home), 5)
 	testing.expect_value(t, chore_points(g, g.home, .Home_Improvement), 25) // half of the 50 after tax
-	testing.expect(t, refuels_at(g, g.home))
+	testing.expect(t, refuels_at(g, g.home, PLAYER))
 }
 
 @(test)
@@ -82,8 +82,8 @@ test_a_turn_of_the_home_colony :: proc(t: ^testing.T) {
 	init_game(g, SEED)
 	c := colony_at(g, g.home)
 	run_colony(g, g.home)
-	testing.expect_value(t, g.bj, 5)
-	testing.expect_value(t, g.research, 10)
+	testing.expect_value(t, g.empires[PLAYER].bj, 5)
+	testing.expect_value(t, g.empires[PLAYER].research, 10)
 	testing.expect_value(t, c.factories, HOME_FACTORIES + 2) // 25 points: two factories, 5 put by
 	testing.expect_value(t, c.stored[.Home_Improvement], 5)
 	testing.expect(t, c.households > HOME_HOUSEHOLDS)
@@ -116,10 +116,10 @@ test_factories_stop_at_what_households_can_work :: proc(t: ^testing.T) {
 	c.stored[.Home_Improvement] = 5 // with this turn's 7, one more factory
 	run_colony(g, g.home)
 	testing.expect_value(t, c.factories, 20)
-	bj := g.bj
+	bj := g.empires[PLAYER].bj
 	run_colony(g, g.home)
 	testing.expect_value(t, c.factories, 20)
-	testing.expect(t, g.bj > bj + tax(g, g.home)) // the surplus went to BJ
+	testing.expect(t, g.empires[PLAYER].bj > bj + tax(g, g.home)) // the surplus went to BJ
 }
 
 @(test)
@@ -165,7 +165,7 @@ test_rich_and_artifacts :: proc(t: ^testing.T) {
 van_target :: proc(g: ^Game, planet: Planet_Type) -> int {
 	to := NO_STAR
 	for i in 0 ..< g.star_count {
-		if i != g.home && !g.stars[i].wormhole && send_problem(g, g.home, i, only(.Moving_Van, 1)) == "" {
+		if i != g.home && !g.stars[i].wormhole && send_problem(g, PLAYER, g.home, i, only(.Moving_Van, 1)) == "" {
 			to = i
 			break
 		}
@@ -187,25 +187,25 @@ test_moving_van_settles_and_sees_the_truth :: proc(t: ^testing.T) {
 			continue
 		}
 		// The Inspector got it wrong.
-		g.stars[to].report = {
+		g.stars[to].reports[PLAYER] = {
 			filed   = true,
 			planet  = .Garden,
 			size    = .Large,
 			special = .Rich,
 		}
-		send_fleet(g, g.home, to, only(.Moving_Van, 1))
+		send_fleet(g, PLAYER, g.home, to, only(.Moving_Van, 1))
 		for _ in 0 ..< 8 {
 			end_turn(g)
 		}
 		c := colony_at(g, to)
 		testing.expect(t, c != nil)
-		testing.expect_value(t, g.stars[to].report.planet, Planet_Type.Ocean)
-		testing.expect_value(t, g.stars[to].report.size, Planet_Size.Medium)
+		testing.expect_value(t, g.stars[to].reports[PLAYER].planet, Planet_Type.Ocean)
+		testing.expect_value(t, g.stars[to].reports[PLAYER].size, Planet_Size.Medium)
 		testing.expect_value(t, colony_max(g, to), 63)
 		// The listing said Rich; after a few turns the colony knows better.
-		testing.expect_value(t, g.stars[to].report.special, Special.None)
+		testing.expect_value(t, g.stars[to].reports[PLAYER].special, Special.None)
 		testing.expect(t, fleet_at(g, to) == nil) // the van was used up
-		testing.expect(t, refuels_at(g, to))
+		testing.expect(t, refuels_at(g, to, PLAYER))
 	}
 }
 
@@ -216,14 +216,14 @@ test_moving_van_will_not_settle_hostile :: proc(t: ^testing.T) {
 	init_game(g, SEED)
 	to := van_target(g, .Toxic)
 	testing.expect(t, to != NO_STAR)
-	send_fleet(g, g.home, to, only(.Moving_Van, 1))
+	send_fleet(g, PLAYER, g.home, to, only(.Moving_Van, 1))
 	for _ in 0 ..< 4 {
 		end_turn(g)
 	}
 	testing.expect(t, colony_at(g, to) == nil)
 	f := fleet_at(g, to)
 	testing.expect(t, f != nil && f.ships[.Moving_Van] == 1)
-	testing.expect_value(t, g.stars[to].report.planet, Planet_Type.Toxic)
+	testing.expect_value(t, g.stars[to].reports[PLAYER].planet, Planet_Type.Toxic)
 }
 
 @(test)

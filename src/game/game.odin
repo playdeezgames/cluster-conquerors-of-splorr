@@ -1,7 +1,8 @@
 package game
 
-// The rules, independent of the platform. Slice 1 step 4 (PLAN.md): technology, colonies, turns,
-// fleets, fuel and surveying over a generated cluster. Rivals and the rest arrive in later steps.
+// The rules, independent of the platform. Slice 1 step 5 (PLAN.md): two computer rivals, technology,
+// colonies, turns, fleets, fuel and surveying over a generated cluster. Combat and the rest arrive in
+// later steps.
 
 // Commands the page sends for keys, gamepad buttons and the touch pads (keep in step with
 // web/index.html). Directions move the cursor to the next star that way, or work a list.
@@ -42,9 +43,10 @@ Pointer :: enum i32 {
 	Touch,
 }
 
-// What the controls are doing: looking at the map, sharing out research, running a colony, picking
+// What the controls are doing: choosing yer species, looking at the map, sharing out research, running a colony, picking
 // ships to send, or picking where.
 Mode :: enum u8 {
+	Choose_Race,
 	Map,
 	Research,
 	Colony,
@@ -57,12 +59,11 @@ Game :: struct {
 	rng:        Rng, // everything random after the cluster is made
 	stars:      [MAX_STARS]Star,
 	star_count: int,
-	home:       int,
+	home:       int, // yer home star
 	cursor:     int, // the star under the cursor; the panel shows it
 	turn:       int,
-	bj:         int, // billion jools, the empire's money
-	research:   int, // this turn's research points from Book Club, shared out at the turn's end
-	tech:       Research,
+	empires:    [MAX_EMPIRES]Empire, // yers first, then the computer rivals
+	empire_count: int,
 	fleets:     [MAX_FLEETS]Fleet,
 	mode:       Mode,
 	source:     int, // the star ships are being sent from
@@ -76,22 +77,62 @@ init_game :: proc(g: ^Game, seed: u64) {
 	g.seed = seed
 	g.rng = Rng{seed ~ 0x5A17_C0DE_0000_0001}
 	make_cluster(g, seed)
-	offer_techs(&g.tech, &g.rng)
+	g.empires[PLAYER].race = .Geese // until chosen; their trait waits for combat, so tests see plain numbers
+	assign_rivals(g)
+	for e in 0 ..< g.empire_count {
+		offer_techs(&g.empires[e].tech, &g.rng)
+		home := found_colony(g, g.empires[e].home, HOME_HOUSEHOLDS, e)
+		home.factories = HOME_FACTORIES
+		home.slider = HOME_SLIDERS
+		f := new_fleet(g, e)
+		f.ships = START_SHIPS
+		f.star = g.empires[e].home
+		f.refills = f.ships[.Gas_Can] * GAS_CAN_REFILLS
+	}
 	g.cursor = g.home
 	g.turn = 1
-	home := found_colony(g, g.home, HOME_HOUSEHOLDS)
-	home.factories = HOME_FACTORIES
-	home.slider = HOME_SLIDERS
-	f := new_fleet(g)
-	f.ships = START_SHIPS
-	f.star = g.home
-	f.refills = f.ships[.Gas_Can] * GAS_CAN_REFILLS
+	g.mode = .Map
+	update_sight(g)
 	b: Text
 	add(&b, "Welcome to ")
 	add(&b, g.stars[g.home].name)
 	add(&b, ". The Homeowners' Association has been notified.")
 	say(g, text(&b))
-	say(g, "(Slice 1, step 4: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
+	say(g, "(Slice 1, step 5: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
+}
+
+// A new game in the browser starts on the species screen; tests start straight on the map as Geese.
+start_choosing :: proc(g: ^Game) {
+	g.mode = .Choose_Race
+	g.row = 0
+}
+
+choose_race :: proc(g: ^Game, r: Race) {
+	g.empires[PLAYER].race = r
+	assign_rivals(g)
+	g.mode = .Map
+	b: Text
+	add(&b, "Yer the ")
+	add(&b, RACES[r].name)
+	add(&b, ". The ")
+	add(&b, empire_name(g, 1))
+	add(&b, " and the ")
+	add(&b, empire_name(g, 2))
+	add(&b, " are out there somewhere. Everybody hates everybody.")
+	say(g, text(&b))
+}
+
+// Up and Down pick a species, Enter/OK picks it.
+race_command :: proc(g: ^Game, c: Command) {
+	n := len(Race)
+	#partial switch c {
+	case .North:
+		g.row = (g.row + n - 1) % n
+	case .South:
+		g.row = (g.row + 1) % n
+	case .Confirm:
+		choose_race(g, Race(g.row))
+	}
 }
 
 command :: proc(g: ^Game, c: Command) {
@@ -105,6 +146,8 @@ command :: proc(g: ^Game, c: Command) {
 		return
 	}
 	switch g.mode {
+	case .Choose_Race:
+		race_command(g, c)
 	case .Map:
 		map_command(g, c)
 	case .Research:
@@ -175,7 +218,7 @@ open_research :: proc(g: ^Game) {
 // Up and Down pick a field, Left and Right move its slider by 5, Enter/OK locks it (or, on Back,
 // goes back); Escape/Back goes back to the map.
 research_command :: proc(g: ^Game, c: Command) {
-	res := &g.tech
+	res := &g.empires[PLAYER].tech
 	#partial switch c {
 	case .North:
 		g.row = (g.row + RESEARCH_ROWS - 1) % RESEARCH_ROWS
@@ -394,7 +437,7 @@ destination_command :: proc(g: ^Game, c: Command) {
 }
 
 try_send :: proc(g: ^Game, to: int) {
-	problem := send_problem(g, g.source, to, g.send)
+	problem := send_problem(g, PLAYER, g.source, to, g.send)
 	if problem != "" {
 		say(g, problem)
 		return
@@ -403,7 +446,7 @@ try_send :: proc(g: ^Game, to: int) {
 		ships = g.send,
 	}
 	turns := trip_turns(g, g.source, to, fleet_speed(&trial))
-	send_fleet(g, g.source, to, g.send)
+	send_fleet(g, PLAYER, g.source, to, g.send)
 	b: Text
 	add_int(&b, fleet_size(&trial))
 	add(&b, fleet_size(&trial) == 1 ? " ship leaves for Lot " : " ships leave for Lot ")
@@ -423,16 +466,16 @@ describe_star :: proc(g: ^Game, i: int, b: ^Text) {
 	add(b, " (Lot ")
 	add_int(b, i + 1)
 	add(b, ")")
-	if s.wormhole_known {
+	if s.wormhole_known[PLAYER] {
 		add(b, ": a wormhole.")
 		return
 	}
-	if !s.report.filed {
+	if !s.reports[PLAYER].filed {
 		add(b, ": not surveyed.")
 		return
 	}
 	add(b, i == g.home ? ": yer home, " : colony_at(g, i) != nil ? ": yer colony, " : ": ")
-	describe_report(b, &s.report)
+	describe_report(b, &s.reports[PLAYER])
 }
 
 // The map cell under a screen pixel, if the pixel is on the map view.
@@ -462,6 +505,20 @@ COUNT_COL :: 13 // the column where "<n>" starts in a ship row
 // moves the cursor there; on the star already under the cursor with yer ships, opens them. While
 // choosing where: a star moves the cursor, the same star again sends. The panel's rows act too.
 pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
+	if g.mode == .Choose_Race {
+		for i in 0 ..< len(Race) {
+			y := race_row_y(i)
+			if sy >= y - 3 && sy < y - 3 + RACE_H {
+				if g.row == i {
+					choose_race(g, Race(i))
+				} else {
+					g.row = i
+				}
+				return
+			}
+		}
+		return
+	}
 	if sx >= PANEL_X {
 		panel_pointer(g, sx, sy)
 		return
@@ -497,7 +554,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Research, .Colony, .Fleet:
+	case .Choose_Race, .Research, .Colony, .Fleet:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -567,6 +624,14 @@ colony_pointer :: proc(g: ^Game, sx, sy: int) {
 	}
 }
 
+// Where the species screen draws its rows: name, blurb and trait on three lines.
+RACE_TOP :: 40
+RACE_H :: 40
+
+race_row_y :: proc(row: int) -> int {
+	return RACE_TOP + row * RACE_H
+}
+
 // Where the research screen draws its rows: a field takes two lines.
 RESEARCH_TOP :: 36
 RESEARCH_H :: 26
@@ -578,7 +643,7 @@ research_row_y :: proc(row: int) -> int {
 // A tap on the research screen: on a bar sets the field's slider there, on the lock toggles it,
 // on Back goes back.
 research_pointer :: proc(g: ^Game, sx, sy: int) {
-	res := &g.tech
+	res := &g.empires[PLAYER].tech
 	cx := (sx - COLONY_X) / GLYPH_W
 	for row in 0 ..< RESEARCH_ROWS {
 		y := research_row_y(row)
@@ -610,7 +675,7 @@ panel_pointer :: proc(g: ^Game, sx, sy: int) {
 		return
 	}
 	switch g.mode {
-	case .Research, .Colony:
+	case .Choose_Race, .Research, .Colony:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)

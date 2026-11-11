@@ -16,7 +16,7 @@ test_cluster_is_well_formed :: proc(t: ^testing.T) {
 		for i in 0 ..< g.star_count {
 			s := g.stars[i]
 			testing.expect(t, s.x >= EDGE && s.x < GALAXY_W - EDGE && s.y >= EDGE && s.y < GALAXY_H - EDGE)
-			testing.expect(t, i == g.home || !s.report.filed)
+			testing.expect(t, i == g.home || !s.reports[PLAYER].filed)
 			if s.wormhole {
 				wormholes += 1
 			}
@@ -31,7 +31,7 @@ test_cluster_is_well_formed :: proc(t: ^testing.T) {
 		}
 		testing.expect_value(t, wormholes, WORMHOLES)
 		h := g.stars[g.home]
-		testing.expect(t, h.report.filed && !h.wormhole)
+		testing.expect(t, h.reports[PLAYER].filed && !h.wormhole)
 		testing.expect_value(t, h.planet, Planet_Type.Terran)
 		testing.expect_value(t, h.size, Planet_Size.Medium)
 		testing.expect_value(t, g.cursor, g.home)

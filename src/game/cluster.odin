@@ -121,9 +121,9 @@ Star :: struct {
 	planet:   Planet_Type,
 	size:     Planet_Size,
 	special:  Special,
-	report:   Report, // what yer Inspectors filed about it (may be wrong, may be lost)
-	wormhole_known: bool, // something has been through it
-	colony:   Colony, // yers, if colony.owned
+	reports:  [MAX_EMPIRES]Report, // what each empire's Inspectors filed about it (may be wrong, may be lost)
+	wormhole_known: [MAX_EMPIRES]bool, // each empire: something of its own has been through it
+	colony:   Colony, // somebody's, if colony.owned
 }
 
 // Straight star names, drawn without repeats for each cluster.
@@ -139,8 +139,9 @@ STAR_NAMES := [?]string {
 }
 
 // Fills g.stars from the seed: places STAR_COUNT stars at least MIN_SPACING apart, numbers them in
-// reading order (so Lot 1 is top left), names them, gives each a planet, hides WORMHOLES wormholes
-// among them, and picks a home star away from the edges with a Terran world.
+// reading order (so Lot 1 is top left), names them, gives each a planet, picks yer home star away from
+// the edges and the rivals' homes as far from it and each other as can be (all Medium Terran worlds),
+// and hides WORMHOLES wormholes among the rest.
 make_cluster :: proc(g: ^Game, seed: u64) {
 	r := Rng{seed}
 	for {
@@ -185,18 +186,38 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 		}
 	}
 	g.home = n > 0 ? candidates[rng_int(&r, n)] : rng_int(&r, g.star_count)
-	home := &g.stars[g.home]
-	home.planet, home.size, home.special = .Terran, .Medium, .None
-	home.report = {
-		filed   = true,
-		planet  = home.planet,
-		size    = home.size,
-		special = home.special,
+	g.empire_count = MAX_EMPIRES
+	g.empires[PLAYER].home = g.home
+	// The rivals' homes: each as far as can be from every home already placed.
+	for e in 1 ..< g.empire_count {
+		best, best_d := NO_STAR, -1
+		for i in 0 ..< g.star_count {
+			d := max(int)
+			for o in 0 ..< e {
+				h := g.stars[g.empires[o].home]
+				dx, dy := g.stars[i].x - h.x, g.stars[i].y - h.y
+				d = min(d, dx * dx + dy * dy)
+			}
+			if d > best_d {
+				best, best_d = i, d
+			}
+		}
+		g.empires[e].home = best
 	}
-	// Wormholes: any stars but home.
+	for e in 0 ..< g.empire_count {
+		home := &g.stars[g.empires[e].home]
+		home.planet, home.size, home.special = .Terran, .Medium, .None
+		home.reports[e] = {
+			filed   = true,
+			planet  = home.planet,
+			size    = home.size,
+			special = home.special,
+		}
+	}
+	// Wormholes: any stars but homes.
 	for placed := 0; placed < WORMHOLES; {
 		i := rng_int(&r, g.star_count)
-		if i != g.home && !g.stars[i].wormhole {
+		if !is_home(g, i) && !g.stars[i].wormhole {
 			g.stars[i].wormhole = true
 			placed += 1
 		}
@@ -226,6 +247,15 @@ place_stars :: proc(g: ^Game, r: ^Rng) -> bool {
 			if g.star_count == STAR_COUNT {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+is_home :: proc(g: ^Game, star: int) -> bool {
+	for e in 0 ..< g.empire_count {
+		if g.empires[e].home == star {
+			return true
 		}
 	}
 	return false

@@ -22,6 +22,7 @@ main :: proc() {
 platform_start :: proc "c" (seed_hi, seed_lo: i32) {
 	context = runtime.default_context()
 	game.init_game(&state.rules, u64(u32(seed_hi)) << 32 | u64(u32(seed_lo)))
+	game.start_choosing(&state.rules)
 	state.dirty = true
 }
 
