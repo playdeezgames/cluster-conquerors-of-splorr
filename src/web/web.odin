@@ -26,6 +26,37 @@ platform_start :: proc "c" (seed_hi, seed_lo: i32) {
 	state.dirty = true
 }
 
+// The save block the page copies to and from localStorage.
+save_buf: [game.SAVE_SIZE]u8
+
+@(export)
+platform_save_ptr :: proc "c" () -> rawptr {
+	return &save_buf
+}
+
+@(export)
+platform_save_size :: proc "c" () -> i32 {
+	return i32(game.SAVE_SIZE)
+}
+
+// Writes the game into the save block; returns its length.
+@(export)
+platform_save :: proc "c" () -> i32 {
+	context = runtime.default_context()
+	return i32(game.write_save(&state.rules, save_buf[:]))
+}
+
+// Reads the game from the first `n` bytes of the save block; 1 if it was a save of this build.
+@(export)
+platform_load :: proc "c" (n: i32) -> i32 {
+	context = runtime.default_context()
+	if n < 0 || int(n) > len(save_buf) || !game.read_save(&state.rules, save_buf[:n]) {
+		return 0
+	}
+	state.dirty = true
+	return 1
+}
+
 @(export)
 step :: proc(dt: f64, c: runtime.Context) -> bool {
 	context = c

@@ -117,6 +117,7 @@ SPECIAL_WEIGHTS := [Special]int {
 Star :: struct {
 	x, y:     int,
 	name:     string, // the star's straight name; the HOA's paperwork uses the lot number (index + 1)
+	name_id:  int, // which name, so a loaded save can find it again (CLUBHOUSE_NAME for the Clubhouse)
 	wormhole: bool, // looks exactly like an unsurveyed star
 	planet:   Planet_Type,
 	size:     Planet_Size,
@@ -125,6 +126,8 @@ Star :: struct {
 	wormhole_known: [MAX_EMPIRES]bool, // each empire: something of its own has been through it
 	colony:   Colony, // somebody's, if colony.owned
 }
+
+CLUBHOUSE_NAME :: -1
 
 // Straight star names, drawn without repeats for each cluster.
 STAR_NAMES := [?]string {
@@ -171,6 +174,7 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 	for i in 0 ..< g.star_count {
 		s := &g.stars[i]
 		s.name = STAR_NAMES[order[i]]
+		s.name_id = order[i]
 		s.planet = Planet_Type(rng_weighted(&r, slice.enumerated_array(&PLANET_WEIGHTS)))
 		s.size = Planet_Size(rng_int(&r, 3))
 		s.special = Special(rng_weighted(&r, slice.enumerated_array(&SPECIAL_WEIGHTS)))
@@ -225,6 +229,7 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 		g.clubhouse = best
 		club := &g.stars[best]
 		club.name = "The Clubhouse"
+		club.name_id = CLUBHOUSE_NAME
 		club.planet, club.size, club.special = .Garden, .Large, .Artifacts
 		g.moth_alive = true
 	}

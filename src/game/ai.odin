@@ -18,7 +18,12 @@ ai_turn :: proc(g: ^Game, owner: int) {
 	threat := threatened(g, owner)
 	have_van := ships_owned(g, owner, .Moving_Van) > 0
 	target_exists := best_settle_target(g, owner, e.home, nil) != NO_STAR
-	inspectors := ships_owned(g, owner, .Inspector)
+	inspectors := 0 // Inspectors that can still fly
+	for &f in g.fleets {
+		if f.used && f.owner == owner && !stranded(g, &f) {
+			inspectors += f.ships[.Inspector]
+		}
+	}
 	unknown := false
 	for i in 0 ..< g.star_count {
 		if !g.stars[i].reports[owner].filed && !g.stars[i].wormhole_known[owner] {
@@ -26,7 +31,7 @@ ai_turn :: proc(g: ^Game, owner: int) {
 			break
 		}
 	}
-	prey, need := invasion_target(g, owner, e.home)
+	prey, need, base := invasion_target(g, owner)
 	carpools := ships_owned(g, owner, .Carpool)
 	for i in 0 ..< g.star_count {
 		c := colony_of(g, i, owner)
@@ -37,7 +42,7 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		switch {
 		case threat:
 			c.build = i == e.home ? .Pickup : .Golf_Cart
-		case prey != NO_STAR && i == e.home && carpools < need && c.households > CARPOOL_LOAD * 2:
+		case prey != NO_STAR && i == base && carpools < need:
 			c.build = .Carpool
 		case !have_van && target_exists:
 			c.build = .Moving_Van
@@ -53,42 +58,48 @@ ai_turn :: proc(g: ^Game, owner: int) {
 	if !threat {
 		ai_attack(g, owner)
 		if prey != NO_STAR {
-			ai_invade(g, owner, prey, need)
+			ai_invade(g, owner, base, prey, need)
 		}
 	}
 }
 
-// The nearest enemy colony the empire remembers with nothing left to defend it, that Carpools from
-// home can reach, and how many Carpools it would want for it (half as many again as its militia).
-invasion_target :: proc(g: ^Game, owner, from: int) -> (target, need: int) {
+// The nearest pair of one of the empire's colonies big enough to spare Carpools and an enemy colony it
+// remembers with nothing left to defend it, in a Carpool's reach; and how many Carpools it would want
+// (half as many troops again as the colony's militia).
+invasion_target :: proc(g: ^Game, owner: int) -> (target, need, base: int) {
 	e := &g.empires[owner]
-	target = NO_STAR
+	target, base = NO_STAR, NO_STAR
 	best_d := max(int)
-	for t in 0 ..< g.star_count {
-		in_ := e.intel[t]
-		if !in_.seen || in_.owner == NO_OWNER || in_.owner == owner || in_.strength > 0 {
+	trial := Fleet {
+		ships = ship_one(.Carpool),
+	}
+	for from in 0 ..< g.star_count {
+		c := colony_of(g, from, owner)
+		if c == nil || c.households <= CARPOOL_LOAD * 2 {
 			continue
 		}
-		trial := Fleet {
-			ships = ship_one(.Carpool),
-		}
-		if trip_turns(g, from, t, fleet_speed(&trial)) > fleet_range(&trial) {
-			continue
-		}
-		a, b := g.stars[from], g.stars[t]
-		d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
-		if d < best_d {
-			target, best_d = t, d
-			militia := (in_.households + 1) / 2
-			need = (militia * 3 / 2) / CARPOOL_LOAD + 1
+		for t in 0 ..< g.star_count {
+			in_ := e.intel[t]
+			if !in_.seen || in_.owner == NO_OWNER || in_.owner == owner || in_.strength > 0 {
+				continue
+			}
+			if trip_turns(g, from, t, fleet_speed(&trial)) > fleet_range(&trial) {
+				continue
+			}
+			a, b := g.stars[from], g.stars[t]
+			d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
+			if d < best_d {
+				target, base, best_d = t, from, d
+				militia := militia_of(in_.households)
+				need = (militia * 3 / 2) / CARPOOL_LOAD + 1
+			}
 		}
 	}
 	return
 }
 
-// Sends the Carpools at home once there are enough of them.
-ai_invade :: proc(g: ^Game, owner, target, need: int) {
-	home := g.empires[owner].home
+// Sends the Carpools at the launching colony once there are enough of them.
+ai_invade :: proc(g: ^Game, owner, home, target, need: int) {
 	f := fleet_of(g, home, owner)
 	if f == nil || f.ships[.Carpool] < need {
 		return
@@ -99,7 +110,7 @@ ai_invade :: proc(g: ^Game, owner, target, need: int) {
 	}
 }
 
-ATTACK_MARGIN :: 2 // a computer empire attacks only with at least this many times the hits it saw there
+ATTACK_PERCENT :: 150 // a computer empire attacks only with at least this share of the hits it saw there
 
 warship_hits :: proc(f: ^Fleet) -> int {
 	n := 0
@@ -146,7 +157,7 @@ ai_attack :: proc(g: ^Game, owner: int) {
 			if t == i || !in_.seen || in_.strength == 0 {
 				continue
 			}
-			if in_.owner == owner || mine < ATTACK_MARGIN * in_.strength {
+			if in_.owner == owner || mine * 100 < ATTACK_PERCENT * in_.strength {
 				continue
 			}
 			if send_problem(g, owner, i, t, warships_of(f)) != "" {
@@ -286,6 +297,10 @@ ai_fleets :: proc(g: ^Game, owner: int) {
 		}
 		for f != nil && f.ships[.Inspector] > 0 {
 			to := nearest_unsurveyed(g, owner, i, &taken)
+			if to == NO_STAR && colony_of(g, i, owner) != nil && f.ships[.Inspector] > 1 {
+				// Nothing left within a round trip: one goes one way, as a probe. Stranded, it still sees.
+				to = nearest_unsurveyed(g, owner, i, &taken, one_way = true)
+			}
 			if to == NO_STAR {
 				break
 			}
@@ -346,7 +361,7 @@ ship_n :: proc(t: Ship_Type, n: int) -> (ships: [Ship_Type]int) {
 
 // The closest star an Inspector from `from` can reach, and come back from, that the empire has no
 // report on.
-nearest_unsurveyed :: proc(g: ^Game, owner, from: int, taken: ^[MAX_STARS]bool) -> int {
+nearest_unsurveyed :: proc(g: ^Game, owner, from: int, taken: ^[MAX_STARS]bool, one_way := false) -> int {
 	best, best_d := NO_STAR, max(int)
 	a := g.stars[from]
 	for i in 0 ..< g.star_count {
@@ -360,8 +375,8 @@ nearest_unsurveyed :: proc(g: ^Game, owner, from: int, taken: ^[MAX_STARS]bool) 
 		if send_problem(g, owner, from, i, ship_one(.Inspector)) != "" {
 			continue
 		}
-		// Only a trip that leaves fuel enough to get back to a colony afterwards.
-		if src := fleet_of(g, from, owner); src != nil {
+		// Only a trip that leaves fuel enough to get back to a colony afterwards (unless one way).
+		if src := fleet_of(g, from, owner); src != nil && !one_way {
 			trial := Fleet {
 				ships = ship_one(.Inspector),
 				away  = src.away,

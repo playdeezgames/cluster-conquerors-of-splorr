@@ -5,23 +5,63 @@ package game
 // Without the define it does nothing.
 
 import "core:os"
+@(require) import "core:strings"
 import "core:testing"
 
 DUMP_PLAY :: #config(DUMP_PLAY, "")
 DUMP_SEED :: #config(DUMP_SEED, 8)
 
+// DUMP_PLAY is a folder: the map after a few turns (map.ppm), a colony (colony.ppm), a battle
+// (battle.ppm) and the council's minutes (council.ppm), for tools/make_shots.sh.
 @(test)
 test_dump_play :: proc(t: ^testing.T) {
 	when DUMP_PLAY != "" {
 		g := new(Game)
 		defer free(g)
-		init_game(g, u64(DUMP_SEED))
-		command(g, .Confirm)
 		fr := new(Frame)
 		defer free(fr)
-		draw_game(fr, g)
-		resolve(fr)
-		write_ppm(DUMP_PLAY, fr)
+		shot :: proc(g: ^Game, fr: ^Frame, name: string) {
+			draw_game(fr, g)
+			resolve(fr)
+			path := strings.concatenate({DUMP_PLAY, "/", name}, context.temp_allocator)
+			write_ppm(path, fr)
+		}
+		init_game(g, u64(DUMP_SEED))
+		choose_race(g, .Beavers)
+		for _ in 0 ..< 12 {
+			ai_turn(g, PLAYER)
+			next_turn(g)
+			for g.mode == .Battle {
+				battle_action(g, 1)
+			}
+			g.mode = .Map
+		}
+		g.cursor = g.home
+		shot(g, fr, "map.ppm")
+		open_colony(g, g.home)
+		g.row = 2
+		shot(g, fr, "colony.ppm")
+		g.mode = .Map
+		h := g.empires[1].home
+		colony_of(g, h, 1).bases = 1
+		f := new_fleet(g)
+		f.ships[.Golf_Cart], f.ships[.Pickup], f.ships[.Monster_Truck] = 4, 2, 1
+		dock(g, f, h)
+		find_battles(g)
+		battle_action(g, 0)
+		shot(g, fr, "battle.ppm")
+		for g.mode == .Battle {
+			battle_action(g, 1)
+		}
+		g.mode = .Map
+		for a in 0 ..< g.empire_count {
+			for b in 0 ..< g.empire_count {
+				g.empires[a].met[b] = a != b
+			}
+		}
+		colony_at(g, g.home).waste = 9
+		council_turn(g)
+		shot(g, fr, "council.ppm")
 	}
 }
 

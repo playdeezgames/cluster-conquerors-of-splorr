@@ -38,7 +38,7 @@ test_a_big_landing_takes_the_colony :: proc(t: ^testing.T) {
 	g := new(Game)
 	defer free(g)
 	init_game(g, SEED)
-	h := landing(g, 20) // 100 troops against 25 militia
+	h := landing(g, 20) // 100 troops against 13 militia
 	rival_race := g.empires[1].race
 	land_troops(g)
 	c := colony_at(g, h)
@@ -58,7 +58,7 @@ test_a_small_landing_is_seen_off :: proc(t: ^testing.T) {
 	g := new(Game)
 	defer free(g)
 	init_game(g, SEED)
-	h := landing(g, 1) // 5 troops against 25 militia
+	h := landing(g, 1) // 5 troops against 13 militia
 	land_troops(g)
 	c := colony_of(g, h, 1)
 	testing.expect(t, c != nil)
@@ -77,9 +77,13 @@ test_no_landing_past_bases_or_ships :: proc(t: ^testing.T) {
 	testing.expect(t, colony_of(g, h, 1) != nil)
 	testing.expect_value(t, fleet_at(g, h).ships[.Carpool], 20)
 	colony_of(g, h, 1).bases = 0
-	rival_fleet(g, h, 1, only(.Inspector, 1)) // even an Inspector in orbit stops a landing
+	rival_fleet(g, h, 1, only(.Golf_Cart, 1)) // an armed ship in orbit stops a landing
 	land_troops(g)
 	testing.expect(t, colony_of(g, h, 1) != nil)
+	// An unarmed one does not.
+	fleet_of(g, h, 1).ships = only(.Inspector, 1)
+	land_troops(g)
+	testing.expect(t, colony_at(g, h) != nil)
 }
 
 @(test)
@@ -155,11 +159,12 @@ test_rivals_invade_what_they_saw_undefended :: proc(t: ^testing.T) {
 		owner      = PLAYER,
 		households = 10,
 	}
-	prey, need := invasion_target(g, 1, h)
+	prey, need, base := invasion_target(g, 1)
 	testing.expect_value(t, prey, target)
-	testing.expect_value(t, need, 2) // 5 militia, half as many again: 7 troops, two Carpools
+	testing.expect_value(t, base, h)
+	testing.expect_value(t, need, 1) // 3 militia, half as many again: 4 troops, one Carpool
 	fleet_of(g, h, 1).ships[.Carpool] = need
-	ai_invade(g, 1, prey, need)
+	ai_invade(g, 1, base, prey, need)
 	going := false
 	for &f in g.fleets {
 		if f.used && f.owner == 1 && f.star == NO_STAR && f.to == target && f.ships[.Carpool] == need {

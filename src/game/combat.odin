@@ -467,6 +467,7 @@ player_retreat :: proc(g: ^Game, bt: ^Battle) -> bool {
 // Writes a finished battle back into the fleets and colonies, sends retreating ships off, and tells
 // the news.
 finish_battle :: proc(g: ^Game, bt: ^Battle) {
+	g.battles += 1
 	lost: [2]int
 	for side in 0 ..< 2 {
 		owner := bt.owners[side]

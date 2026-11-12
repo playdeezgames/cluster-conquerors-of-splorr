@@ -76,6 +76,8 @@ Game :: struct {
 	row:        int, // the highlighted row of the ship list
 	outcome:    Outcome, // still playing, won or lost
 	council:    Council, // the Homeowners' Association
+	battles:    int, // battles fought so far (for the simulator)
+	captures:   int, // colonies taken so far (for the simulator)
 	battle:     Battle, // the player's battle on screen
 	pending:    [8][2]int, // the player's battles this turn: star, enemy
 	pending_n:  int,
@@ -110,7 +112,7 @@ init_game :: proc(g: ^Game, seed: u64) {
 	add(&b, g.stars[g.home].name)
 	add(&b, ". The Homeowners' Association has been notified.")
 	say(g, text(&b))
-	say(g, "(Slice 1, step 8: Enter/OK on a colony runs it; R or Tech for research; T ends the turn.)")
+	say(g, "Enter/OK on a colony runs it, R or Tech is research, T or Turn ends the turn.")
 }
 
 // A new game in the browser starts on the species screen; tests start straight on the map as Geese.

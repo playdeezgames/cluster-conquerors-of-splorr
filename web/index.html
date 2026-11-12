@@ -51,7 +51,7 @@
 <footer>
 	Cluster Conquerors of SPLORR!! by TheGrumpyGameDev. Code made by an AI agent (Claude Code) at the author's direction.
 	Tiles: Urizen by vurmux (CC0). Font: DINOBYTE by mby (CC BY 4.0). Feedback by LootLocker.
-	<a href="#" id="feedback-link">Send feedback (F)</a> · <a href="https://thegrumpygamedev.itch.io/">itch.io</a> · <a href="https://playdeezgames.github.io/oeuvre-of-splorr/">more games</a>
+	<a href="#" id="feedback-link">Send feedback (F)</a> · <a href="#" id="new-cluster">New cluster</a> · <a href="https://thegrumpygamedev.itch.io/">itch.io</a> · <a href="https://playdeezgames.github.io/oeuvre-of-splorr/">more games</a>
 </footer>
 <script src="odin.js"></script>
 <script src="lootlocker.js"></script>
@@ -71,11 +71,48 @@
 	await odin.runWasm("game.wasm", null, {}, memory);
 	const ex = memory.exports;
 	const W = ex.platform_screen_w(), H = ex.platform_screen_h();
-	// A new cluster each load (saves arrive in step 9); ?seed=N in the URL replays one.
+	// Every input goes through these, and is saved shortly after (see saveSoon below).
+	function sendCommand(c) { ex.platform_command(c); saveSoon(); }
+	function sendPointer(x, y, p) { ex.platform_pointer(x, y, p); saveSoon(); }
+	// The game is saved in localStorage after every move and picked up on the next visit. ?seed=N in the
+	// URL starts (and replaces the save with) that cluster; "New cluster" in the footer starts a fresh one.
+	const SAVE_KEY = "ccos-save";
+	function saveGame() {
+		try {
+			const n = ex.platform_save();
+			const bytes = new Uint8Array(memory.memory.buffer, ex.platform_save_ptr(), n);
+			let bin = "";
+			for (let i = 0; i < n; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+			localStorage.setItem(SAVE_KEY, btoa(bin));
+		} catch (e) { /* private windows and full storage: play on without saving */ }
+	}
+	function loadGame() {
+		try {
+			const b64 = localStorage.getItem(SAVE_KEY);
+			if (!b64) return false;
+			const bin = atob(b64);
+			if (bin.length > ex.platform_save_size()) return false;
+			const bytes = new Uint8Array(memory.memory.buffer, ex.platform_save_ptr(), bin.length);
+			for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+			return ex.platform_load(bin.length) === 1;
+		} catch (e) { return false; }
+	}
+	let saveTimer = null;
+	function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveGame, 300); }
+	window.addEventListener("pagehide", saveGame);
 	const seedParam = new URLSearchParams(location.search).get("seed");
-	const seed = seedParam !== null && /^\d+$/.test(seedParam) ? Number(seedParam) : Math.floor(Math.random() * 2 ** 31);
-	console.log("cluster seed", seed);
-	ex.platform_start(Math.floor(seed / 2 ** 32), seed % 2 ** 32);
+	if (seedParam !== null || !loadGame()) {
+		const seed = seedParam !== null && /^\d+$/.test(seedParam) ? Number(seedParam) : Math.floor(Math.random() * 2 ** 31);
+		console.log("cluster seed", seed);
+		ex.platform_start(Math.floor(seed / 2 ** 32), seed % 2 ** 32);
+		saveGame();
+	}
+	document.getElementById("new-cluster").addEventListener("click", (e) => {
+		e.preventDefault();
+		if (!confirm("Start a new cluster? This one will be forgotten.")) return;
+		try { localStorage.removeItem(SAVE_KEY); } catch (err) {}
+		location.href = location.pathname;
+	});
 
 	// game.Command order (src/game/game.odin): North South West East NorthWest NorthEast SouthWest SouthEast
 	// Confirm Cancel EndTurn Research.
@@ -94,7 +131,7 @@
 		e.preventDefault();
 		const c = KEYS[e.code];
 		if (e.repeat && c > C.SE) return; // held keys repeat cursor moves only
-		ex.platform_command(c);
+		sendCommand(c);
 	});
 
 	// Mouse and touch: a click or tap goes to the game in framebuffer pixels as a game.Pointer
@@ -103,8 +140,8 @@
 	canvas.addEventListener("pointerdown", (e) => {
 		const r = canvas.getBoundingClientRect();
 		const x = Math.floor((e.clientX - r.left) * W / r.width), y = Math.floor((e.clientY - r.top) * H / r.height);
-		if (e.pointerType === "touch" || e.pointerType === "pen") { showPads(); ex.platform_pointer(x, y, 2); }
-		else ex.platform_pointer(x, y, e.button === 2 ? 1 : 0);
+		if (e.pointerType === "touch" || e.pointerType === "pen") { showPads(); sendPointer(x, y, 2); }
+		else sendPointer(x, y, e.button === 2 ? 1 : 0);
 	});
 
 	// Touch d-pad and action buttons. Held direction buttons repeat like held keys.
@@ -117,11 +154,11 @@
 		const c = Number(b.dataset.c);
 		b.addEventListener("pointerdown", (e) => {
 			e.preventDefault();
-			ex.platform_command(c);
+			sendCommand(c);
 			if (c <= C.SE) {
 				clearInterval(padHeld);
 				const started = Date.now();
-				padHeld = setInterval(() => { if (Date.now() - started > 300) ex.platform_command(c); }, 110);
+				padHeld = setInterval(() => { if (Date.now() - started > 300) sendCommand(c); }, 110);
 			}
 		});
 		const release = () => { clearInterval(padHeld); padHeld = null; };
@@ -151,11 +188,11 @@
 		const gp = navigator.getGamepads ? Array.from(navigator.getGamepads()).find((g) => g) : null;
 		if (!gp) return;
 		const d = stickCommand(gp);
-		if (d !== pad.held) { pad.held = d; pad.frames = 0; if (d >= 0) ex.platform_command(d); }
-		else if (d >= 0 && ++pad.frames >= 12) { pad.frames = 6; ex.platform_command(d); }
+		if (d !== pad.held) { pad.held = d; pad.frames = 0; if (d >= 0) sendCommand(d); }
+		else if (d >= 0 && ++pad.frames >= 12) { pad.frames = 6; sendCommand(d); }
 		[[0, C.CONFIRM], [1, C.CANCEL], [3, C.RESEARCH], [9, C.END_TURN]].forEach(([i, c]) => {
 			const now = !!(gp.buttons[i] && gp.buttons[i].pressed);
-			if (now && !pad.buttons[i]) ex.platform_command(c);
+			if (now && !pad.buttons[i]) sendCommand(c);
 			pad.buttons[i] = now;
 		});
 	}

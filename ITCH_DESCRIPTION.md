@@ -1,7 +1,7 @@
 # itch.io page copy: Cluster Conquerors of SPLORR!!
 
 Page: https://thegrumpygamedev.itch.io/cluster-conquerors-of-splorr (not created yet; no release booked). Pages comes first (`DESIGN.md`: a normal release, GitHub Pages as soon as a galaxy map can be explored, itch.io later on a Coxswain-booked day).
-**Draft, written November 10, 2026 at slice 1 step 0; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, a placeholder made by `tools/make_cover.py`). Screenshots: `assets/screenshots/` (none yet).
+**Draft, written November 10, 2026 at slice 1 step 0 and brought up to the end of slice 1 on November 12, 2026; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, a placeholder made by `tools/make_cover.py`). Screenshots: `assets/screenshots/01-map.png` to `04-council.png` (native frames at 3x, by `tools/make_shots.sh`).
 
 ## Short description (the one-line field)
 
@@ -25,7 +25,17 @@ Pick a species of animal. Survey the stars, settle them, run each colony on five
 
 ### How to play
 
-To be written as the controls settle. Mouse, keyboard, gamepad and touch (landscape) are all supported.
+Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself in yer browser after every move; "New cluster" under the screen starts again.
+
+- **The map:** the arrows (or d-pad, or stick) move from star to star; a click or tap picks one. Enter/OK on one of yer colonies opens it; on a star with only yer ships, opens them.
+- **A colony:** five sliders share what it makes (Parking builds ships, Fencing builds defence bases, Home Improvement builds factories, Lawn Care cleans up, Book Club researches). Up/Down pick, Left/Right move, Enter/OK locks; click a bar to set it.
+- **Sending ships:** pick how many of each go, then the star; the line turns red when they would run out of fuel on the way. Ships fill up only at yer colonies, or from a Gas Can.
+- **Research:** R (gamepad Y, the Tech button) shares Book Club's research among six hobbies.
+- **Battles:** pick a target, then fight a round, fight it out, or retreat.
+- **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
+- **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
+
+This is slice 1 of 3: one small cluster and two rivals. Diplomacy and spies, bylaws, the other six species, bigger clusters and more rivals are still to come.
 
 ### About it
 

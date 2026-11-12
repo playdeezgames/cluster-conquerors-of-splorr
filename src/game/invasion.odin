@@ -1,14 +1,19 @@
 package game
 
 // Invasion and conquest (slice 1 step 7). Carpools carry households; at an enemy colony with no bases
-// and no ships left to stop them, they land at the start of the next turn and fight the colony's
-// militia (half its households), one against one, with hidden even odds. Win, and the colony is yers,
+// and no armed ships left to stop them, they land at the start of the next turn and fight the colony's
+// militia (a quarter of its households), one against one, with hidden even odds. Win, and the colony is yers,
 // its people still their own species (and with their own trait) until they assimilate. An empire with
 // no colonies left is out; the last one standing has conquered the cluster.
 
 CARPOOL_LOAD :: 5 // households a Carpool takes from the colony that builds it, and lands
 ASSIMILATE_TURNS :: 20 // turns before a captured colony's people become the owner's species
 LAND_WIN_PERCENT :: 50 // a landed household's chance against one of the militia
+MILITIA_IN :: 4 // one household in this many takes up arms against a landing
+
+militia_of :: proc(households: int) -> int {
+	return (households + MILITIA_IN - 1) / MILITIA_IN
+}
 
 Outcome :: enum u8 {
 	Playing,
@@ -20,8 +25,11 @@ Outcome :: enum u8 {
 land_troops :: proc(g: ^Game) {
 	for i in 0 ..< g.star_count {
 		c := any_colony(g, i)
-		if c == nil || c.bases > 0 || fleet_of(g, i, c.owner) != nil {
+		if c == nil || c.bases > 0 {
 			continue
+		}
+		if f := fleet_of(g, i, c.owner); f != nil && warship_hits(f) > 0 {
+			continue // only armed ships (or bases) stop a landing
 		}
 		for e in 0 ..< g.empire_count {
 			if e == c.owner {
@@ -50,7 +58,7 @@ invade :: proc(g: ^Game, star: int, f: ^Fleet) {
 	if fleet_size(f) == 0 {
 		f^ = {}
 	}
-	militia := (c.households + 1) / 2
+	militia := militia_of(c.households)
 	fallen := 0
 	for troops > 0 && militia > 0 {
 		if rng_int(&g.rng, 100) < LAND_WIN_PERCENT {
@@ -64,6 +72,7 @@ invade :: proc(g: ^Game, star: int, f: ^Fleet) {
 	s := &g.stars[star]
 	won := militia == 0 && troops > 0
 	if won {
+		g.captures += 1
 		race := c.race
 		c^ = {
 			owned      = true,

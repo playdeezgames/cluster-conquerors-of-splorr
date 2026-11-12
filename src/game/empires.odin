@@ -27,7 +27,7 @@ RACES := [Race]Race_Info {
 	.Beavers = {"Beavers", "Beaver", "Build whether or not anyone asked.", "Factories make half as much again."},
 	.Owls    = {"Owls", "Owl", "Read everything, finish nothing.", "Research comes half as fast again."},
 	.Rabbits = {"Rabbits", "Rabbit", "You know.", "Households grow half as fast again."},
-	.Geese   = {"Geese", "Goose", "Honk, then attack.", "Ships aim a fifth better (in battle, step 6)."},
+	.Geese   = {"Geese", "Goose", "Honk, then attack.", "Ships aim a fifth better in battle."},
 }
 
 // The colour each empire's colonies and ships are drawn in.

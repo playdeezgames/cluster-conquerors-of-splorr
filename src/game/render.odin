@@ -709,6 +709,8 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 		print(f, info.blurb, x + 2 * GLYPH_W, y + 11, COLOR_MID)
 		print(f, info.trait, x + 2 * GLYPH_W, y + 22, COLOR_CYAN)
 	}
+	print(f, "Slice 1 of 3. Still to come: diplomacy and spies, bylaws,", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "the other six species, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Up/Down: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
