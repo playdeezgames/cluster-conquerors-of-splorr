@@ -86,6 +86,7 @@ invade :: proc(g: ^Game, star: int, f: ^Fleet) {
 	c.households = max(0, c.households - fallen)
 	s := &g.stars[star]
 	won := militia == 0 && troops > 0
+	add_grudge(g, defender, attacker, won ? GRUDGE_CAPTURE : GRUDGE_LANDING)
 	if won {
 		g.captures += 1
 		race := c.race

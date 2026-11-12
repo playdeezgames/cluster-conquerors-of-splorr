@@ -69,7 +69,7 @@ ai_turn :: proc(g: ^Game, owner: int) {
 invasion_target :: proc(g: ^Game, owner: int) -> (target, need, base: int) {
 	e := &g.empires[owner]
 	target, base = NO_STAR, NO_STAR
-	best_d := max(int)
+	best_grudge, best_d := -1, max(int)
 	trial := Fleet {
 		ships = ship_one(.Carpool),
 	}
@@ -88,8 +88,9 @@ invasion_target :: proc(g: ^Game, owner: int) -> (target, need, base: int) {
 			}
 			a, b := g.stars[from], g.stars[t]
 			d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
-			if d < best_d {
-				target, base, best_d = t, from, d
+			gr := grudge_at(g, owner, in_)
+			if gr > best_grudge || (gr == best_grudge && d < best_d) {
+				target, base, best_grudge, best_d = t, from, gr, d
 				militia := militia_of(in_.households)
 				need = (militia * 3 / 2) / CARPOOL_LOAD + 1
 			}
@@ -148,7 +149,7 @@ ai_attack :: proc(g: ^Game, owner: int) {
 			continue
 		}
 		mine := warship_hits(f)
-		best, best_d := NO_STAR, max(int)
+		best, best_grudge, best_d := NO_STAR, -1, max(int)
 		for t in 0 ..< g.star_count {
 			in_ := e.intel[t]
 			if t == g.clubhouse && g.moth_alive && !in_.seen {
@@ -165,8 +166,9 @@ ai_attack :: proc(g: ^Game, owner: int) {
 			}
 			a, b := g.stars[i], g.stars[t]
 			d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
-			if d < best_d {
-				best, best_d = t, d
+			gr := grudge_at(g, owner, in_)
+			if gr > best_grudge || (gr == best_grudge && d < best_d) {
+				best, best_grudge, best_d = t, gr, d
 			}
 		}
 		if best != NO_STAR {

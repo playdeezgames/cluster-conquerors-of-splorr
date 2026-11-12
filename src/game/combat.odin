@@ -479,6 +479,8 @@ player_retreat :: proc(g: ^Game, bt: ^Battle) -> bool {
 // the news.
 finish_battle :: proc(g: ^Game, bt: ^Battle) {
 	g.battles += 1
+	add_grudge(g, bt.owners[0], bt.owners[1], GRUDGE_BATTLE)
+	add_grudge(g, bt.owners[1], bt.owners[0], GRUDGE_BATTLE)
 	lost: [2]int
 	for side in 0 ..< 2 {
 		owner := bt.owners[side]

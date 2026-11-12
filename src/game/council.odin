@@ -129,6 +129,9 @@ fine :: proc(g: ^Game, owner: int, why: string) {
 	e := &g.empires[owner]
 	amount := e.bj * FINE_PERCENT / 100
 	e.bj -= amount
+	for other in 0 ..< g.empire_count {
+		add_grudge(g, other, owner, GRUDGE_COMPLAINT)
+	}
 	b: Text
 	add(&b, "Complaint, ")
 	add(&b, who(g, owner))

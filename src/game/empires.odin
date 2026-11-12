@@ -41,7 +41,7 @@ RACES := [Race]Race_Info {
 	.Tardigrades = {"Tardigrades", "Tardigrade", "Live on any rock. Grow slowly.", "Settle any world without Landscaping; grow at half speed.", ""},
 	.Tortoises   = {"Tortoises", "Tortoise", "The shell is the plan.", "Enemy shots hit a fifth less often.", ""},
 	.Badgers     = {"Badgers", "Badger", "Dig in.", "Win 65 of 100 fights on the ground, not 50.", ""},
-	.Dogs        = {"Dogs", "Dog", "Like everybody. Everybody still hates them.", "Grudges start lower; trade pays half as much again.", "Waits for grudges and trade (slice 2 steps 1 and 3)."},
+	.Dogs        = {"Dogs", "Dog", "Like everybody. Everybody still hates them.", "Grudges start lower; trade pays half as much again.", "Trade waits for slice 2 step 3."},
 }
 
 // The colour each empire's colonies and ships are drawn in.
@@ -57,6 +57,8 @@ Empire :: struct {
 	sees:     [MAX_STARS]bool, // stars in sight this turn
 	intel:    [MAX_STARS]Intel, // what it last saw at each star
 	out:      bool, // no colonies left
+	grudge:   [MAX_EMPIRES]int, // how much it hates each empire, 0 to 100 (grudges.odin); hidden
+	mood:     Mood, // the gossip band of its grudge against you, last time you heard
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.
@@ -126,6 +128,7 @@ assign_rivals :: proc(g: ^Game) {
 	for e in 1 ..< g.empire_count {
 		g.empires[e].race = others[e - 1]
 	}
+	reset_grudges(g)
 }
 
 // Where an empire's eyes are: its colonies and its ships, docked or on the way.

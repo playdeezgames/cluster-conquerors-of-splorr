@@ -373,6 +373,7 @@ send_fleet :: proc(g: ^Game, owner, from, to: int, ships: [Ship_Type]int) {
 end_turn :: proc(g: ^Game) {
 	land_troops(g)
 	assimilate(g)
+	grudge_turn(g)
 	check_conquest(g)
 	if g.outcome != .Playing {
 		return

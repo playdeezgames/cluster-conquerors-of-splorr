@@ -6,7 +6,7 @@ package game
 // and a new cluster starts.
 
 SAVE_MAGIC :: u32(0x5343_4343) // "CCCS"
-SAVE_VERSION :: u32(1)
+SAVE_VERSION :: u32(2) // 2: slice 2 step 1 (grudges)
 
 Save_Header :: struct {
 	magic:   u32,
