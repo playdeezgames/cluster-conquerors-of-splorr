@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cluster Conquerors Manual</title>
+<style>
+	/* Sweetie-16, as the game. */
+	:root {
+		--bg: #1a1c2c; --panel: #333c57; --line: #566c86; --text: #94b0c2; --bright: #f4f4f4;
+		--cyan: #73eff7; --blue: #41a6f6; --green: #38b764; --lime: #a7f070; --yellow: #ffcd75;
+		--orange: #ef7d57; --red: #b13e53; --purple: #5d275d;
+	}
+	html { background: var(--bg); }
+	body {
+		margin: 0 auto; max-width: 820px; padding: 24px 16px 64px; background: var(--bg); color: var(--text);
+		font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+	}
+	h1, h2, h3, nav, .key, table th, code { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; }
+	h1 { color: var(--bright); font-size: 26px; margin: 0 0 4px; }
+	h2 { color: var(--cyan); font-size: 20px; margin: 40px 0 8px; padding-top: 8px; border-top: 1px solid var(--panel); }
+	h3 { color: var(--yellow); font-size: 16px; margin: 24px 0 6px; }
+	p, ul, ol { margin: 0 0 12px; }
+	li { margin-bottom: 4px; }
+	strong { color: var(--bright); }
+	a { color: var(--blue); }
+	.sub { color: var(--line); margin: 0 0 20px; }
+	.note { background: var(--panel); border-left: 3px solid var(--yellow); padding: 10px 14px; border-radius: 4px; margin: 0 0 16px; }
+	.key { display: inline-block; color: var(--bright); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; font-size: 13px; line-height: 20px; }
+	code { color: var(--cyan); font-size: 14px; }
+	nav { background: var(--panel); border-radius: 6px; padding: 12px 16px; margin: 0 0 8px; font-size: 14px; }
+	nav ol { columns: 2; column-gap: 24px; margin: 0; padding-left: 22px; }
+	@media (max-width: 560px) { nav ol { columns: 1; } }
+	.wrap { overflow-x: auto; margin: 0 0 16px; }
+	table { border-collapse: collapse; width: 100%; font-size: 14px; }
+	th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--panel); vertical-align: top; }
+	th { color: var(--bright); font-size: 13px; white-space: nowrap; }
+	td.n { text-align: right; font-variant-numeric: tabular-nums; }
+	.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+	.back { display: inline-block; margin-bottom: 16px; }
+	ol.steps > li { margin-bottom: 10px; }
+	.later { color: var(--line); }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">&larr; Back to the Metaphor</a>
+<h1>Cluster Conquerors of SPLORR!!</h1>
+<p class="sub">The manual. Everything in writing, as the Homeowners' Association would want.</p>
+
+<p>A Metaphor about paperwork, in the shape of a turn-based space strategy game in the spirit of the original Master of Orion. You are one species of animal in a small cluster of about twenty stars, with two rival species. You survey the stars, settle them, run each colony, research hobbies, build ships, and fight. Everybody hates you. The rivals hate each other too, but you get it worst.</p>
+<div class="note"><strong>The Metaphor is still being built.</strong> This is slice 2 of 3. Spies, bylaws, alliances, trade, random events, bigger clusters and more rivals are still to come. This manual describes only what is in it today.</div>
+
+<nav>
+<ol>
+	<li><a href="#quick">Yer first ten turns</a></li>
+	<li><a href="#controls">Controls</a></li>
+	<li><a href="#screen">The screen and the map</a></li>
+	<li><a href="#colonies">Colonies and the five chores</a></li>
+	<li><a href="#ships">Ships</a></li>
+	<li><a href="#fuel">Fuel and Gas Cans</a></li>
+	<li><a href="#surveys">Surveys, and how they lie</a></li>
+	<li><a href="#research">Research</a></li>
+	<li><a href="#battles">Battles</a></li>
+	<li><a href="#invasion">Taking colonies</a></li>
+	<li><a href="#clubhouse">The Clubhouse and its moth</a></li>
+	<li><a href="#hoa">The Homeowners' Association</a></li>
+	<li><a href="#paperwork">Grudges and paperwork</a></li>
+	<li><a href="#species">The ten species</a></li>
+	<li><a href="#end">Winning, losing and saves</a></li>
+	<li><a href="#tips">Tips</a></li>
+</ol>
+</nav>
+
+<h2 id="quick">Yer first ten turns</h2>
+<ol class="steps">
+	<li><strong>Pick a species.</strong> Arrows to move, <span class="key">Enter</span> to choose (or tap twice). Each has one trait; the <a href="#species">table below</a> says what. If you cannot decide, the <strong>Beavers</strong> (more from factories) are the plainest start.</li>
+	<li><strong>Look around.</strong> You start at yer home star, ringed in green. Almost every other star is grey: <em>unknown</em>. The panel on the right always describes the star under the cursor. The news runs along the bottom.</li>
+	<li><strong>Send yer two Inspectors out.</strong> Press <span class="key">Enter</span> on home to open the colony, pick <em>Ships parked here &gt;</em>, then:
+		<ul>
+			<li>Up/Down picks a kind of ship (the Inspector). Left/Right sets how many go: start with one.</li>
+			<li>Pick <em>Choose where</em>, move the cursor to a grey star, and press <span class="key">Enter</span> (or tap the star twice). The dotted line is cyan when the trip can be made, and red when it cannot. The panel shows the turns the trip takes and the fuel left on arrival.</li>
+			<li>Do it again with the other Inspector, towards a different star.</li>
+		</ul>
+	</li>
+	<li><strong>End the turn</strong> with <span class="key">T</span>. An Inspector files a survey of each star it reaches. Surveyed stars turn yellow and show their planet in the panel.</li>
+	<li><strong>Settle with the Moving Van.</strong> Once a survey shows a good world nearby (Garden, Terran, Ocean or Jungle; Medium or Large), send the Moving Van there. It settles on arrival with 2 households and is used up. Hostile worlds (Barren, Dead, Inferno, Toxic, Radiated) need a <a href="#research">Landscaping</a> tech first, unless you are Tardigrades.</li>
+	<li><strong>Set yer home's chores.</strong> Open the colony (<span class="key">Enter</span> on home). The five sliders share out what it makes. Early on, keep <strong>Home Improvement</strong> high to build factories, keep a little <strong>Lawn Care</strong> so the yards stay tidy, and give <strong>Book Club</strong> a share for research. Set the <strong>ship order</strong> to a Moving Van and raise <strong>Parking</strong> when you want another colony.</li>
+	<li><strong>Research.</strong> <span class="key">R</span> opens the research screen. Its six sliders share yer Book Club points between six hobbies. Landscaping (more worlds to settle) and Commuting (speed and range) pay off early.</li>
+	<li><strong>Keep ending turns.</strong> Around turn 10 you will probably meet a rival. They hate you. Keep a few Golf Carts at home, and build Fencing (defence bases) at colonies near them.</li>
+</ol>
+
+<h2 id="controls">Controls</h2>
+<p>Mouse, keyboard, gamepad and touch all work everywhere. Phones play turned sideways; touch buttons appear beside the screen.</p>
+<div class="wrap"><table>
+	<tr><th>To</th><th>Keyboard</th><th>Gamepad</th><th>Touch / mouse</th></tr>
+	<tr><td>Move the cursor, pick a row</td><td>Arrows, numpad (diagonals on 7 9 1 3)</td><td>D-pad, left stick</td><td>Tap or click a star or a row</td></tr>
+	<tr><td>Confirm, open, choose</td><td><span class="key">Enter</span> <span class="key">Space</span></td><td>A</td><td>OK button, or tap twice</td></tr>
+	<tr><td>Back</td><td><span class="key">Esc</span> <span class="key">Backspace</span></td><td>B</td><td>Back button</td></tr>
+	<tr><td>End the turn</td><td><span class="key">T</span></td><td>Start</td><td>Turn button</td></tr>
+	<tr><td>Research screen</td><td><span class="key">R</span></td><td>Y</td><td>Tech button, or <em>R: tech</em> in the panel</td></tr>
+	<tr><td>The forms desk</td><td><span class="key">P</span></td><td>X</td><td>Forms button, or <em>P: forms</em> in the panel</td></tr>
+	<tr><td>Send feedback</td><td><span class="key">F</span></td><td></td><td><em>Send feedback</em> under the screen</td></tr>
+</table></div>
+<p>On sliders, Left/Right moves the highlighted slider by 5 and <span class="key">Enter</span> locks it. A click on a bar sets it there, and a click on the lock column toggles the lock.</p>
+
+<h2 id="screen">The screen and the map</h2>
+<p>The <strong>map</strong> is on the left and scrolls with the cursor. The <strong>panel</strong> is on the right: turn number, yer BJ (billion jools, the money), and whatever the cursor is on. The <strong>news</strong> runs along the bottom, newest last.</p>
+<div class="wrap"><table>
+	<tr><th>On the map</th><th>Means</th></tr>
+	<tr><td>Grey star</td><td>Unknown: never surveyed, or its survey was misfiled.</td></tr>
+	<tr><td>Yellow star</td><td>Surveyed. The panel shows what the report says, which may be wrong.</td></tr>
+	<tr><td><span class="sw" style="background:#38b764"></span>Green ring</td><td>One of yer colonies.</td></tr>
+	<tr><td><span class="sw" style="background:#b13e53"></span><span class="sw" style="background:#ef7d57"></span>Red or orange ring</td><td>A rival's colony, shown only while in sight.</td></tr>
+	<tr><td>Small flag</td><td>Yer ships parked at a star. A red flag means stranded (out of fuel). A rival's ships show as a flag at the top left, in its colour.</td></tr>
+	<tr><td>A van between stars</td><td>A fleet on its way, in its owner's colour.</td></tr>
+	<tr><td><span class="sw" style="background:#5d275d"></span>Purple vortex</td><td>A wormhole you have been through.</td></tr>
+</table></div>
+<p>You see about 7 cells around each of yer colonies and ships. Beyond that, rivals are invisible.</p>
+<p><strong>A turn</strong> happens when you end it. Everyone's colonies produce, research is spent, fleets move and arrive, fuel burns, battles are found, and now and then the Homeowners' Association meets. Yer battles, a meeting and any forms on yer doormat then come up one after another before you are back on the map.</p>
+
+<h2 id="colonies">Colonies and the five chores</h2>
+<p>A colony has <strong>households</strong> (its people), <strong>factories</strong>, <strong>defence bases</strong> and <strong>waste</strong>. Each turn it makes production: half a point per household, plus a point per factory the households can work (two factories per household; three for Ants). Rich worlds make half as much again, and Poor worlds half as much.</p>
+<p>A tenth of production goes to yer <strong>BJ</strong> as tax. The five chore sliders share the rest, always adding up to 100. Moving one shares the difference among the others that are not locked.</p>
+<div class="wrap"><table>
+	<tr><th>Chore</th><th>Does</th></tr>
+	<tr><td><strong>Parking</strong></td><td>Builds the colony's ship order. Ships appear at the colony.</td></tr>
+	<tr><td><strong>Fencing</strong></td><td>Builds defence bases at 30 points each. They fight in battles at the colony and stop landings.</td></tr>
+	<tr><td><strong>Home Improvement</strong></td><td>Builds factories at 10 points each (less with Renovation techs), up to what the households can work. Once that is reached, the surplus goes to BJ.</td></tr>
+	<tr><td><strong>Lawn Care</strong></td><td>Cleans waste. Every 4 factories make 1 waste a turn, and a point cleans 2. Every 10 waste left lying about permanently takes room for one household off the planet, with a complaint in the news. Spare Lawn Care helps households grow.</td></tr>
+	<tr><td><strong>Book Club</strong></td><td>Makes research points, doubled on Ancient Artifacts worlds.</td></tr>
+</table></div>
+<p><strong>Room:</strong> a Small world holds up to 40 households, Medium 70 and Large 100, times the type: Garden 125 %, Terran 100 %, Ocean and Jungle 90 %, Arid and Steppe 80 %, Desert and Tundra 70 %. Hostile types hold less, once you can settle them at all. Households grow towards the room each turn, slower as it fills.</p>
+<p><strong>Home</strong> starts with 50 households and 30 factories, building Inspectors.</p>
+
+<h2 id="ships">Ships</h2>
+<p>You do not design ships. There are seven fixed types, and technology upgrades every ship of a type at once. All yer ships at one star are one fleet. Ships sent together travel together, at the slowest one's speed.</p>
+<div class="wrap"><table>
+	<tr><th>Ship</th><th>Job</th><th>Cost</th><th>Fuel</th><th>Speed</th><th>Hits</th><th>Shots</th><th>Range</th></tr>
+	<tr><td><strong>Inspector</strong></td><td>Surveys every star it reaches</td><td class="n">10</td><td class="n">6</td><td class="n">4</td><td class="n">2</td><td class="n">0</td><td class="n">0</td></tr>
+	<tr><td><strong>Moving Van</strong></td><td>Settles a new colony; used up</td><td class="n">60</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="n">0</td><td class="n">0</td></tr>
+	<tr><td><strong>Carpool</strong></td><td>Carries 5 households to invade</td><td class="n">20</td><td class="n">4</td><td class="n">3</td><td class="n">4</td><td class="n">0</td><td class="n">0</td></tr>
+	<tr><td><strong>Gas Can</strong></td><td>Refuels its fleet away from home</td><td class="n">25</td><td class="n">8</td><td class="n">3</td><td class="n">3</td><td class="n">0</td><td class="n">0</td></tr>
+	<tr><td><strong>Golf Cart</strong></td><td>Small warship</td><td class="n">20</td><td class="n">4</td><td class="n">4</td><td class="n">4</td><td class="n">1</td><td class="n">2</td></tr>
+	<tr><td><strong>Pickup</strong></td><td>Medium warship</td><td class="n">50</td><td class="n">4</td><td class="n">3</td><td class="n">10</td><td class="n">2</td><td class="n">3</td></tr>
+	<tr><td><strong>Monster Truck</strong></td><td>Large warship</td><td class="n">120</td><td class="n">3</td><td class="n">2</td><td class="n">24</td><td class="n">4</td><td class="n">4</td></tr>
+</table></div>
+<p>Cost is in production points (Parking), fuel is turns away from a colony, and speed is map cells a turn. Hits, shots and range are for battles. You start with 2 Inspectors, a Moving Van, a Gas Can and 2 Golf Carts.</p>
+<p><strong>Sending:</strong> <span class="key">Enter</span> on a star with yer ships (or <em>Ships parked here &gt;</em> on a colony) opens the list. Pick kinds and counts, then <em>Choose where</em>, then the star. <span class="key">Esc</span> steps back.</p>
+
+<h2 id="fuel">Fuel and Gas Cans</h2>
+<p>A fleet counts the turns it spends away from one of yer colonies. Its range is the fuel of its thirstiest ship. An order that would run dry on the way is refused ("Out of range."). A fleet that runs dry anywhere that is not yer colony is <strong>stranded</strong> (red flag) and waits there forever, until a Gas Can reaches it.</p>
+<p>A <strong>Gas Can</strong> fills up with 10 refills at yer colonies. Away from home, it tops its own fleet up with one refill a turn. So send Gas Cans along on long trips, or send one to rescue a stranded fleet. Commuting techs add speed and fuel.</p>
+
+<h2 id="surveys">Surveys, and how they lie</h2>
+<ul>
+	<li><strong>Wrong readings:</strong> about 15 % of reports get the planet's type or size wrong. The truth comes out when a Moving Van arrives. If it turns out the world cannot be settled, the movers wait in the van.</li>
+	<li><strong>Estate-agent language:</strong> a star with no special is sometimes reported <em>Rich</em> or <em>Ancient Artifacts</em>. A new colony finds out after 3 turns. Only flattering lies are told.</li>
+	<li><strong>Misfiling:</strong> each turn, each report (not home's) has a 1 % chance of being lost, and the star shows grey again.</li>
+	<li><strong>Wormholes:</strong> about one star in eight is a wormhole that looks exactly like an unknown star. Anything that enters is thrown to a random star. After that you know it, and it is drawn as a purple vortex.</li>
+</ul>
+<p>Spreadsheets techs make bad readings rarer.</p>
+
+<h2 id="research">Research</h2>
+<p>Book Club points go into a pool that six empire-wide sliders share between six hobbies. Each hobby buys its cheapest available tech when it has enough. Each cluster offers only 5 of each hobby's 8 techs, so nobody gets everything.</p>
+<div class="wrap"><table>
+	<tr><th>Hobby</th><th>Gives</th></tr>
+	<tr><td><strong>Spreadsheets</strong></td><td>Ships aim better; fewer bad survey readings</td></tr>
+	<tr><td><strong>Renovation</strong></td><td>Cheaper factories; ship armour</td></tr>
+	<tr><td><strong>Fences</strong></td><td>Ship shields; stronger defence bases</td></tr>
+	<tr><td><strong>Landscaping</strong></td><td>Settle hostile worlds (Barren, Dead, Inferno, Toxic, Radiated, one tech each); more room; Composting halves waste</td></tr>
+	<tr><td><strong>Commuting</strong></td><td>Ship speed and fuel</td></tr>
+	<tr><td><strong>Disputes</strong></td><td>Ship weapons (more damage per hit)</td></tr>
+</table></div>
+<p><strong>The upgrade fee:</strong> when a ship tech arrives, every affected ship upgrades at once and you are billed 5 BJ per ship. A fleet you cannot pay for keeps its old kit and is marked <em>Unpaid</em> in orange. Pay later with <em>Pay upgrades</em> in its ship list. Unpaid fees are also a complaint at the Homeowners' Association.</p>
+
+<h2 id="battles">Battles</h2>
+<p>At the end of a turn, two empires at the same star fight if one of them can shoot (armed ships or defence bases) and the other has something to shoot at. Yer battles open on a 10 by 8 grid. Each side's ships are stacks of one type, warships in front and bases at the back.</p>
+<ul>
+	<li><strong>Left/Right</strong> picks the enemy stack to aim at (red brackets). <strong>Up/Down</strong> picks an action: <em>Fight a round</em>, <em>Fight it out</em> (the rest of the battle at once, with the same rolls) or <em>Retreat</em> (to yer nearest colony in reach).</li>
+	<li>The dice are hidden. A shot hits 50 % of the time, plus 10 per aiming tech (Geese +10, and a fifth less against Tortoises). A hit does 3 damage plus weapons, less the target's shields, and always at least 1.</li>
+	<li>A battle still undecided after 10 rounds is broken off, and both sides stay (and fight again next turn). Ships are repaired after every battle.</li>
+	<li>The news gives only the losses each round.</li>
+</ul>
+<p>Battles between the rivals are fought out at once and appear in the news only if you can see them.</p>
+
+<h2 id="invasion">Taking colonies</h2>
+<p>A <strong>Carpool</strong> takes 5 households from the colony that builds it (a colony with 5 or fewer waits). Carpools parked at an enemy colony that has <strong>no defence bases and no armed ships</strong> left land at the start of the next turn.</p>
+<p>A quarter of the colony's households fight as militia, one against one with hidden rolls, at even odds (65 % for Badgers landing, 35 % against Badger households). Win, and the colony is yers with its factories. <strong>Its people keep their species</strong> and that species' trait. They complain at every meeting of the Homeowners' Association until they settle in after 20 turns.</p>
+
+<h2 id="clubhouse">The Clubhouse and its moth</h2>
+<p>Somewhere far from every home is <strong>The Clubhouse</strong>: a Large Garden world with Ancient Artifacts. Its porch light is on, and it has drawn <strong>a very large space moth</strong>. The moth has 72 hits and 12 shots at range 4, never moves, and heals completely between battles. Any ships that park there fight it. Nobody can settle there while it lives.</p>
+<p>Once the moth is gone, the first Moving Van to settle the Clubhouse finds <strong>three lost techs</strong>, from any hobby. Bring a lot of Pickups, or a few Monster Trucks.</p>
+
+<h2 id="hoa">The Homeowners' Association</h2>
+<p>Once every empire has met every other one, the Association meets, and then every 25 turns after that. The minutes come up on screen after the turn.</p>
+<ul>
+	<li><strong>Complaints:</strong> each captured colony whose people have not settled in complains. Each empire also gets at most one more complaint: yards in a mess (5 or more waste at a colony), ships parked at someone else's colony, or unpaid upgrade fees. <strong>Each complaint fines 5 % of yer BJ.</strong></li>
+	<li><strong>The vote</strong> is held at the first meeting, the third, and every other one after. The two empires with the most households stand. Votes follow households, and a winner needs two thirds of all of them. You vote for a candidate (yerselves, if standing) or abstain. The rivals never vote for you.</li>
+	<li><strong>Being President counts as a win</strong>, but play goes on, and every later meeting costs the President 10 BJ for the biscuits.</li>
+</ul>
+
+<h2 id="paperwork">Grudges and paperwork</h2>
+<h3>Grudges</h3>
+<p>Every empire keeps a hidden grudge against every other one, from 0 to 100. The rivals start at 60 against you and 30 against each other (20 less against Dogs). Battles, landings, captured colonies, threats and fines all add to it. It cools by a point a turn, but never below where it started. You never see the numbers; the news passes on gossip when a rival's feelings change ("have stopped waving", "have started a petition about you", "have written yer name on their bins"). The rivals send their fleets at whoever they hate most among the targets they can beat.</p>
+<h3>The forms desk</h3>
+<p><span class="key">P</span> opens it. Pick a rival you have met (Left/Right on <em>To</em>), then file a form with <span class="key">Enter</span>. The answer comes in the news.</p>
+<div class="wrap"><table>
+	<tr><th>Form</th><th>Answer</th><th>What happens</th></tr>
+	<tr><td><strong>Non-aggression pact</strong></td><td>next turn</td><td>They sign only if a pact is worth more to them than their grudge. It is worth more when you are the stronger, and more again when they are busy hating the other rival. With a pact, neither side's ships fight the other's and nobody lands Carpools. A refusal adds a little grudge.</td></tr>
+	<tr><td><strong>Tribute</strong></td><td>next turn</td><td>The BJ goes in with the form. Each 2 BJ takes a point off their grudge, but never more than 20 below where it started.</td></tr>
+	<tr><td><strong>Threat</strong></td><td>in two turns</td><td>If you are at least twice as strong, they pay what they can. If not, they file it under Ha. Either way, they hate you 15 more.</td></tr>
+	<tr><td><strong>Declaration of war</strong></td><td>at once</td><td>Tears up a pact. They hate you 30 more.</td></tr>
+</table></div>
+<p>"Strong" means warship hits plus defence bases. The Association keeps a register, so everyone knows everyone's. A rival tears up a pact itself when its grudge reaches 80, or when it becomes twice as strong as you.</p>
+<h3>Yer doormat</h3>
+<p>Now and then a rival who has met you files a form at you. When it is the stronger, it sends a <strong>demand</strong> for some of yer BJ. When it would rather be left alone, it sends a <strong>pact</strong>, already signed. Pay or sign, or refuse. Refusing a demand adds 15 to its grudge.</p>
+
+<h2 id="species">The ten species</h2>
+<div class="wrap"><table>
+	<tr><th>Species</th><th>In a sentence</th><th>Trait</th></tr>
+	<tr><td><strong>Beavers</strong></td><td>Build whether or not anyone asked.</td><td>Factories make half as much again.</td></tr>
+	<tr><td><strong>Owls</strong></td><td>Read everything, finish nothing.</td><td>Research comes half as fast again.</td></tr>
+	<tr><td><strong>Rabbits</strong></td><td>You know.</td><td>Households grow half as fast again.</td></tr>
+	<tr><td><strong>Geese</strong></td><td>Honk, then attack.</td><td>Ships aim a fifth better (+10 to hit).</td></tr>
+	<tr><td><strong>Raccoons</strong></td><td>Masked, into everything.</td><td class="later">Best spies. Spies are not in yet, so for now Raccoons have no trait.</td></tr>
+	<tr><td><strong>Ants</strong></td><td>A hundred to a job.</td><td>Each household works three factories, not two.</td></tr>
+	<tr><td><strong>Tardigrades</strong></td><td>Live on any rock. Grow slowly.</td><td>Settle any world without Landscaping; households grow at half speed.</td></tr>
+	<tr><td><strong>Tortoises</strong></td><td>The shell is the plan.</td><td>Enemy shots hit a fifth less often.</td></tr>
+	<tr><td><strong>Badgers</strong></td><td>Dig in.</td><td>Win 65 of 100 fights on the ground (attackers win only 35 against them).</td></tr>
+	<tr><td><strong>Dogs</strong></td><td>Like everybody. Everybody still hates them.</td><td>Grudges against them start 20 lower. <span class="later">Better trade comes when trade does.</span></td></tr>
+</table></div>
+<p>A trait belongs to a colony's people, not its owner. A captured colony keeps its people's trait until they settle in.</p>
+
+<h2 id="end">Winning, losing and saves</h2>
+<ul>
+	<li><strong>You win</strong> when no rival has a colony left.</li>
+	<li><strong>You lose</strong> when you have none.</li>
+	<li><strong>Being elected President</strong> of the Homeowners' Association also counts as a win, and play goes on.</li>
+</ul>
+<p>An empire with no colonies is out, and its ships vanish. <span class="key">Enter</span> on the end screen starts a new cluster.</p>
+<p><strong>Saves</strong> are automatic. The cluster is kept in yer browser after every move and picked up when you come back. <em>New cluster</em> under the screen starts afresh. Adding <code>?seed=123</code> to the address plays a particular cluster. A save from an older build is ignored and a new cluster starts.</p>
+
+<h2 id="tips">Tips</h2>
+<ul>
+	<li><strong>Survey before you settle.</strong> A good-looking report is wrong about one time in seven.</li>
+	<li><strong>Watch the yards.</strong> Waste costs room for households forever, and it is a fine at every meeting. Composting (Landscaping) halves it.</li>
+	<li><strong>Keep some BJ in hand</strong> to pay upgrade fees, or yer ships keep their old kit.</li>
+	<li><strong>Defence bases stop landings.</strong> A colony with even one base, or one armed ship, cannot be invaded.</li>
+	<li><strong>Range is the clock.</strong> Check the fuel shown in the panel before sending anything far, and take a Gas Can on long trips.</li>
+	<li><strong>Tribute buys time, not friends.</strong> It lowers a grudge only so far, and the rivals still hate you.</li>
+	<li><strong>The Clubhouse is worth it</strong>, if you bring enough to beat a 72-hit moth that heals between visits.</li>
+</ul>
+
+<p class="sub" style="margin-top:40px">Cluster Conquerors of SPLORR!! by TheGrumpyGameDev. Code and this manual made by an AI agent (Claude Code) at the author's direction. <a href="index.html">Back to the Metaphor</a>.</p>
+</body>
+</html>
