@@ -5,7 +5,7 @@ Drafted November 10, 2026. `DESIGN.md` is the specification; this file is how it
 ## Slices
 
 1. **The neighbourhood** (this plan): the smallest galaxy, you and two rivals, the whole explore, expand, exploit loop, tactical combat and invasion, the Clubhouse and its moth, and the HOA council's complaints and vote. A game you can win, lose and be elected in.
-2. **Proposed: the paperwork.** Diplomacy (treaties, trade, tribute, threats), spies (steal, sabotage, frame), bylaws, the presidency's duties in full, all ten races offered, random events.
+2. **The paperwork** (planned November 12, 2026; see "Slice 2" below). Diplomacy (treaties, trade, tribute, threats), spies (steal, sabotage, frame), bylaws, the presidency's duties in full, all ten races offered, random events.
 3. **Proposed: the subdivision.** All galaxy sizes up to huge, up to six empires, the computer rivals' personalities, balance with a simulator (as Skirmishers' `sim.sh`), sound, the cover, then itch.io on a Coxswain-booked day.
 
 ## Slice 1: the neighbourhood
@@ -94,3 +94,58 @@ Fuel counts turns spent away from a refuelling place (own colonies, a Gas Can in
 
 - Every number, for review step by step. Assimilation time for captured colonies (step 7).
 - The text drafts (opening line, race sentences, complaint wording, news, the moth's lines, the presidential notice), for review as each step lands.
+
+## Slice 2: the paperwork
+
+Planned November 12, 2026, after slice 1 went live on Pages. Same cluster (about 20 stars, you and two rivals); slice 3 still brings the bigger clusters, more empires, personalities and the smarter computer player.
+
+**Goal:** the rivals still hate you, but now they hate you on paper. File forms with them (pacts, alliances, trade, research swaps, tribute, threats, war) and wait for the answer; keep a Neighbourhood Watch that steals, sabotages and frames; sit through meetings that vote bylaws in and, if yer President, rule on every complaint; meet all ten species; and put up with the cluster's bad luck.
+
+**In the slice:** the six other species; hidden grudges; diplomacy by filed forms; the Neighbourhood Watch and framing; bylaws voted at meetings; the President's rulings; six random events; saves carried over (a new save version), a simulator pass, Pages each step at the user's word.
+
+**Not in the slice:** larger clusters, more than three empires, the rivals' personalities, the smarter computer player (massing fleets, escorts, Gas Cans), sound, the cover, itch.io.
+
+## Decided for slice 2 (November 12, 2026, one at a time)
+
+1. **Diplomacy is filed forms**: you fill in a form for a rival; it is filed and the answer comes in the news a turn or two later (paperwork). Rivals file forms at you too.
+2. **The forms are Master of Orion's set**: non-aggression pact, alliance, trade agreement (BJ both ways each turn), research swap (one tech for one tech), tribute (BJ or a tech), threat (a demand, or else), and declaring war, which tears up everything with that empire.
+3. **A hidden grudge ledger**: every empire keeps a hidden grudge against every other one; battles, captures, spies caught, broken pacts and complaints add to it, tribute pays it down; against you it starts high and never gets to friendly. A rival signs a form only when what it gains outweighs its grudge.
+4. **Spies are a Neighbourhood Watch budget**: an empire-wide share of BJ each turn trains watchers, placed per rival to steal tech, sabotage (factories, bases or ships) or just watch; yer watchers also catch theirs.
+5. **Framing: choose, with a risk**: a mission may carry a frame-up naming the other rival; it usually works and the victim's grudge lands on them; a failed frame-up doubles the grudge against you and is read out at the next meeting.
+6. **Bylaws are voted on**: each meeting puts two proposed bylaws to a vote by households; the winner binds every empire until the next meeting, and breaking it is a complaint and a fine.
+7. **The President rules on each complaint**: uphold (the fine stands), dismiss (no fine; the complainer's grudge against the President grows) or double it; a computer President rules by its grudges; meetings still cost the President BJ.
+8. **The six species as drafted**, rivals drawn from all ten: **Raccoons**, watchers half as effective again and harder to catch; **Ants**, each household works 3 factories, not 2; **Tardigrades**, settle any hostile world without Landscaping but grow at half speed; **Tortoises**, enemy shots hit a fifth less often; **Badgers**, landed households and militia win 65 % of their fights, not 50 %; **Dogs**, grudges against them start lower and trade pays half as much again.
+9. **Events: all six, HOA-named**, about one every 15 turns, to any empire: **a stray Goat** wanders between stars and eats households; **a Flu going round** a colony; **a Star going out** (the planet is lost); **an abandoned car** with a tech in the glovebox; **a Residents' Revolt** (a colony stops paying for a while); **a Find in the Attic** (BJ, or the planet turns out Rich). Each in the news, and on the doormat if it is yers.
+
+## Proposed for slice 2 (Claude's, until the user reviews them step by step)
+
+**Grudges:** points, 0 to 100, hidden; the rivals start at 60 against you and 30 against each other (Dogs: 40 and 20). Each turn every grudge cools by 1 down to its starting value. Adds: a battle 10, a captured colony 25, a spy caught 10 (or on the framed empire), a broken pact 30, a complaint caused 5, a threat 15. Tribute takes off 1 per 2 BJ (or 15 for a tech). The rivals now attack whoever they hold the biggest grudge against among the targets they could beat, not the nearest.
+
+**Forms:** P (gamepad X, a Forms pad, "P: paperwork" in the panel) opens the forms desk: pick a rival you have met, pick a form, fill in its blanks (how much BJ, which tech), file it. Answers arrive one turn later for a pact or tribute, two for anything else; the desk shows what is filed and pending. A rival accepts when its gain (in BJ terms: peace while it is losing, a tech it wants, BJ) beats its grudge; a threat works when you are much the stronger, and otherwise adds to the grudge. **Pacts:** with a non-aggression pact, neither side's fleets fight at the same star and neither lands Carpools; an alliance also refuels each other's ships at colonies and shares sight. Breaking either (attacking, or declaring war) is a broken pact. **Trade:** each side gets 5 % of the other's BJ income each turn, Dogs half as much again; it starts small and grows by a point a turn to 15 %. **Rivals' forms:** about one every 10 turns at you (tribute demands, threats, now and then a pact when they are losing a war with the other); yer answer on a doormat screen: sign, refuse.
+
+**The Neighbourhood Watch:** a slider beside the research ones sends a share of BJ income to the Watch (0 to 25 %); each 20 BJ trains a watcher, kept on yer side until placed; W (gamepad, a Watch pad) opens the Watch screen: watchers per rival and a mission each (watch, steal tech, sabotage factories, bases or ships, with or without a frame-up). Each turn a placed watcher tries: success one time in ten for steal or sabotage, plus 5 per watcher more than the target's own watchers on defence, Raccoons half as much again; a catch one time in five, less for Raccoons; caught is dead. Watching shows that rival's colonies and ships as if seen. A frame-up works 75 % of the time.
+
+**Bylaws:** a book of eight, two drawn for each vote: no warships bigger than a Pickup; quiet hours (research halved); no Carpools; no parking (ships not at their own colonies are complained about); tidy yards (waste over 2 is a complaint); no new houses (no Moving Vans); fence height limit (no new bases); a jumble sale (every empire pays 10 BJ to the HOA). Rivals vote for the one that hurts their biggest grudge most.
+
+**Rulings:** while yer President, the complaints come to you one at a time on the council screen before the minutes close (Uphold, Dismiss, Double); a dismissed complaint adds 10 to the complainer's grudge against you, a doubled one 10 to the accused's.
+
+**Events:** each turn, one chance in 15 of an event, its target an empire chosen at random weighted by households. The Goat moves a star a turn at random and eats 2 households a turn at a colony until something armed fights it (a battle, 20 hits). The Flu takes a fifth of a colony's households over 5 turns. A Star going out: one in fifty events, a colony that is not a home. The abandoned car: a random tech from any field. The Revolt: a colony's production goes nowhere for 5 turns. The Find: 50 to 150 BJ, or Rich.
+
+## Build order for slice 2 (each step ends playable in the browser and tested natively)
+
+0. **All ten species**: the six new ones on the species screen (two columns), their traits, the rivals drawn from all ten; Urizen animals checked by eye where the sheet has them.
+1. **Grudges**: the hidden ledger, what adds to and cools it, the rivals choosing targets by it; news lines hinting at it ("The Owls have stopped waving.").
+2. **The forms desk**: filing, pending answers, war, non-aggression pacts, tribute and threats; the rivals' forms at you on the doormat.
+3. **Alliances, trade and research swaps**: allied refuelling and sight, trade income, swaps through the desk.
+4. **The Neighbourhood Watch**: the budget, watchers, missions, catching.
+5. **Framing**: frame-ups and their failures read out at meetings.
+6. **Bylaws**: the book, the vote, complaints for breaking them.
+7. **The President's rulings**.
+8. **Random events**.
+9. **Saves and balance**: a new save version, the simulator reporting pacts, wars, spies and events, a balance pass, screenshots, the slice-2 notice, then Pages when the user says so.
+
+## Open for slice 2
+
+- Every number above, for review step by step and in step 9's balance pass.
+- The text drafts: the forms' wording, the rivals' answers, the doormat, the Watch's reports, the bylaws, the rulings, the events.
+- The new keys (P, W) and gamepad buttons, checked against the controls already taken.
