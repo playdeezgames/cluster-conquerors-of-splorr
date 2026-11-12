@@ -17,6 +17,10 @@ draw_game :: proc(f: ^Frame, g: ^Game) {
 		draw_colony(f, g)
 	case .Research:
 		draw_research(f, g)
+	case .Forms:
+		draw_desk(f, g)
+	case .Doormat:
+		draw_doormat(f, g)
 	case .Map, .Fleet, .Destination:
 		draw_map(f, g)
 	}
@@ -156,17 +160,16 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	case .Choose_Race:
 	case .Map:
 		draw_star_panel(f, g)
-	case .Colony, .Research:
+	case .Colony, .Research, .Forms, .Doormat:
 		draw_empire_panel(f, g)
 	case .Fleet:
 		draw_fleet_panel(f, g)
 	case .Destination:
 		draw_destination_panel(f, g)
 	}
-	if g.mode == .Map || g.mode == .Colony {
-		print(f, "R: research", x, RESEARCH_LINK_Y, COLOR_CYAN)
-	} else if g.mode == .Research {
-		print(f, "R: back to map", x, RESEARCH_LINK_Y, COLOR_CYAN)
+	if g.mode == .Map || g.mode == .Colony || g.mode == .Research || g.mode == .Forms {
+		print(f, g.mode == .Research ? "R: map" : "R: tech", x, RESEARCH_LINK_Y, COLOR_CYAN)
+		print(f, g.mode == .Forms ? "P: map" : "P: forms", FORMS_LINK_X, RESEARCH_LINK_Y, COLOR_CYAN)
 	}
 }
 
@@ -877,4 +880,166 @@ draw_council :: proc(f: ^Frame, g: ^Game) {
 	if c.ever_won {
 		print(f, "You have been President. That counts as winning.", x, VIEW_H * TILE - 24, COLOR_YELLOW)
 	}
+}
+
+// Prints text wrapped at spaces to a width in characters; returns the lines used.
+print_wrapped :: proc(f: ^Frame, s: string, x, y, cols: int, color: u8, line_h := 10) -> int {
+	rest := s
+	n := 0
+	for len(rest) > 0 {
+		cut := min(len(rest), cols)
+		if cut < len(rest) {
+			for i := cut; i > 0; i -= 1 {
+				if rest[i] == ' ' {
+					cut = i
+					break
+				}
+			}
+		}
+		print(f, rest[:cut], x, y + n * line_h, color)
+		n += 1
+		rest = rest[cut:]
+		for len(rest) > 0 && rest[0] == ' ' {
+			rest = rest[1:]
+		}
+	}
+	return n
+}
+
+// The forms desk: who to, the pact (or war), tribute, a threat, Back; then the treaty, the gossip and
+// what is in the post.
+draw_desk :: proc(f: ^Frame, g: ^Game) {
+	x := COLONY_X
+	print(f, "The forms desk", x, 6, COLOR_WHITE)
+	print(f, "Everything in writing. Answers come back in the news.", x, 18, COLOR_LIGHT)
+	_, n := met_rivals(g)
+	if n == 0 {
+		print(f, "You have not met anybody. Nobody to write to.", x, desk_row_y(0), COLOR_MID)
+	}
+	r := g.desk.rival
+	for row in 0 ..< DESK_ROWS {
+		if n == 0 && row != DESK_BACK_ROW {
+			continue
+		}
+		y := desk_row_y(row)
+		if g.row == row {
+			fill_rect(f, 0, y - 3, VIEW_W * TILE, DESK_H - 1, COLOR_NAVY)
+		}
+		label, value, tail := desk_row_text(g, row)
+		print(f, label, x, y, COLOR_LIGHT)
+		if value != "" {
+			print(f, "<", x + DESK_VALUE_COL * GLYPH_W, y, COLOR_CYAN)
+			print(f, value, x + (DESK_VALUE_COL + 2) * GLYPH_W, y, COLOR_WHITE)
+			print(f, ">", x + (DESK_VALUE_COL + 3 + len(value)) * GLYPH_W, y, COLOR_CYAN)
+			print(f, tail, x + (DESK_VALUE_COL + 5 + len(value)) * GLYPH_W, y, COLOR_LIGHT)
+		}
+	}
+	y := desk_row_y(DESK_ROWS) + 4
+	if n > 0 {
+		b: Text
+		add(&b, "Between you and the ")
+		add(&b, empire_name(g, r))
+		if has_pact(g, PLAYER, r) {
+			add(&b, ": a non-aggression pact since turn ")
+			add_int(&b, g.treaty_since[PLAYER][r])
+			add(&b, ".")
+		} else {
+			add(&b, ": no treaty. They hate you.")
+		}
+		print(f, text(&b), x, y, COLOR_MID)
+		m: Text
+		add(&m, "Last heard: they ")
+		add(&m, MOOD_NEWS[g.empires[r].mood])
+		y += 10 * print_wrapped(f, text(&m), x, y + 10, 58, COLOR_MID) + 14
+	}
+	print(f, "In the post:", x, y, COLOR_WHITE)
+	y += 10
+	any_ := false
+	for &fm in g.forms {
+		if !fm.used || fm.from != PLAYER || y > VIEW_H * TILE - 24 {
+			continue
+		}
+		any_ = true
+		b: Text
+		add(&b, FORM_NAMES[fm.kind])
+		if fm.kind == .Tribute || fm.kind == .Threat {
+			add(&b, " (")
+			add_int(&b, fm.amount)
+			add(&b, " BJ)")
+		}
+		add(&b, " to the ")
+		add(&b, empire_name(g, fm.to))
+		add(&b, ", answer turn ")
+		add_int(&b, fm.due)
+		print(f, text(&b), x + 2 * GLYPH_W, y, COLOR_LIGHT)
+		y += 10
+	}
+	if !any_ {
+		print(f, "nothing.", x + 2 * GLYPH_W, y, COLOR_DARK)
+	}
+	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: file.", x, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+// A row of the desk as a label, the value between < and > (if it has one) and what follows it.
+desk_row_text :: proc(g: ^Game, row: int) -> (label, value, tail: string) {
+	@(static) v: Text
+	v = {}
+	r := g.desk.rival
+	switch row {
+	case DESK_TO_ROW:
+		add(&v, "the ")
+		add(&v, empire_name(g, r))
+		return "To:", text(&v), ""
+	case DESK_PACT_ROW:
+		if has_pact(g, PLAYER, r) {
+			return "File: a declaration of war (at once)", "", ""
+		}
+		return "File: a non-aggression pact", "", ""
+	case DESK_TRIBUTE_ROW:
+		add_int(&v, g.desk.tribute)
+		return "File: tribute,", text(&v), "BJ enclosed"
+	case DESK_THREAT_ROW:
+		add_int(&v, g.desk.threat)
+		return "File: a threat. Pay", text(&v), "BJ, or else"
+	}
+	return "Back to the map", "", ""
+}
+
+// A rival's form on yer doormat: what it says, then Sign and Refuse.
+draw_doormat :: proc(f: ^Frame, g: ^Game) {
+	d := &g.doormat
+	x := COLONY_X
+	print(f, "On yer doormat", x, 6, COLOR_WHITE)
+	// Sentence by sentence: a Text holds only LOG_CAP characters.
+	y := 24
+	b: Text
+	add(&b, "A form from the ")
+	add(&b, empire_name(g, d.from))
+	switch d.kind {
+	case .Demand:
+		add(&b, ", stamped URGENT. They want ")
+		add_int(&b, d.amount)
+		add(&b, " BJ, or else.")
+		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)
+		y += 10 * print_wrapped(f, "The or else is not specified.", x, y, 58, COLOR_LIGHT)
+		h: Text
+		add(&h, "You have ")
+		add_int(&h, g.empires[PLAYER].bj)
+		add(&h, " BJ.")
+		print_wrapped(f, text(&h), x, y + 6, 58, COLOR_MID)
+	case .Pact_Offer:
+		add(&b, ": a non-aggression pact, already signed on their side.")
+		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)
+		y += 10 * print_wrapped(f, "Neither of yer fleets would fight the other, and nobody would land Carpools.", x, y, 58, COLOR_LIGHT)
+		print_wrapped(f, "They still hate you.", x, y + 6, 58, COLOR_MID)
+	}
+	for row in 0 ..< 2 {
+		ry := doormat_row_y(row)
+		if d.choice == row {
+			fill_rect(f, 0, ry - 3, VIEW_W * TILE, DESK_H - 1, COLOR_NAVY)
+		}
+		label := row == 0 ? (d.kind == .Demand ? "Pay up" : "Sign it") : "Refuse"
+		print(f, label, x, ry, COLOR_CYAN)
+	}
+	print(f, "Up/Down: pick. Enter/OK or a tap: answer.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }

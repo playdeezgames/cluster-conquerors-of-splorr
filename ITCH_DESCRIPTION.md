@@ -31,6 +31,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **A colony:** five sliders share what it makes (Parking builds ships, Fencing builds defence bases, Home Improvement builds factories, Lawn Care cleans up, Book Club researches). Up/Down pick, Left/Right move, Enter/OK locks; click a bar to set it.
 - **Sending ships:** pick how many of each go, then the star; the line turns red when they would run out of fuel on the way. Ships fill up only at yer colonies, or from a Gas Can.
 - **Research:** R (gamepad Y, the Tech button) shares Book Club's research among six hobbies.
+- **Paperwork:** P (gamepad X, the Forms button) opens the forms desk: file a non-aggression pact, tribute or a threat with a rival you have met, or tear up a pact. Answers come back in the news. Rivals' forms land on yer doormat to sign or refuse.
 - **Battles:** pick a target, then fight a round, fight it out, or retreat.
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.

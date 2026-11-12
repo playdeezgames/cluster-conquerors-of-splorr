@@ -19,6 +19,7 @@ Command :: enum i32 {
 	Cancel,
 	End_Turn,
 	Research,
+	Forms, // P, gamepad X, the Forms pad: the forms desk
 }
 
 DIRECTION := [Command][2]int {
@@ -34,6 +35,7 @@ DIRECTION := [Command][2]int {
 	.Cancel     = {0, 0},
 	.End_Turn   = {0, 0},
 	.Research   = {0, 0},
+	.Forms      = {0, 0},
 }
 
 // How a click or tap reached the game (the page sends these numbers).
@@ -55,6 +57,8 @@ Mode :: enum u8 {
 	Battle,
 	Council,
 	Game_Over,
+	Forms, // the forms desk
+	Doormat, // a rival's form to sign or refuse
 }
 
 Game :: struct {
@@ -83,6 +87,12 @@ Game :: struct {
 	pending_n:  int,
 	pending_i:  int,
 	news:       [NEWS_LINES]Message, // oldest first
+	treaty:     [MAX_EMPIRES][MAX_EMPIRES]Treaty, // forms.odin; the same both ways
+	treaty_since: [MAX_EMPIRES][MAX_EMPIRES]int,
+	pacts:      int, // pacts signed so far (for the simulator)
+	forms:      [MAX_FORMS]Form, // in the post
+	desk:       Desk,
+	doormat:    Doormat,
 }
 
 init_game :: proc(g: ^Game, seed: u64) {
@@ -157,16 +167,29 @@ race_command :: proc(g: ^Game, c: Command) {
 }
 
 command :: proc(g: ^Game, c: Command) {
+	if c == .Forms {
+		// P, gamepad X or the Forms pad opens the forms desk from the map, a colony or research.
+		if g.mode == .Forms {
+			g.mode = .Map
+		} else if g.mode == .Map || g.mode == .Colony || g.mode == .Research {
+			open_desk(g)
+		}
+		return
+	}
 	if c == .Research {
 		// R, gamepad Y or the Tech pad opens the research screen from anywhere but the middle of an order.
 		if g.mode == .Research {
 			g.mode = .Map
-		} else if g.mode == .Map || g.mode == .Colony {
+		} else if g.mode == .Map || g.mode == .Colony || g.mode == .Forms {
 			open_research(g)
 		}
 		return
 	}
 	switch g.mode {
+	case .Forms:
+		desk_command(g, c)
+	case .Doormat:
+		doormat_command(g, c)
 	case .Council:
 		council_command(g, c)
 	case .Game_Over:
@@ -216,6 +239,8 @@ map_command :: proc(g: ^Game, c: Command) {
 		next_turn(g)
 	case .Research:
 		open_research(g)
+	case .Forms:
+		open_desk(g)
 	}
 }
 
@@ -593,6 +618,14 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		council_pointer(g, sx, sy)
 		return
 	}
+	if g.mode == .Doormat {
+		doormat_pointer(g, sx, sy)
+		return
+	}
+	if g.mode == .Forms && sx < PANEL_X {
+		desk_pointer(g, sx, sy)
+		return
+	}
 	if g.mode == .Battle {
 		battle_pointer(g, sx, sy)
 		return
@@ -646,7 +679,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet, .Forms, .Doormat:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -773,7 +806,7 @@ council_pointer :: proc(g: ^Game, sx, sy: int) {
 		}
 		return
 	}
-	g.mode = .Map
+	back_to_map(g)
 }
 
 // Where the species screen draws its names: two columns of five; the highlighted one's details below.
@@ -826,15 +859,17 @@ research_pointer :: proc(g: ^Game, sx, sy: int) {
 	}
 }
 
-RESEARCH_LINK_Y :: VIEW_H * TILE - 12 // "R: research" at the foot of the panel
+RESEARCH_LINK_Y :: VIEW_H * TILE - 12 // "R: research" and "P: forms" at the foot of the panel
+FORMS_LINK_X :: PANEL_TEXT_X + 9 * GLYPH_W
 
 panel_pointer :: proc(g: ^Game, sx, sy: int) {
-	if on_row(sy, RESEARCH_LINK_Y) && (g.mode == .Map || g.mode == .Colony || g.mode == .Research) {
-		command(g, .Research)
+	if on_row(sy, RESEARCH_LINK_Y) && (g.mode == .Map || g.mode == .Colony || g.mode == .Research || g.mode == .Forms) {
+		// "R: research" on the left, "P: forms" on the right.
+		command(g, sx < FORMS_LINK_X ? .Research : .Forms)
 		return
 	}
 	switch g.mode {
-	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Forms, .Doormat:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)
@@ -951,4 +986,56 @@ add_int :: proc(b: ^Text, v: int) {
 
 text :: proc(b: ^Text) -> string {
 	return string(b.buf[:b.n])
+}
+
+// Where the forms desk draws its rows, and the column of each row's < value >.
+DESK_TOP :: 40
+DESK_H :: 14
+DESK_VALUE_COL :: 20
+
+desk_row_y :: proc(row: int) -> int {
+	return DESK_TOP + row * DESK_H
+}
+
+// A tap on the desk: on < or > changes the row; on a row picks it, and a second tap files it.
+desk_pointer :: proc(g: ^Game, sx, sy: int) {
+	_, n := met_rivals(g)
+	for row in 0 ..< DESK_ROWS {
+		y := desk_row_y(row)
+		if sy < y - 3 || sy >= y - 3 + DESK_H || (n == 0 && row != DESK_BACK_ROW) {
+			continue
+		}
+		_, value, _ := desk_row_text(g, row)
+		col := (sx - COLONY_X) / GLYPH_W
+		if value != "" && col >= DESK_VALUE_COL - 1 && col <= DESK_VALUE_COL + 1 {
+			g.row = row
+			desk_change(g, -1)
+		} else if value != "" && col >= DESK_VALUE_COL + 2 + len(value) && col <= DESK_VALUE_COL + 4 + len(value) {
+			g.row = row
+			desk_change(g, 1)
+		} else if g.row == row || row == DESK_BACK_ROW {
+			g.row = row
+			desk_file(g)
+		} else {
+			g.row = row
+		}
+		return
+	}
+}
+
+DOORMAT_TOP :: 120
+
+doormat_row_y :: proc(row: int) -> int {
+	return DOORMAT_TOP + row * DESK_H
+}
+
+doormat_pointer :: proc(g: ^Game, sx, sy: int) {
+	for row in 0 ..< 2 {
+		y := doormat_row_y(row)
+		if sy >= y - 3 && sy < y - 3 + DESK_H {
+			g.doormat.choice = row
+			answer_doormat(g, row == 0)
+			return
+		}
+	}
 }

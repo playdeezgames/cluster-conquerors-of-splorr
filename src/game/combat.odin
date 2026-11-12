@@ -99,6 +99,9 @@ targets :: proc(g: ^Game, star, owner: int) -> bool {
 
 // Whether two empires at a star come to blows: one can shoot and the other has something to shoot.
 will_fight :: proc(g: ^Game, star, a, b: int) -> bool {
+	if has_pact(g, a, b) {
+		return false
+	}
 	return (armed(g, star, a) && targets(g, star, b)) || (armed(g, star, b) && targets(g, star, a))
 }
 
@@ -647,7 +650,6 @@ next_battle :: proc(g: ^Game) {
 		}
 	}
 	if g.mode == .Battle {
-		g.mode = .Map
-		show_waiting_meeting(g)
+		back_to_map(g)
 	}
 }

@@ -33,7 +33,7 @@ land_troops :: proc(g: ^Game) {
 			continue // only armed ships (or bases) stop a landing
 		}
 		for e in 0 ..< g.empire_count {
-			if e == c.owner {
+			if e == c.owner || has_pact(g, e, c.owner) {
 				continue
 			}
 			f := fleet_of(g, i, e)

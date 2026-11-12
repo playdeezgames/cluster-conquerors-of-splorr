@@ -367,7 +367,7 @@ council_command :: proc(g: ^Game, cmd: Command) {
 	}
 	#partial switch cmd {
 	case .Confirm, .Cancel:
-		g.mode = .Map
+		back_to_map(g)
 	}
 }
 

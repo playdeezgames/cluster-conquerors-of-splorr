@@ -80,7 +80,7 @@ invasion_target :: proc(g: ^Game, owner: int) -> (target, need, base: int) {
 		}
 		for t in 0 ..< g.star_count {
 			in_ := e.intel[t]
-			if !in_.seen || in_.owner == NO_OWNER || in_.owner == owner || in_.strength > 0 {
+			if !in_.seen || in_.owner == NO_OWNER || in_.owner == owner || has_pact(g, owner, in_.owner) || in_.strength > 0 {
 				continue
 			}
 			if trip_turns(g, from, t, fleet_speed(&trial)) > fleet_range(&trial) {
@@ -158,7 +158,7 @@ ai_attack :: proc(g: ^Game, owner: int) {
 			if t == i || !in_.seen || in_.strength == 0 {
 				continue
 			}
-			if in_.owner == owner || mine * 100 < ATTACK_PERCENT * in_.strength {
+			if in_.owner == owner || has_pact(g, owner, in_.owner) || mine * 100 < ATTACK_PERCENT * in_.strength {
 				continue
 			}
 			if send_problem(g, owner, i, t, warships_of(f)) != "" {
@@ -216,7 +216,7 @@ ai_sliders :: proc(g: ^Game, star: int, c: ^Colony, threat: bool) {
 // A hostile fleet the empire can see near one of its colonies.
 threatened :: proc(g: ^Game, owner: int) -> bool {
 	for &f in g.fleets {
-		if !f.used || f.owner == owner {
+		if !f.used || f.owner == owner || has_pact(g, owner, f.owner) {
 			continue
 		}
 		fx, fy := fleet_cell(g, &f)

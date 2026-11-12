@@ -11,10 +11,11 @@ SIM_GAMES :: #config(SIM_GAMES, 0)
 SIM_TURNS :: #config(SIM_TURNS, 200)
 
 Sim_Stats :: struct {
-	contact, battle, meeting, capture, moth, president, out: [dynamic]int, // turns things first happened
+	contact, battle, meeting, capture, moth, president, out, pact: [dynamic]int, // turns things first happened
 	colonies: int,
 	presidents_you: int,
 	won, lost: int,
+	doormats: int, // rivals' forms at side 0
 }
 
 sim_first :: proc(list: ^[dynamic]int, seen: ^bool, turn: int, now: bool) {
@@ -52,10 +53,11 @@ test_simulate :: proc(t: ^testing.T) {
 			delete(st.moth)
 			delete(st.president)
 			delete(st.out)
+			delete(st.pact)
 		}
 		for seed in u64(1) ..= SIM_GAMES {
 			init_game(g, seed)
-			seen: [7]bool
+			seen: [8]bool
 			for turn in 1 ..= SIM_TURNS {
 				ai_turn(g, PLAYER)
 				next_turn(g)
@@ -64,6 +66,13 @@ test_simulate :: proc(t: ^testing.T) {
 				}
 				if g.council.voting {
 					cast_votes(g, .Abstain)
+				}
+				if g.outcome == .Playing && g.mode != .Doormat {
+					back_to_map(g)
+				}
+				for g.mode == .Doormat {
+					st.doormats += 1
+					answer_doormat(g, ai_doormat_sign(g))
 				}
 				g.mode = g.outcome == .Playing ? .Map : g.mode
 				met := false
@@ -83,6 +92,7 @@ test_simulate :: proc(t: ^testing.T) {
 				sim_first(&st.moth, &seen[4], turn, !g.moth_alive)
 				sim_first(&st.president, &seen[5], turn, g.council.president != NO_OWNER)
 				sim_first(&st.out, &seen[6], turn, anyone_out)
+				sim_first(&st.pact, &seen[7], turn, g.pacts > 0)
 				if g.outcome != .Playing {
 					break
 				}
@@ -108,6 +118,8 @@ test_simulate :: proc(t: ^testing.T) {
 		sim_summary("moth gone", st.moth, SIM_GAMES)
 		sim_summary("a President", st.president, SIM_GAMES)
 		sim_summary("someone out", st.out, SIM_GAMES)
+		sim_summary("first pact", st.pact, SIM_GAMES)
+		fmt.printfln("  rivals' forms on side 0's doormat: %.1f a game (pacts signed, demands paid only to the twice as strong)", f64(st.doormats) / f64(SIM_GAMES))
 		fmt.printfln("  colonies at the end: %.1f per empire; side 0 won %v, lost %v, was President in %v", f64(st.colonies) / f64(SIM_GAMES * MAX_EMPIRES), st.won, st.lost, st.presidents_you)
 	}
 }

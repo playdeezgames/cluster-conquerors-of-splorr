@@ -445,8 +445,10 @@ end_turn :: proc(g: ^Game) {
 		}
 	}
 	update_sight(g)
+	forms_turn(g)
 	find_battles(g)
 	council_turn(g)
+	show_doormat(g)
 }
 
 // A fleet reaches a star: a wormhole throws it somewhere else; an Inspector files a survey; a Moving
