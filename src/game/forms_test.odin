@@ -223,14 +223,13 @@ test_the_forms_desk :: proc(t: ^testing.T) {
 	command(g, .South) // the pact
 	command(g, .Confirm)
 	testing.expect(t, pending_form(g, PLAYER, 2, .Pact))
+	command(g, .South) // trade
 	command(g, .South) // tribute
 	command(g, .East)
 	testing.expect_value(t, g.desk.tribute, 60)
 	// A tap on the tribute row's < takes 10 off; a tap on the row picks it, a second files it.
-	_, value, _ := desk_row_text(g, DESK_TRIBUTE_ROW)
 	pointer(g, COLONY_X + DESK_VALUE_COL * GLYPH_W + 1, desk_row_y(DESK_TRIBUTE_ROW) + 2, .Touch)
 	testing.expect_value(t, g.desk.tribute, 50)
-	_ = value
 	g.empires[PLAYER].bj = 100
 	pointer(g, COLONY_X + 2, desk_row_y(DESK_THREAT_ROW) + 2, .Touch)
 	testing.expect_value(t, g.row, DESK_THREAT_ROW)
@@ -243,4 +242,158 @@ test_the_forms_desk :: proc(t: ^testing.T) {
 	testing.expect_value(t, g.mode, Mode.Forms)
 	command(g, .Cancel)
 	testing.expect_value(t, g.mode, Mode.Map)
+}
+
+// A pact first, then an alliance: refuelling at each other's colonies and shared sight.
+@(test)
+test_alliances :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	testing.expect(t, file_form(g, PLAYER, 1, .Alliance, 0) != "") // no pact yet
+	set_treaty(g, PLAYER, 1, .Pact)
+	g.empires[1].grudge[PLAYER] = 90
+	file_form(g, PLAYER, 1, .Alliance, 0)
+	post_turn(g)
+	testing.expect(t, !allied(g, PLAYER, 1))
+	testing.expect(t, news_has(g, "declined the alliance"))
+	testing.expect(t, !has_pact(g, PLAYER, 1)) // at 95 they tore the pact up too
+	set_treaty(g, PLAYER, 1, .Pact)
+	g.empires[1].grudge[PLAYER] = 5
+	file_form(g, PLAYER, 1, .Alliance, 0)
+	post_turn(g)
+	testing.expect(t, allied(g, PLAYER, 1) && has_pact(g, PLAYER, 1))
+	// Their colony refuels yer ships, and you see what they see.
+	h := g.empires[1].home
+	testing.expect(t, refuels_at(g, h, PLAYER))
+	update_sight(g)
+	testing.expect(t, g.empires[PLAYER].sees[h])
+	// War tears it all up.
+	file_form(g, PLAYER, 1, .War, 0)
+	testing.expect(t, !has_pact(g, PLAYER, 1))
+	testing.expect(t, !refuels_at(g, h, PLAYER))
+}
+
+@(test)
+test_trade_agreements :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	g.empires[1].grudge[PLAYER] = 10
+	file_form(g, PLAYER, 1, .Trade, 0)
+	post_turn(g)
+	testing.expect(t, trading(g, PLAYER, 1) && trading(g, 1, PLAYER))
+	testing.expect_value(t, g.trade[PLAYER][1], TRADE_START)
+	testing.expect(t, file_form(g, PLAYER, 1, .Trade, 0) != "")
+	// Each turn each side takes a share of the other's income, and the share grows to the cap.
+	mine, theirs := g.empires[PLAYER].bj, g.empires[1].bj
+	want_mine := income_of(g, 1) * TRADE_START / 100
+	want_theirs := income_of(g, PLAYER) * TRADE_START / 100
+	trade_turn(g)
+	testing.expect_value(t, g.empires[PLAYER].bj, mine + want_mine)
+	testing.expect_value(t, g.empires[1].bj, theirs + want_theirs)
+	for _ in 0 ..< 30 {
+		trade_turn(g)
+	}
+	testing.expect_value(t, g.trade[PLAYER][1], TRADE_MAX)
+	// Dogs take half as much again.
+	g.empires[PLAYER].race = .Dogs
+	mine = g.empires[PLAYER].bj
+	want := income_of(g, 1) * TRADE_MAX / 100 * 3 / 2
+	trade_turn(g)
+	testing.expect_value(t, g.empires[PLAYER].bj, mine + want)
+	// War ends it; war with only trade is allowed.
+	testing.expect_value(t, file_form(g, PLAYER, 1, .War, 0), "")
+	testing.expect(t, !trading(g, PLAYER, 1))
+	// Hated too much: refused.
+	g.empires[2].grudge[PLAYER] = 90
+	file_form(g, PLAYER, 2, .Trade, 0)
+	post_turn(g)
+	testing.expect(t, !trading(g, PLAYER, 2))
+}
+
+// Some tech you know and they do not, and the other way round.
+give_techs :: proc(g: ^Game) -> (mine, theirs: int) {
+	g.empires[PLAYER].tech.known = {}
+	g.empires[1].tech.known = {}
+	g.empires[PLAYER].tech.known[.Disputes][0] = true
+	g.empires[1].tech.known[.Commuting][0] = true
+	return tech_id(.Disputes, 0), tech_id(.Commuting, 0)
+}
+
+@(test)
+test_research_swaps_and_tech_gifts :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	mine, theirs := give_techs(g)
+	list, n := giveable(g, PLAYER, 1)
+	testing.expect_value(t, n, 1)
+	testing.expect_value(t, list[0], mine)
+	testing.expect_value(t, swap_back(g, PLAYER, 1), theirs)
+	// Refused when hated.
+	g.empires[1].grudge[PLAYER] = 90
+	testing.expect_value(t, file_form(g, PLAYER, 1, .Swap, 0, mine), "")
+	post_turn(g)
+	post_turn(g)
+	testing.expect(t, !knows(g, PLAYER, theirs))
+	// Accepted: each learns the other's.
+	g.empires[1].grudge[PLAYER] = 10
+	file_form(g, PLAYER, 1, .Swap, 0, mine)
+	post_turn(g)
+	post_turn(g)
+	testing.expect(t, knows(g, PLAYER, theirs) && knows(g, 1, mine))
+	testing.expect(t, file_form(g, PLAYER, 1, .Swap, 0, mine) != "") // they know it now
+	// A gift: always taken, and pays some grudge off.
+	mine, theirs = give_techs(g)
+	g.empires[1].grudge[PLAYER] = GRUDGE_AT_YOU
+	testing.expect_value(t, file_form(g, PLAYER, 1, .Gift, 0, mine), "")
+	post_turn(g)
+	testing.expect(t, knows(g, 1, mine))
+	testing.expect_value(t, g.empires[1].grudge[PLAYER], GRUDGE_AT_YOU - TECH_TRIBUTE_GRUDGE)
+	testing.expect(t, file_form(g, PLAYER, 1, .Gift, 0, mine) != "")
+	// Nothing of theirs to swap for.
+	g.empires[1].tech.known = {}
+	g.empires[1].tech.known[.Disputes][1] = true
+	g.empires[PLAYER].tech.known[.Disputes][1] = true
+	testing.expect(t, file_form(g, PLAYER, 1, .Swap, 0, mine) != "")
+}
+
+// The gift and swap rows step through the techs the rival lacks.
+@(test)
+test_desk_tech_rows :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	give_techs(g)
+	g.empires[PLAYER].tech.known[.Fences][0] = true
+	command(g, .Forms)
+	testing.expect_value(t, g.desk.gift, tech_id(.Fences, 0))
+	g.row = DESK_GIFT_ROW
+	command(g, .East)
+	testing.expect_value(t, g.desk.gift, tech_id(.Disputes, 0))
+	command(g, .Confirm)
+	testing.expect(t, pending_form(g, PLAYER, 1, .Gift))
+	_, value, _ := desk_row_text(g, DESK_SWAP_ROW)
+	testing.expect_value(t, value, tech_name(g.desk.swap))
+}
+
+// A rival with a pact who would trade offers it on the doormat.
+@(test)
+test_a_rival_offers_trade :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	set_treaty(g, PLAYER, 1, .Pact)
+	g.empires[1].grudge[PLAYER] = 20
+	for _ in 0 ..< 200 {
+		if g.doormat.waiting {
+			break
+		}
+		rival_files(g, 1)
+	}
+	testing.expect(t, g.doormat.waiting && g.doormat.kind == .Trade_Offer)
+	show_doormat(g)
+	command(g, .Confirm)
+	testing.expect(t, trading(g, PLAYER, 1))
 }

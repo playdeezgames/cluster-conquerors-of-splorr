@@ -90,6 +90,9 @@ Game :: struct {
 	treaty:     [MAX_EMPIRES][MAX_EMPIRES]Treaty, // forms.odin; the same both ways
 	treaty_since: [MAX_EMPIRES][MAX_EMPIRES]int,
 	pacts:      int, // pacts signed so far (for the simulator)
+	alliances:  int,
+	trade:      [MAX_EMPIRES][MAX_EMPIRES]int, // percent of the other's income, 0 for no agreement
+	trades:     int, // trade agreements signed (for the simulator)
 	forms:      [MAX_FORMS]Form, // in the post
 	desk:       Desk,
 	doormat:    Doormat,
@@ -989,9 +992,9 @@ text :: proc(b: ^Text) -> string {
 }
 
 // Where the forms desk draws its rows, and the column of each row's < value >.
-DESK_TOP :: 40
-DESK_H :: 14
-DESK_VALUE_COL :: 20
+DESK_TOP :: 36
+DESK_H :: 12
+DESK_VALUE_COL :: 14
 
 desk_row_y :: proc(row: int) -> int {
 	return DESK_TOP + row * DESK_H

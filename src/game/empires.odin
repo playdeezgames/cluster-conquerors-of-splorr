@@ -41,7 +41,7 @@ RACES := [Race]Race_Info {
 	.Tardigrades = {"Tardigrades", "Tardigrade", "Live on any rock. Grow slowly.", "Settle any world without Landscaping; grow at half speed.", ""},
 	.Tortoises   = {"Tortoises", "Tortoise", "The shell is the plan.", "Enemy shots hit a fifth less often.", ""},
 	.Badgers     = {"Badgers", "Badger", "Dig in.", "Win 65 of 100 fights on the ground, not 50.", ""},
-	.Dogs        = {"Dogs", "Dog", "Like everybody. Everybody still hates them.", "Grudges start lower; trade pays half as much again.", "Trade waits for slice 2 step 3."},
+	.Dogs        = {"Dogs", "Dog", "Like everybody. Everybody still hates them.", "Grudges start lower; trade pays half as much again.", ""},
 }
 
 // The colour each empire's colonies and ships are drawn in.
@@ -154,6 +154,20 @@ update_sight :: proc(g: ^Game) {
 		if f.used {
 			x, y := fleet_cell(g, &f)
 			look(g, f.owner, x, y)
+		}
+	}
+	// Allies share what they see.
+	own: [MAX_EMPIRES][MAX_STARS]bool
+	for e in 0 ..< g.empire_count {
+		own[e] = g.empires[e].sees
+	}
+	for a in 0 ..< g.empire_count {
+		for b in 0 ..< g.empire_count {
+			if a != b && allied(g, a, b) {
+				for i in 0 ..< g.star_count {
+					g.empires[a].sees[i] ||= own[b][i]
+				}
+			}
 		}
 	}
 	for o in 0 ..< g.empire_count {

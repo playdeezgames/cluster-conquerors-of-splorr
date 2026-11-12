@@ -6,7 +6,7 @@ package game
 // and a new cluster starts.
 
 SAVE_MAGIC :: u32(0x5343_4343) // "CCCS"
-SAVE_VERSION :: u32(3) // 2: slice 2 step 1 (grudges); 3: step 2 (forms)
+SAVE_VERSION :: u32(4) // 2: slice 2 step 1 (grudges); 3: step 2 (forms); 4: step 3 (alliances, trade)
 
 Save_Header :: struct {
 	magic:   u32,

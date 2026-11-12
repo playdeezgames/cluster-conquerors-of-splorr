@@ -247,7 +247,8 @@ stranded :: proc(g: ^Game, f: ^Fleet) -> bool {
 
 // Where an empire's ships fill up: its own colonies (treaties come in slice 2).
 refuels_at :: proc(g: ^Game, star, owner: int) -> bool {
-	return colony_of(g, star, owner) != nil
+	c := any_colony(g, star)
+	return c != nil && (c.owner == owner || allied(g, owner, c.owner))
 }
 
 // Turns from one star to another at a speed: the fewest whole turns that cover the distance.

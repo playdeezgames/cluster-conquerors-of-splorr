@@ -176,7 +176,7 @@ complaints :: proc(g: ^Game, owner: int) {
 			continue
 		}
 		col := any_colony(g, f.star)
-		if col != nil && col.owner != owner {
+		if col != nil && col.owner != owner && !allied(g, owner, col.owner) {
 			b: Text
 			add(&b, "ships parked at Lot ")
 			add_int(&b, f.star + 1)

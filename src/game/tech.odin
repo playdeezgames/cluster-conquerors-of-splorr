@@ -240,12 +240,12 @@ research_turn :: proc(g: ^Game, owner: int) {
 }
 
 // A tech is learned: say so (if it is yers), and bill the upgrades it brings to ships.
-learn :: proc(g: ^Game, owner: int, f: Field, i: int) {
+learn :: proc(g: ^Game, owner: int, f: Field, i: int, how := "Book Club finishes ") {
 	before := empire_kit(g, owner)
 	g.empires[owner].tech.known[f][i] = true
 	t := TECHS[f][i]
 	b: Text
-	add(&b, "Book Club finishes ")
+	add(&b, how)
 	add(&b, t.name)
 	add(&b, " (")
 	add(&b, FIELD_NAMES[f])

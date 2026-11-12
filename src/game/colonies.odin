@@ -467,7 +467,7 @@ lost_tech :: proc(g: ^Game, owner: int) {
 				}
 				if pick == 0 && !done {
 					res.offered[f][i] = true
-					learn(g, owner, f, i)
+					learn(g, owner, f, i, "Found in the Clubhouse: ")
 					done = true
 				}
 				pick -= 1

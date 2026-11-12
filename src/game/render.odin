@@ -717,8 +717,8 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3, being built. Still to come: diplomacy, spies,", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "bylaws, events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 2 of 3, being built. Still to come: spies, bylaws,", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
@@ -939,20 +939,33 @@ draw_desk :: proc(f: ^Frame, g: ^Game) {
 		b: Text
 		add(&b, "Between you and the ")
 		add(&b, empire_name(g, r))
-		if has_pact(g, PLAYER, r) {
-			add(&b, ": a non-aggression pact since turn ")
+		switch treaty_of(g, PLAYER, r) {
+		case .None:
+			add(&b, ": no treaty. They hate you.")
+		case .Pact:
+			add(&b, ": a pact since turn ")
 			add_int(&b, g.treaty_since[PLAYER][r])
 			add(&b, ".")
-		} else {
-			add(&b, ": no treaty. They hate you.")
+		case .Alliance:
+			add(&b, ": allies since turn ")
+			add_int(&b, g.treaty_since[PLAYER][r])
+			add(&b, ".")
 		}
 		print(f, text(&b), x, y, COLOR_MID)
+		if trading(g, PLAYER, r) {
+			tr: Text
+			add(&tr, "Trade: each takes ")
+			add_int(&tr, g.trade[PLAYER][r])
+			add(&tr, " % of the other's BJ income a turn.")
+			y += 10
+			print(f, text(&tr), x, y, COLOR_MID)
+		}
 		m: Text
 		add(&m, "Last heard: they ")
 		add(&m, MOOD_NEWS[g.empires[r].mood])
 		y += 10 * print_wrapped(f, text(&m), x, y + 10, 58, COLOR_MID) + 14
 	}
-	print(f, "In the post:", x, y, COLOR_WHITE)
+	print(f, "In the post (answers due):", x, y, COLOR_WHITE)
 	y += 10
 	any_ := false
 	for &fm in g.forms {
@@ -961,16 +974,22 @@ draw_desk :: proc(f: ^Frame, g: ^Game) {
 		}
 		any_ = true
 		b: Text
-		add(&b, FORM_NAMES[fm.kind])
+		add(&b, "Turn ")
+		add_int(&b, fm.due)
+		add(&b, ": ")
+		add(&b, POST_NAMES[fm.kind])
 		if fm.kind == .Tribute || fm.kind == .Threat {
 			add(&b, " (")
 			add_int(&b, fm.amount)
 			add(&b, " BJ)")
 		}
-		add(&b, " to the ")
+		if fm.kind == .Gift || fm.kind == .Swap {
+			add(&b, " (")
+			add(&b, tech_name(fm.tech))
+			add(&b, ")")
+		}
+		add(&b, ", the ")
 		add(&b, empire_name(g, fm.to))
-		add(&b, ", answer turn ")
-		add_int(&b, fm.due)
 		print(f, text(&b), x + 2 * GLYPH_W, y, COLOR_LIGHT)
 		y += 10
 	}
@@ -990,17 +1009,32 @@ desk_row_text :: proc(g: ^Game, row: int) -> (label, value, tail: string) {
 		add(&v, "the ")
 		add(&v, empire_name(g, r))
 		return "To:", text(&v), ""
-	case DESK_PACT_ROW:
-		if has_pact(g, PLAYER, r) {
-			return "File: a declaration of war (at once)", "", ""
+	case DESK_TREATY_ROW:
+		switch treaty_of(g, PLAYER, r) {
+		case .None:
+			return "File: a non-aggression pact", "", ""
+		case .Pact:
+			return "File: an alliance", "", ""
+		case .Alliance:
+			return "Allies already. Nothing more to file.", "", ""
 		}
-		return "File: a non-aggression pact", "", ""
+	case DESK_TRADE_ROW:
+		if trading(g, PLAYER, r) {
+			return "Trade agreement in force.", "", ""
+		}
+		return "File: a trade agreement", "", ""
 	case DESK_TRIBUTE_ROW:
 		add_int(&v, g.desk.tribute)
-		return "File: tribute,", text(&v), "BJ enclosed"
+		return "Tribute:", text(&v), "BJ enclosed"
+	case DESK_GIFT_ROW:
+		return "Gift a tech:", tech_name(g.desk.gift), ""
+	case DESK_SWAP_ROW:
+		return "Swap yer:", tech_name(g.desk.swap), "for one of theirs"
 	case DESK_THREAT_ROW:
 		add_int(&v, g.desk.threat)
-		return "File: a threat. Pay", text(&v), "BJ, or else"
+		return "Threat, pay:", text(&v), "BJ, or else"
+	case DESK_WAR_ROW:
+		return "File: a declaration of war (at once)", "", ""
 	}
 	return "Back to the map", "", ""
 }
@@ -1027,6 +1061,11 @@ draw_doormat :: proc(f: ^Frame, g: ^Game) {
 		add_int(&h, g.empires[PLAYER].bj)
 		add(&h, " BJ.")
 		print_wrapped(f, text(&h), x, y + 6, 58, COLOR_MID)
+	case .Trade_Offer:
+		add(&b, ": a trade agreement, already signed on their side.")
+		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)
+		y += 10 * print_wrapped(f, "Each of you would take a share of the other's BJ income every turn, 5 % at first, growing to 15 %.", x, y, 58, COLOR_LIGHT)
+		print_wrapped(f, "They still hate you.", x, y + 6, 58, COLOR_MID)
 	case .Pact_Offer:
 		add(&b, ": a non-aggression pact, already signed on their side.")
 		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)
