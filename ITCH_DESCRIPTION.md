@@ -35,7 +35,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
 
-This is slice 1 of 3: one small cluster and two rivals. Diplomacy and spies, bylaws, the other six species, bigger clusters and more rivals are still to come.
+This is slice 2 of 3, being built: one small cluster and two rivals, now with all ten species. Diplomacy and spies, bylaws, random events, bigger clusters and more rivals are still to come.
 
 ### About it
 

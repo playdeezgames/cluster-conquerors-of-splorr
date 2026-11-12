@@ -184,7 +184,12 @@ bonus :: proc(g: ^Game, owner: int, e: Effect) -> int {
 	return n
 }
 
+// Whether an empire's Moving Vans can settle a type: Tardigrades anything, others by Landscaping.
 can_settle :: proc(g: ^Game, owner: int, planet: Planet_Type) -> bool {
+	return g.empires[owner].race == .Tardigrades || can_settle_by_tech(g, owner, planet)
+}
+
+can_settle_by_tech :: proc(g: ^Game, owner: int, planet: Planet_Type) -> bool {
 	if TYPE_PERCENT[planet] > 0 {
 		return true
 	}

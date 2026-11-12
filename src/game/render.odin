@@ -586,7 +586,7 @@ draw_colony :: proc(f: ^Frame, g: ^Game) {
 	add(&line1, "   Factories ")
 	add_int(&line1, col.factories)
 	add(&line1, "/")
-	add_int(&line1, col.households * FACTORIES_PER_HOUSEHOLD)
+	add_int(&line1, factory_cap(col))
 	add(&line1, "   Bases ")
 	add_int(&line1, col.bases)
 	print(f, text(&line1), x, 30, COLOR_LIGHT)
@@ -672,7 +672,7 @@ chore_effect :: proc(g: ^Game, star: int, ch: Chore) -> string {
 			add_int(&b, t)
 		}
 	case .Home_Improvement:
-		if col.factories >= col.households * FACTORIES_PER_HOUSEHOLD {
+		if col.factories >= factory_cap(col) {
 			add(&b, "full; to BJ")
 		} else {
 			add(&b, "+")
@@ -693,25 +693,30 @@ chore_effect :: proc(g: ^Game, star: int, ch: Chore) -> string {
 	return text(&b)
 }
 
-// The four species to choose from, each with its line and its trait.
+// The ten species to choose from in two columns; the highlighted one's line and trait below.
 draw_races :: proc(f: ^Frame, g: ^Game) {
 	x := COLONY_X
 	print(f, "Choose yer species", x, 6, COLOR_WHITE)
 	print(f, "Two of the others will be yer neighbours. They will hate you.", x, 18, COLOR_LIGHT)
 	for r in Race {
 		row := int(r)
-		y := race_row_y(row)
+		rx, ry := race_col_x(row), race_row_y(row)
 		if g.row == row {
-			fill_rect(f, 0, y - 3, VIEW_W * TILE, RACE_H - 4, COLOR_NAVY)
+			fill_rect(f, rx - 4, ry - 3, RACE_COL_W - 8, RACE_H - 1, COLOR_NAVY)
 		}
-		info := RACES[r]
-		print(f, info.name, x, y, g.row == row ? COLOR_WHITE : COLOR_LIGHT)
-		print(f, info.blurb, x + 2 * GLYPH_W, y + 11, COLOR_MID)
-		print(f, info.trait, x + 2 * GLYPH_W, y + 22, COLOR_CYAN)
+		print(f, RACES[r].name, rx, ry, g.row == row ? COLOR_WHITE : COLOR_LIGHT)
 	}
-	print(f, "Slice 1 of 3. Still to come: diplomacy and spies, bylaws,", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "the other six species, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
-	print(f, "Up/Down: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
+	info := RACES[Race(g.row)]
+	y := RACE_DETAIL_Y
+	print(f, info.name, x, y, COLOR_WHITE)
+	print(f, info.blurb, x + 2 * GLYPH_W, y + 12, COLOR_MID)
+	print(f, info.trait, x + 2 * GLYPH_W, y + 24, COLOR_CYAN)
+	if info.later != "" {
+		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
+	}
+	print(f, "Slice 2 of 3, being built. Still to come: diplomacy, spies,", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "bylaws, events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
 SHIP_GFX := [Ship_Type]Gfx {

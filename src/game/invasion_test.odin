@@ -57,13 +57,21 @@ test_a_big_landing_takes_the_colony :: proc(t: ^testing.T) {
 test_a_small_landing_is_seen_off :: proc(t: ^testing.T) {
 	g := new(Game)
 	defer free(g)
-	init_game(g, SEED)
-	h := landing(g, 1) // 5 troops against 13 militia
-	land_troops(g)
-	c := colony_of(g, h, 1)
-	testing.expect(t, c != nil)
-	testing.expect(t, c.households < HOME_HOUSEHOLDS)
-	testing.expect(t, fleet_at(g, h) == nil)
+	// Five troops against 13 militia never win; most of the time they take somebody with them.
+	hurt := 0
+	for seed in u64(1) ..= 10 {
+		init_game(g, seed)
+		h := landing(g, 1)
+		colony_of(g, h, 1).race = .Geese // not Badgers
+		land_troops(g)
+		c := colony_of(g, h, 1)
+		testing.expect(t, c != nil)
+		if c != nil && c.households < HOME_HOUSEHOLDS {
+			hurt += 1
+		}
+		testing.expect(t, fleet_at(g, h) == nil)
+	}
+	testing.expect(t, hurt >= 8)
 }
 
 @(test)

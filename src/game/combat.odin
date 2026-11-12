@@ -13,6 +13,7 @@ MAX_ROUNDS :: 10 // a battle not decided by then is broken off; both sides stay 
 BASE_HIT_CHANCE :: 50 // percent, before kit and species
 HIT_PER_TO_HIT :: 10 // percent per point of aiming kit
 GEESE_HIT :: 10 // Geese aim a fifth better: 50 becomes 60
+TORTOISE_HIT_PERCENT :: 80 // shots at Tortoises hit a fifth less often
 SHOT_DAMAGE :: 3 // per hit, before weapons kit and the target's shields
 AI_RETREAT_PERCENT :: 25 // a computer side leaves when its armed strength falls below this share of the enemy's
 
@@ -107,6 +108,15 @@ hit_chance :: proc(g: ^Game, owner, to_hit_kit: int) -> int {
 		c += GEESE_HIT
 	}
 	return clamp(c, 5, 95)
+}
+
+// A stack's chance to hit a target: its own aim, a fifth less against Tortoises' ships and bases.
+aim_at :: proc(g: ^Game, bt: ^Battle, s, target: ^Stack) -> int {
+	owner := bt.owners[target.side]
+	if owner >= 0 && g.empires[owner].race == .Tortoises {
+		return s.to_hit * TORTOISE_HIT_PERCENT / 100
+	}
+	return s.to_hit
 }
 
 // Lays out a battle: side 0 on the left, side 1 on the right, bases at the back.
@@ -287,11 +297,12 @@ battle_round :: proc(g: ^Game, bt: ^Battle) {
 			if grid_distance(s, target) > s.range {
 				continue
 			}
+			aim := aim_at(g, bt, s, target)
 			for _ in 0 ..< s.count * s.weapons {
 				if !alive(target) {
 					break
 				}
-				if rng_int(&g.rng, 100) >= s.to_hit {
+				if rng_int(&g.rng, 100) >= aim {
 					continue
 				}
 				dmg := max(1, s.damage - target.shield)

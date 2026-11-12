@@ -193,7 +193,7 @@ ai_sliders :: proc(g: ^Game, star: int, c: ^Colony, threat: bool) {
 	}
 	books := 20
 	improve := 100 - care - parking - fencing - books
-	if c.factories >= c.households * FACTORIES_PER_HOUSEHOLD {
+	if c.factories >= factory_cap(c) {
 		books += improve
 		improve = 0
 	}

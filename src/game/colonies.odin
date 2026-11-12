@@ -24,7 +24,8 @@ CHORE_NAMES := [Chore]string {
 
 TAX_PERCENT :: 10 // of production, to BJ, before the sliders share the rest
 FACTORY_COST :: 10 // production per factory
-FACTORIES_PER_HOUSEHOLD :: 2 // a colony can use this many factories per household
+FACTORIES_PER_HOUSEHOLD :: 2 // a colony can use this many factories per household (Ants 3)
+ANT_FACTORIES_PER_HOUSEHOLD :: 3
 BASE_COST :: 30 // production per defence base
 WASTE_PER_FACTORIES :: 4 // one waste a turn for every this many factories
 WASTE_CLEANED_PER_POINT :: 2 // one point of Lawn Care cleans this much waste
@@ -112,7 +113,12 @@ HOSTILE_PERCENT := [Planet_Type]int {
 
 // Households a planet holds with what an empire's Landscaping knows; 0 if it cannot be settled yet.
 planet_max :: proc(g: ^Game, owner: int, planet: Planet_Type, size: Planet_Size) -> int {
-	if !can_settle(g, owner, planet) {
+	return race_max(g, owner, g.empires[owner].race, planet, size)
+}
+
+// The room for a colony of a species (Tardigrades live on any rock) under an owner's techs.
+race_max :: proc(g: ^Game, owner: int, race: Race, planet: Planet_Type, size: Planet_Size) -> int {
+	if race != .Tardigrades && !can_settle_by_tech(g, owner, planet) {
 		return 0
 	}
 	pct := TYPE_PERCENT[planet] > 0 ? TYPE_PERCENT[planet] : HOSTILE_PERCENT[planet]
@@ -122,7 +128,7 @@ planet_max :: proc(g: ^Game, owner: int, planet: Planet_Type, size: Planet_Size)
 // A colony's room: the planet's, less what waste has worn away.
 colony_max :: proc(g: ^Game, star: int) -> int {
 	s := &g.stars[star]
-	return max(1, planet_max(g, s.colony.owner, s.planet, s.size) - s.colony.wear)
+	return max(1, race_max(g, s.colony.owner, s.colony.race, s.planet, s.size) - s.colony.wear)
 }
 
 factory_cost :: proc(g: ^Game, owner: int) -> int {
@@ -159,6 +165,11 @@ found_colony :: proc(g: ^Game, star: int, households: int, owner := PLAYER) -> ^
 	return &s.colony
 }
 
+// The factories a colony's households can work.
+factory_cap :: proc(c: ^Colony) -> int {
+	return c.households * (c.race == .Ants ? ANT_FACTORIES_PER_HOUSEHOLD : FACTORIES_PER_HOUSEHOLD)
+}
+
 // What a colony makes in a turn: half a point per household, a point per worked factory (half as much
 // again where the people are Beavers), more on a Rich world and less on a Poor one.
 production :: proc(g: ^Game, star: int) -> int {
@@ -166,7 +177,7 @@ production :: proc(g: ^Game, star: int) -> int {
 	if c == nil {
 		return 0
 	}
-	worked := min(c.factories, c.households)
+	worked := min(c.factories, factory_cap(c))
 	if c.race == .Beavers {
 		worked = worked * 3 / 2
 	}
@@ -279,7 +290,7 @@ run_colony :: proc(g: ^Game, star: int) {
 
 	// Home Improvement: factories, up to what the households can work; the surplus goes to BJ.
 	c.stored[.Home_Improvement] += chore_points(g, star, .Home_Improvement)
-	cap := c.households * FACTORIES_PER_HOUSEHOLD
+	cap := factory_cap(c)
 	for c.stored[.Home_Improvement] >= factory_cost(g, c.owner) && c.factories < cap {
 		c.stored[.Home_Improvement] -= factory_cost(g, c.owner)
 		c.factories += 1
@@ -322,6 +333,8 @@ run_colony :: proc(g: ^Game, star: int) {
 		grow += spare / GROWTH_PER_POINT
 		if c.race == .Rabbits {
 			grow = grow * 3 / 2
+		} else if c.race == .Tardigrades {
+			grow = max(1, grow / 2)
 		}
 		c.households = min(room, c.households + grow)
 	} else if c.households > room {

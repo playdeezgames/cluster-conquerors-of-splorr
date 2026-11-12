@@ -8,11 +8,18 @@ MAX_EMPIRES :: 3
 NO_OWNER :: -1
 SIGHT_RANGE :: 7 // cells an empire can see from its colonies and ships
 
+// The slice-1 four first, so their numbers in old saves still mean the same species.
 Race :: enum u8 {
 	Beavers, // industry
 	Owls, // research
 	Rabbits, // growth
 	Geese, // ship attack
+	Raccoons, // spies
+	Ants, // more factories per household
+	Tardigrades, // any rock, slow growth
+	Tortoises, // ship defence
+	Badgers, // ground troops
+	Dogs, // treaties and trade
 }
 
 Race_Info :: struct {
@@ -20,14 +27,21 @@ Race_Info :: struct {
 	one:   string, // "Beaver"
 	blurb: string,
 	trait: string,
+	later: string, // what the trait waits for, while it does nothing yet ("" once it works)
 }
 
-// The slice-1 four (PLAN.md); the other six arrive in slice 2.
+// All ten (DESIGN.md; the six after the Geese arrived in slice 2 step 0).
 RACES := [Race]Race_Info {
-	.Beavers = {"Beavers", "Beaver", "Build whether or not anyone asked.", "Factories make half as much again."},
-	.Owls    = {"Owls", "Owl", "Read everything, finish nothing.", "Research comes half as fast again."},
-	.Rabbits = {"Rabbits", "Rabbit", "You know.", "Households grow half as fast again."},
-	.Geese   = {"Geese", "Goose", "Honk, then attack.", "Ships aim a fifth better in battle."},
+	.Beavers     = {"Beavers", "Beaver", "Build whether or not anyone asked.", "Factories make half as much again.", ""},
+	.Owls        = {"Owls", "Owl", "Read everything, finish nothing.", "Research comes half as fast again.", ""},
+	.Rabbits     = {"Rabbits", "Rabbit", "You know.", "Households grow half as fast again.", ""},
+	.Geese       = {"Geese", "Goose", "Honk, then attack.", "Ships aim a fifth better in battle.", ""},
+	.Raccoons    = {"Raccoons", "Raccoon", "Masked, into everything.", "Watchers work half as well again, and get caught less.", "Waits for the Neighbourhood Watch (slice 2 step 4)."},
+	.Ants        = {"Ants", "Ant", "A hundred to a job.", "Each household works three factories, not two.", ""},
+	.Tardigrades = {"Tardigrades", "Tardigrade", "Live on any rock. Grow slowly.", "Settle any world without Landscaping; grow at half speed.", ""},
+	.Tortoises   = {"Tortoises", "Tortoise", "The shell is the plan.", "Enemy shots hit a fifth less often.", ""},
+	.Badgers     = {"Badgers", "Badger", "Dig in.", "Win 65 of 100 fights on the ground, not 50.", ""},
+	.Dogs        = {"Dogs", "Dog", "Like everybody. Everybody still hates them.", "Grudges start lower; trade pays half as much again.", "Waits for grudges and trade (slice 2 steps 1 and 3)."},
 }
 
 // The colour each empire's colonies and ships are drawn in.
@@ -94,7 +108,7 @@ owner_color :: proc(owner: int) -> u8 {
 	return owner == MOTH ? COLOR_LIGHT : EMPIRE_COLORS[owner]
 }
 
-// Picks the rivals' species once you have chosen yers: two of the other three, at random.
+// Picks the rivals' species once you have chosen yers: two of the other nine, at random.
 assign_rivals :: proc(g: ^Game) {
 	mine := g.empires[PLAYER].race
 	others: [len(Race) - 1]Race

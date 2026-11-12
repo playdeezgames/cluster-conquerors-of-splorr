@@ -9,6 +9,7 @@ package game
 CARPOOL_LOAD :: 5 // households a Carpool takes from the colony that builds it, and lands
 ASSIMILATE_TURNS :: 20 // turns before a captured colony's people become the owner's species
 LAND_WIN_PERCENT :: 50 // a landed household's chance against one of the militia
+BADGER_LAND_PERCENT :: 15 // added for Badgers landing, taken off for Badgers defending
 MILITIA_IN :: 4 // one household in this many takes up arms against a landing
 
 militia_of :: proc(households: int) -> int {
@@ -48,6 +49,19 @@ land_troops :: proc(g: ^Game) {
 	}
 }
 
+// A landed household's chance against one of the militia: better for Badgers landing, worse against
+// Badger households (the colony's people, whoever owns it).
+landing_odds :: proc(g: ^Game, attacker: int, c: ^Colony) -> int {
+	win := LAND_WIN_PERCENT
+	if g.empires[attacker].race == .Badgers {
+		win += BADGER_LAND_PERCENT
+	}
+	if c.race == .Badgers {
+		win -= BADGER_LAND_PERCENT
+	}
+	return win
+}
+
 // One landing: every Carpool at the star unloads, and the fight goes until one side is spent.
 invade :: proc(g: ^Game, star: int, f: ^Fleet) {
 	c := any_colony(g, star)
@@ -59,9 +73,10 @@ invade :: proc(g: ^Game, star: int, f: ^Fleet) {
 		f^ = {}
 	}
 	militia := militia_of(c.households)
+	win := landing_odds(g, attacker, c)
 	fallen := 0
 	for troops > 0 && militia > 0 {
-		if rng_int(&g.rng, 100) < LAND_WIN_PERCENT {
+		if rng_int(&g.rng, 100) < win {
 			militia -= 1
 			fallen += 1
 		} else {

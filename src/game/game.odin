@@ -141,7 +141,7 @@ choose_race :: proc(g: ^Game, r: Race) {
 	say(g, text(&b))
 }
 
-// Up and Down pick a species, Enter/OK picks it.
+// Up and Down go down the list, Left and Right change column, Enter/OK picks it.
 race_command :: proc(g: ^Game, c: Command) {
 	n := len(Race)
 	#partial switch c {
@@ -149,6 +149,8 @@ race_command :: proc(g: ^Game, c: Command) {
 		g.row = (g.row + n - 1) % n
 	case .South:
 		g.row = (g.row + 1) % n
+	case .West, .East:
+		g.row = (g.row + RACES_PER_COL) % n
 	case .Confirm:
 		choose_race(g, Race(g.row))
 	}
@@ -597,8 +599,8 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 	}
 	if g.mode == .Choose_Race {
 		for i in 0 ..< len(Race) {
-			y := race_row_y(i)
-			if sy >= y - 3 && sy < y - 3 + RACE_H {
+			x, y := race_col_x(i), race_row_y(i)
+			if sx >= x - 2 && sx < x - 2 + RACE_COL_W && sy >= y - 3 && sy < y - 3 + RACE_H {
 				if g.row == i {
 					choose_race(g, Race(i))
 				} else {
@@ -774,12 +776,19 @@ council_pointer :: proc(g: ^Game, sx, sy: int) {
 	g.mode = .Map
 }
 
-// Where the species screen draws its rows: name, blurb and trait on three lines.
+// Where the species screen draws its names: two columns of five; the highlighted one's details below.
 RACE_TOP :: 40
-RACE_H :: 40
+RACE_H :: 14
+RACE_COL_W :: 180
+RACES_PER_COL :: 5
+RACE_DETAIL_Y :: RACE_TOP + RACES_PER_COL * RACE_H + 10
 
 race_row_y :: proc(row: int) -> int {
-	return RACE_TOP + row * RACE_H
+	return RACE_TOP + row % RACES_PER_COL * RACE_H
+}
+
+race_col_x :: proc(row: int) -> int {
+	return COLONY_X + row / RACES_PER_COL * RACE_COL_W
 }
 
 // Where the research screen draws its rows: a field takes two lines.
