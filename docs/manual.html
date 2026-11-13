@@ -48,7 +48,7 @@
 <p class="sub">The manual. Everything in writing, as the Homeowners' Association would want.</p>
 
 <p>A Metaphor about paperwork, in the shape of a turn-based space strategy game in the spirit of the original Master of Orion. You are one species of animal in a small cluster of about twenty stars, with two rival species. You survey the stars, settle them, run each colony, research hobbies, build ships, and fight. Everybody hates you. The rivals hate each other too, but you get it worst.</p>
-<div class="note"><strong>The Metaphor is still being built.</strong> This is slice 2 of 3. Spies, bylaws, alliances, trade, random events, bigger clusters and more rivals are still to come. This manual describes only what is in it today.</div>
+<div class="note"><strong>The Metaphor is still being built.</strong> This is slice 2 of 3. Spies, bylaws, random events, bigger clusters and more rivals are still to come. This manual describes only what is in it today.</div>
 
 <nav>
 <ol>
@@ -115,7 +115,7 @@
 	<tr><td>A van between stars</td><td>A fleet on its way, in its owner's colour.</td></tr>
 	<tr><td><span class="sw" style="background:#5d275d"></span>Purple vortex</td><td>A wormhole you have been through.</td></tr>
 </table></div>
-<p>You see about 7 cells around each of yer colonies and ships. Beyond that, rivals are invisible.</p>
+<p>You see about 7 cells around each of yer colonies and ships, and everything an ally sees. Beyond that, rivals are invisible.</p>
 <p><strong>A turn</strong> happens when you end it. Everyone's colonies produce, research is spent, fleets move and arrive, fuel burns, battles are found, and now and then the Homeowners' Association meets. Yer battles, a meeting and any forms on yer doormat then come up one after another before you are back on the map.</p>
 
 <h2 id="colonies">Colonies and the five chores</h2>
@@ -148,8 +148,8 @@
 <p><strong>Sending:</strong> <span class="key">Enter</span> on a star with yer ships (or <em>Ships parked here &gt;</em> on a colony) opens the list. Pick kinds and counts, then <em>Choose where</em>, then the star. <span class="key">Esc</span> steps back.</p>
 
 <h2 id="fuel">Fuel and Gas Cans</h2>
-<p>A fleet counts the turns it spends away from one of yer colonies. Its range is the fuel of its thirstiest ship. An order that would run dry on the way is refused ("Out of range."). A fleet that runs dry anywhere that is not yer colony is <strong>stranded</strong> (red flag) and waits there forever, until a Gas Can reaches it.</p>
-<p>A <strong>Gas Can</strong> fills up with 10 refills at yer colonies. Away from home, it tops its own fleet up with one refill a turn. So send Gas Cans along on long trips, or send one to rescue a stranded fleet. Commuting techs add speed and fuel.</p>
+<p>A fleet counts the turns it spends away from one of yer colonies (or an ally's). Its range is the fuel of its thirstiest ship. An order that would run dry on the way is refused ("Out of range."). A fleet that runs dry anywhere that is not yer colony is <strong>stranded</strong> (red flag) and waits there forever, until a Gas Can reaches it.</p>
+<p>A <strong>Gas Can</strong> fills up with 10 refills at yer colonies (or an ally's). Away from home, it tops its own fleet up with one refill a turn. So send Gas Cans along on long trips, or send one to rescue a stranded fleet. Commuting techs add speed and fuel.</p>
 
 <h2 id="surveys">Surveys, and how they lie</h2>
 <ul>
@@ -194,7 +194,7 @@
 <h2 id="hoa">The Homeowners' Association</h2>
 <p>Once every empire has met every other one, the Association meets, and then every 25 turns after that. The minutes come up on screen after the turn.</p>
 <ul>
-	<li><strong>Complaints:</strong> each captured colony whose people have not settled in complains. Each empire also gets at most one more complaint: yards in a mess (5 or more waste at a colony), ships parked at someone else's colony, or unpaid upgrade fees. <strong>Each complaint fines 5 % of yer BJ.</strong></li>
+	<li><strong>Complaints:</strong> each captured colony whose people have not settled in complains. Each empire also gets at most one more complaint: yards in a mess (5 or more waste at a colony), ships parked at someone else's colony (an ally's is fine), or unpaid upgrade fees. <strong>Each complaint fines 5 % of yer BJ.</strong></li>
 	<li><strong>The vote</strong> is held at the first meeting, the third, and every other one after. The two empires with the most households stand. Votes follow households, and a winner needs two thirds of all of them. You vote for a candidate (yerselves, if standing) or abstain. The rivals never vote for you.</li>
 	<li><strong>Being President counts as a win</strong>, but play goes on, and every later meeting costs the President 10 BJ for the biscuits.</li>
 </ul>
@@ -203,17 +203,21 @@
 <h3>Grudges</h3>
 <p>Every empire keeps a hidden grudge against every other one, from 0 to 100. The rivals start at 60 against you and 30 against each other (20 less against Dogs). Battles, landings, captured colonies, threats and fines all add to it. It cools by a point a turn, but never below where it started. You never see the numbers; the news passes on gossip when a rival's feelings change ("have stopped waving", "have started a petition about you", "have written yer name on their bins"). The rivals send their fleets at whoever they hate most among the targets they can beat.</p>
 <h3>The forms desk</h3>
-<p><span class="key">P</span> opens it. Pick a rival you have met (Left/Right on <em>To</em>), then file a form with <span class="key">Enter</span>. The answer comes in the news.</p>
+<p><span class="key">P</span> opens it. Pick a rival you have met (Left/Right on <em>To</em>), pick a row, change its figure or tech with Left/Right, and file it with <span class="key">Enter</span>. The answer comes in the news. Below the forms, the desk shows yer treaty and trade with that rival, the last gossip, and what is in the post.</p>
 <div class="wrap"><table>
 	<tr><th>Form</th><th>Answer</th><th>What happens</th></tr>
 	<tr><td><strong>Non-aggression pact</strong></td><td>next turn</td><td>They sign only if a pact is worth more to them than their grudge. It is worth more when you are the stronger, and more again when they are busy hating the other rival. With a pact, neither side's ships fight the other's and nobody lands Carpools. A refusal adds a little grudge.</td></tr>
+	<tr><td><strong>Alliance</strong></td><td>next turn</td><td>Needs a pact first, and is a little harder to get. Allies keep the pact, refuel at each other's colonies (Gas Cans too) and see everything the other sees.</td></tr>
+	<tr><td><strong>Trade agreement</strong></td><td>next turn</td><td>Each of you takes a share of the other's BJ income every turn: 5 % at first, growing a point a turn to 15 %. Worth more to them if you already have a pact. Dogs take half as much again.</td></tr>
 	<tr><td><strong>Tribute</strong></td><td>next turn</td><td>The BJ goes in with the form. Each 2 BJ takes a point off their grudge, but never more than 20 below where it started.</td></tr>
+	<tr><td><strong>Gift a tech</strong></td><td>next turn</td><td>Tribute in a tech they lack. Always taken, and worth 15 points of grudge (with the same limit). They keep it, and so do you.</td></tr>
+	<tr><td><strong>Research swap</strong></td><td>in two turns</td><td>You offer a tech they lack; if they agree, they give you their cheapest tech that you lack. Worth more to them if you have a pact.</td></tr>
 	<tr><td><strong>Threat</strong></td><td>in two turns</td><td>If you are at least twice as strong, they pay what they can. If not, they file it under Ha. Either way, they hate you 15 more.</td></tr>
-	<tr><td><strong>Declaration of war</strong></td><td>at once</td><td>Tears up a pact. They hate you 30 more.</td></tr>
+	<tr><td><strong>Declaration of war</strong></td><td>at once</td><td>Tears up a pact, an alliance and any trade agreement. They hate you 30 more.</td></tr>
 </table></div>
-<p>"Strong" means warship hits plus defence bases. The Association keeps a register, so everyone knows everyone's. A rival tears up a pact itself when its grudge reaches 80, or when it becomes twice as strong as you.</p>
+<p>"Strong" means warship hits plus defence bases. The Association keeps a register, so everyone knows everyone's. A rival tears up everything itself when its grudge reaches 80, or when it becomes twice as strong as you. Since their grudge against you never cools below 60, most deals need some tribute first.</p>
 <h3>Yer doormat</h3>
-<p>Now and then a rival who has met you files a form at you. When it is the stronger, it sends a <strong>demand</strong> for some of yer BJ. When it would rather be left alone, it sends a <strong>pact</strong>, already signed. Pay or sign, or refuse. Refusing a demand adds 15 to its grudge.</p>
+<p>Now and then a rival who has met you files a form at you. When it is the stronger, it sends a <strong>demand</strong> for some of yer BJ. When it would rather be left alone, it sends a <strong>pact</strong>, already signed; once you have a pact, it may send a <strong>trade agreement</strong>. Pay or sign, or refuse. Refusing a demand adds 15 to its grudge.</p>
 
 <h2 id="species">The ten species</h2>
 <div class="wrap"><table>
@@ -227,7 +231,7 @@
 	<tr><td><strong>Tardigrades</strong></td><td>Live on any rock. Grow slowly.</td><td>Settle any world without Landscaping; households grow at half speed.</td></tr>
 	<tr><td><strong>Tortoises</strong></td><td>The shell is the plan.</td><td>Enemy shots hit a fifth less often.</td></tr>
 	<tr><td><strong>Badgers</strong></td><td>Dig in.</td><td>Win 65 of 100 fights on the ground (attackers win only 35 against them).</td></tr>
-	<tr><td><strong>Dogs</strong></td><td>Like everybody. Everybody still hates them.</td><td>Grudges against them start 20 lower. <span class="later">Better trade comes when trade does.</span></td></tr>
+	<tr><td><strong>Dogs</strong></td><td>Like everybody. Everybody still hates them.</td><td>Grudges against them start 20 lower; trade pays them half as much again.</td></tr>
 </table></div>
 <p>A trait belongs to a colony's people, not its owner. A captured colony keeps its people's trait until they settle in.</p>
 
