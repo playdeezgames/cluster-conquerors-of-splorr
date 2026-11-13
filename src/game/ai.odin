@@ -10,6 +10,7 @@ THREAT_RANGE :: 10 // cells: a hostile fleet this close to a colony means build 
 
 ai_turn :: proc(g: ^Game, owner: int) {
 	e := &g.empires[owner]
+	ai_watch(g, owner)
 	for &f in g.fleets {
 		if f.used && f.owner == owner {
 			pay_upgrades(g, &f)

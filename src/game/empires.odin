@@ -36,7 +36,7 @@ RACES := [Race]Race_Info {
 	.Owls        = {"Owls", "Owl", "Read everything, finish nothing.", "Research comes half as fast again.", ""},
 	.Rabbits     = {"Rabbits", "Rabbit", "You know.", "Households grow half as fast again.", ""},
 	.Geese       = {"Geese", "Goose", "Honk, then attack.", "Ships aim a fifth better in battle.", ""},
-	.Raccoons    = {"Raccoons", "Raccoon", "Masked, into everything.", "Watchers work half as well again, and get caught less.", "Waits for the Neighbourhood Watch (slice 2 step 4)."},
+	.Raccoons    = {"Raccoons", "Raccoon", "Masked, into everything.", "Watchers work half as well again, and get caught half as often.", ""},
 	.Ants        = {"Ants", "Ant", "A hundred to a job.", "Each household works three factories, not two.", ""},
 	.Tardigrades = {"Tardigrades", "Tardigrade", "Live on any rock. Grow slowly.", "Settle any world without Landscaping; grow at half speed.", ""},
 	.Tortoises   = {"Tortoises", "Tortoise", "The shell is the plan.", "Enemy shots hit a fifth less often.", ""},
@@ -59,6 +59,11 @@ Empire :: struct {
 	out:      bool, // no colonies left
 	grudge:   [MAX_EMPIRES]int, // how much it hates each empire, 0 to 100 (grudges.odin); hidden
 	mood:     Mood, // the gossip band of its grudge against you, last time you heard
+	watch_share: int, // percent of BJ income to the Neighbourhood Watch (watch.odin)
+	watch_saved: int, // BJ towards the next watcher
+	watchers: int, // at home, looking out for the others'
+	placed:   [MAX_EMPIRES]int, // watchers on each rival
+	mission:  [MAX_EMPIRES]Mission,
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.
@@ -156,6 +161,7 @@ update_sight :: proc(g: ^Game) {
 			look(g, f.owner, x, y)
 		}
 	}
+	watch_sight(g)
 	// Allies share what they see.
 	own: [MAX_EMPIRES][MAX_STARS]bool
 	for e in 0 ..< g.empire_count {

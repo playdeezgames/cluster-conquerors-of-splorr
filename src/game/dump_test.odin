@@ -62,6 +62,15 @@ test_dump_play :: proc(t: ^testing.T) {
 		colony_at(g, g.home).waste = 9
 		council_turn(g)
 		shot(g, fr, "council.ppm")
+		for g.mode == .Council || g.mode == .Doormat {
+			command(g, .Confirm)
+		}
+		e := &g.empires[PLAYER]
+		e.watch_share, e.watchers, e.watch_saved = 15, 2, 12
+		e.placed[1], e.mission[1] = 3, .Steal
+		open_watch(g)
+		g.row = 2
+		shot(g, fr, "watch.ppm")
 	}
 }
 

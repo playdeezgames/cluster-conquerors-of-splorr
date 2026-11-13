@@ -48,7 +48,7 @@
 <p class="sub">The manual. Everything in writing, as the Homeowners' Association would want.</p>
 
 <p>A Metaphor about paperwork, in the shape of a turn-based space strategy game in the spirit of the original Master of Orion. You are one species of animal in a small cluster of about twenty stars, with two rival species. You survey the stars, settle them, run each colony, research hobbies, build ships, and fight. Everybody hates you. The rivals hate each other too, but you get it worst.</p>
-<div class="note"><strong>The Metaphor is still being built.</strong> This is slice 2 of 3. Spies, bylaws, random events, bigger clusters and more rivals are still to come. This manual describes only what is in it today.</div>
+<div class="note"><strong>The Metaphor is still being built.</strong> This is slice 2 of 3. Framing, bylaws, random events, bigger clusters and more rivals are still to come. This manual describes only what is in it today.</div>
 
 <nav>
 <ol>
@@ -65,6 +65,7 @@
 	<li><a href="#clubhouse">The Clubhouse and its moth</a></li>
 	<li><a href="#hoa">The Homeowners' Association</a></li>
 	<li><a href="#paperwork">Grudges and paperwork</a></li>
+	<li><a href="#watch">The Neighbourhood Watch</a></li>
 	<li><a href="#species">The ten species</a></li>
 	<li><a href="#end">Winning, losing and saves</a></li>
 	<li><a href="#tips">Tips</a></li>
@@ -99,6 +100,7 @@
 	<tr><td>End the turn</td><td><span class="key">T</span></td><td>Start</td><td>Turn button</td></tr>
 	<tr><td>Research screen</td><td><span class="key">R</span></td><td>Y</td><td>Tech button, or <em>R: tech</em> in the panel</td></tr>
 	<tr><td>The forms desk</td><td><span class="key">P</span></td><td>X</td><td>Forms button, or <em>P: forms</em> in the panel</td></tr>
+	<tr><td>The Neighbourhood Watch</td><td><span class="key">W</span></td><td>LB</td><td>Watch button, or <em>W: watch</em> in the panel</td></tr>
 	<tr><td>Send feedback</td><td><span class="key">F</span></td><td></td><td><em>Send feedback</em> under the screen</td></tr>
 </table></div>
 <p>On sliders, Left/Right moves the highlighted slider by 5 and <span class="key">Enter</span> locks it. A click on a bar sets it there, and a click on the lock column toggles the lock.</p>
@@ -201,7 +203,7 @@
 
 <h2 id="paperwork">Grudges and paperwork</h2>
 <h3>Grudges</h3>
-<p>Every empire keeps a hidden grudge against every other one, from 0 to 100. The rivals start at 60 against you and 30 against each other (20 less against Dogs). Battles, landings, captured colonies, threats and fines all add to it. It cools by a point a turn, but never below where it started. You never see the numbers; the news passes on gossip when a rival's feelings change ("have stopped waving", "have started a petition about you", "have written yer name on their bins"). The rivals send their fleets at whoever they hate most among the targets they can beat.</p>
+<p>Every empire keeps a hidden grudge against every other one, from 0 to 100. The rivals start at 60 against you and 30 against each other (20 less against Dogs). Battles, landings, captured colonies, threats, fines and watchers caught all add to it. It cools by a point a turn, but never below where it started. You never see the numbers; the news passes on gossip when a rival's feelings change ("have stopped waving", "have started a petition about you", "have written yer name on their bins"). The rivals send their fleets at whoever they hate most among the targets they can beat.</p>
 <h3>The forms desk</h3>
 <p><span class="key">P</span> opens it. Pick a rival you have met (Left/Right on <em>To</em>), pick a row, change its figure or tech with Left/Right, and file it with <span class="key">Enter</span>. The answer comes in the news. Below the forms, the desk shows yer treaty and trade with that rival, the last gossip, and what is in the post.</p>
 <div class="wrap"><table>
@@ -219,6 +221,18 @@
 <h3>Yer doormat</h3>
 <p>Now and then a rival who has met you files a form at you. When it is the stronger, it sends a <strong>demand</strong> for some of yer BJ. When it would rather be left alone, it sends a <strong>pact</strong>, already signed; once you have a pact, it may send a <strong>trade agreement</strong>. Pay or sign, or refuse. Refusing a demand adds 15 to its grudge.</p>
 
+<h2 id="watch">The Neighbourhood Watch</h2>
+<p>Yer spies. <span class="key">W</span> opens the Watch screen.</p>
+<ul>
+	<li><strong>Budget:</strong> Left/Right sends 0 to 25 % of yer BJ income to the Watch, in steps of 5. Every 20 BJ saved trains a watcher. The Watch holds at most 20.</li>
+	<li><strong>At home</strong>, watchers look out for the other side's. A rival's watchers are more likely to be caught, and less likely to get anything done, while you keep some at home.</li>
+	<li><strong>On a rival:</strong> on that rival's watchers row, Right sends a watcher from home and Left calls one back. The mission row below picks what they do: <em>just watch</em>, <em>steal techs</em>, <em>wreck factories</em> (5 at a time), <em>wreck bases</em> or <em>wreck ships</em> (one at a time).</li>
+	<li><strong>Every turn</strong>, each watcher on a rival lets you see that rival's colonies and parked ships. Each one on a mission has 10 % to succeed, plus 5 for every watcher you have there beyond the ones they keep at home (at most 60 %). At most one success per rival per turn.</li>
+	<li><strong>Getting caught:</strong> a watcher on a mission is caught 20 % of the time, one just watching 5 %, and more when they have watchers at home. A caught watcher is gone, and the rival hates you 10 more. When their watchers are caught, the news tells you.</li>
+	<li><strong>Raccoons</strong> succeed half as often again and are caught half as often.</li>
+</ul>
+<p>When someone steals from you or wrecks something of yers, the news says what. It never says who. The rivals keep a Watch too: a tenth of their income, one watcher at home, the rest on whoever they hate most.</p>
+
 <h2 id="species">The ten species</h2>
 <div class="wrap"><table>
 	<tr><th>Species</th><th>In a sentence</th><th>Trait</th></tr>
@@ -226,7 +240,7 @@
 	<tr><td><strong>Owls</strong></td><td>Read everything, finish nothing.</td><td>Research comes half as fast again.</td></tr>
 	<tr><td><strong>Rabbits</strong></td><td>You know.</td><td>Households grow half as fast again.</td></tr>
 	<tr><td><strong>Geese</strong></td><td>Honk, then attack.</td><td>Ships aim a fifth better (+10 to hit).</td></tr>
-	<tr><td><strong>Raccoons</strong></td><td>Masked, into everything.</td><td class="later">Best spies. Spies are not in yet, so for now Raccoons have no trait.</td></tr>
+	<tr><td><strong>Raccoons</strong></td><td>Masked, into everything.</td><td>Watchers succeed half as often again, and are caught half as often.</td></tr>
 	<tr><td><strong>Ants</strong></td><td>A hundred to a job.</td><td>Each household works three factories, not two.</td></tr>
 	<tr><td><strong>Tardigrades</strong></td><td>Live on any rock. Grow slowly.</td><td>Settle any world without Landscaping; households grow at half speed.</td></tr>
 	<tr><td><strong>Tortoises</strong></td><td>The shell is the plan.</td><td>Enemy shots hit a fifth less often.</td></tr>
@@ -251,6 +265,7 @@
 	<li><strong>Keep some BJ in hand</strong> to pay upgrade fees, or yer ships keep their old kit.</li>
 	<li><strong>Defence bases stop landings.</strong> A colony with even one base, or one armed ship, cannot be invaded.</li>
 	<li><strong>Range is the clock.</strong> Check the fuel shown in the panel before sending anything far, and take a Gas Can on long trips.</li>
+	<li><strong>Keep a watcher or two at home.</strong> The rivals spy on whoever they hate most, and that is you.</li>
 	<li><strong>Tribute buys time, not friends.</strong> It lowers a grudge only so far, and the rivals still hate you.</li>
 	<li><strong>The Clubhouse is worth it</strong>, if you bring enough to beat a 72-hit moth that heals between visits.</li>
 </ul>

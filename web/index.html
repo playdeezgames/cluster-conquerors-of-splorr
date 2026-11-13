@@ -46,7 +46,7 @@
 	<button data-c="6">&#8601;</button><button data-c="1">&#8595;</button><button data-c="7">&#8600;</button>
 </div>
 <div id="acts" class="pad">
-	<button data-c="8">OK</button><button data-c="9">Back</button><button data-c="10">Turn</button><button data-c="11">Tech</button><button data-c="12">Forms</button>
+	<button data-c="8">OK</button><button data-c="9">Back</button><button data-c="10">Turn</button><button data-c="11">Tech</button><button data-c="12">Forms</button><button data-c="13">Watch</button>
 </div>
 <footer>
 	Cluster Conquerors of SPLORR!! by TheGrumpyGameDev. Code made by an AI agent (Claude Code) at the author's direction.
@@ -115,15 +115,15 @@
 	});
 
 	// game.Command order (src/game/game.odin): North South West East NorthWest NorthEast SouthWest SouthEast
-	// Confirm Cancel EndTurn Research Forms.
-	const C = { N: 0, S: 1, W: 2, E: 3, NW: 4, NE: 5, SW: 6, SE: 7, CONFIRM: 8, CANCEL: 9, END_TURN: 10, RESEARCH: 11, FORMS: 12 };
+	// Confirm Cancel EndTurn Research Forms Watch.
+	const C = { N: 0, S: 1, W: 2, E: 3, NW: 4, NE: 5, SW: 6, SE: 7, CONFIRM: 8, CANCEL: 9, END_TURN: 10, RESEARCH: 11, FORMS: 12, WATCH: 13 };
 	const KEYS = {
 		ArrowUp: C.N, ArrowDown: C.S, ArrowLeft: C.W, ArrowRight: C.E,
 		Numpad8: C.N, Numpad2: C.S, Numpad4: C.W, Numpad6: C.E,
 		Numpad7: C.NW, Numpad9: C.NE, Numpad1: C.SW, Numpad3: C.SE,
 		Home: C.NW, PageUp: C.NE, End: C.SW, PageDown: C.SE,
 		Enter: C.CONFIRM, NumpadEnter: C.CONFIRM, Space: C.CONFIRM, Numpad5: C.CONFIRM,
-		Escape: C.CANCEL, Backspace: C.CANCEL, KeyT: C.END_TURN, KeyR: C.RESEARCH, KeyP: C.FORMS,
+		Escape: C.CANCEL, Backspace: C.CANCEL, KeyT: C.END_TURN, KeyR: C.RESEARCH, KeyP: C.FORMS, KeyW: C.WATCH,
 	};
 	window.addEventListener("keydown", (e) => {
 		if (e.code === "KeyF" && !e.repeat) { e.preventDefault(); feedback.open(); return; }
@@ -169,7 +169,7 @@
 	});
 
 	// Gamepad (standard mapping): d-pad or left stick moves the cursor (diagonals from the stick), A confirm,
-	// B cancel, Y research, X the forms desk, Start ends the turn. Held directions repeat after 12 frames, then every 6.
+	// B cancel, Y research, X the forms desk, LB the Watch, Start ends the turn. Held directions repeat after 12 frames, then every 6.
 	const pad = { held: -1, frames: 0, buttons: [] };
 	function stickCommand(gp) {
 		const b = (i) => gp.buttons[i] && gp.buttons[i].pressed;
@@ -190,7 +190,7 @@
 		const d = stickCommand(gp);
 		if (d !== pad.held) { pad.held = d; pad.frames = 0; if (d >= 0) sendCommand(d); }
 		else if (d >= 0 && ++pad.frames >= 12) { pad.frames = 6; sendCommand(d); }
-		[[0, C.CONFIRM], [1, C.CANCEL], [2, C.FORMS], [3, C.RESEARCH], [9, C.END_TURN]].forEach(([i, c]) => {
+		[[0, C.CONFIRM], [1, C.CANCEL], [2, C.FORMS], [3, C.RESEARCH], [4, C.WATCH], [9, C.END_TURN]].forEach(([i, c]) => {
 			const now = !!(gp.buttons[i] && gp.buttons[i].pressed);
 			if (now && !pad.buttons[i]) sendCommand(c);
 			pad.buttons[i] = now;

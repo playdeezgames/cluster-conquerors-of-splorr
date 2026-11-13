@@ -19,6 +19,8 @@ draw_game :: proc(f: ^Frame, g: ^Game) {
 		draw_research(f, g)
 	case .Forms:
 		draw_desk(f, g)
+	case .Watch:
+		draw_watch(f, g)
 	case .Doormat:
 		draw_doormat(f, g)
 	case .Map, .Fleet, .Destination:
@@ -160,14 +162,15 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	case .Choose_Race:
 	case .Map:
 		draw_star_panel(f, g)
-	case .Colony, .Research, .Forms, .Doormat:
+	case .Colony, .Research, .Forms, .Doormat, .Watch:
 		draw_empire_panel(f, g)
 	case .Fleet:
 		draw_fleet_panel(f, g)
 	case .Destination:
 		draw_destination_panel(f, g)
 	}
-	if g.mode == .Map || g.mode == .Colony || g.mode == .Research || g.mode == .Forms {
+	if on_screens(g) {
+		print(f, g.mode == .Watch ? "W: map" : "W: watch", x, WATCH_LINK_Y, COLOR_CYAN)
 		print(f, g.mode == .Research ? "R: map" : "R: tech", x, RESEARCH_LINK_Y, COLOR_CYAN)
 		print(f, g.mode == .Forms ? "P: map" : "P: forms", FORMS_LINK_X, RESEARCH_LINK_Y, COLOR_CYAN)
 	}
@@ -443,8 +446,9 @@ isqrt :: proc(n: int) -> int {
 // The empire's totals, beside the colony screen.
 draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 	x := PANEL_TEXT_X
-	print(f, "Species", x, 44, COLOR_MID)
-	print(f, RACES[g.empires[PLAYER].race].name, x + 11 * GLYPH_W, 44, COLOR_GREEN)
+	// "Yer Tardigrades": the longest name runs off the panel after a label.
+	print(f, "Yer", x, 44, COLOR_MID)
+	print(f, RACES[g.empires[PLAYER].race].name, x + 4 * GLYPH_W, 44, COLOR_GREEN)
 	colonies, households, made, rp := 0, 0, 0, 0
 	for i in 0 ..< g.star_count {
 		if c := colony_at(g, i); c != nil {
@@ -717,7 +721,7 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3, being built. Still to come: spies, bylaws,", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Slice 2 of 3, being built. Still to come: framing, bylaws,", x, VIEW_H * TILE - 34, COLOR_MID)
 	print(f, "events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
@@ -1081,4 +1085,73 @@ draw_doormat :: proc(f: ^Frame, g: ^Game) {
 		print(f, label, x, ry, COLOR_CYAN)
 	}
 	print(f, "Up/Down: pick. Enter/OK or a tap: answer.", x, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+// The Neighbourhood Watch: the budget, each rival's watchers and mission, Back; then who is at home, the
+// next watcher, and the odds.
+draw_watch :: proc(f: ^Frame, g: ^Game) {
+	x := COLONY_X
+	e := &g.empires[PLAYER]
+	print(f, "The Neighbourhood Watch", x, 6, COLOR_WHITE)
+	print(f, "Concerned residents. Very concerned. About the neighbours.", x, 18, COLOR_LIGHT)
+	for row in 0 ..< WATCH_ROWS {
+		label, value, tail := watch_row_text(g, row)
+		if label == "" {
+			continue
+		}
+		y := watch_row_y(row)
+		if g.row == row {
+			fill_rect(f, 0, y - 3, VIEW_W * TILE, DESK_H - 1, COLOR_NAVY)
+		}
+		print(f, label, x, y, value == "" && row != WATCH_BACK_ROW ? COLOR_DARK : COLOR_LIGHT)
+		if value != "" {
+			print(f, "<", x + WATCH_VALUE_COL * GLYPH_W, y, COLOR_CYAN)
+			print(f, value, x + (WATCH_VALUE_COL + 2) * GLYPH_W, y, COLOR_WHITE)
+			print(f, ">", x + (WATCH_VALUE_COL + 3 + len(value)) * GLYPH_W, y, COLOR_CYAN)
+			print(f, tail, x + (WATCH_VALUE_COL + 5 + len(value)) * GLYPH_W, y, COLOR_LIGHT)
+		}
+	}
+	y := watch_row_y(WATCH_ROWS) + 4
+	h: Text
+	add(&h, "At home: ")
+	add_int(&h, e.watchers)
+	add(&h, e.watchers == 1 ? " watcher, " : " watchers, ")
+	add(&h, "looking out for theirs.")
+	print(f, text(&h), x, y, COLOR_MID)
+	y += 10
+	n: Text
+	if watchers_of(g, PLAYER) >= WATCHERS_MAX {
+		add(&n, "The Watch is full: ")
+		add_int(&n, WATCHERS_MAX)
+		add(&n, " watchers. No more are trained.")
+	} else {
+		add(&n, "Next watcher: ")
+		add_int(&n, e.watch_saved)
+		add(&n, " of ")
+		add_int(&n, WATCHER_COST)
+		add(&n, " BJ saved.")
+	}
+	print(f, text(&n), x, y, COLOR_MID)
+	y += 14
+	r, _ := watch_row_rival(g.row)
+	if watch_rival_ok(g, r) && e.placed[r] > 0 {
+		o: Text
+		m := e.mission[r]
+		if m == .Watch {
+			add(&o, "Watching: their colonies and parked ships are in sight.")
+		} else {
+			add(&o, "Each a turn: ")
+			add_int(&o, watch_success(g, PLAYER, r, 0))
+			add(&o, " % to succeed (one a turn),")
+		}
+		print(f, text(&o), x, y, COLOR_LIGHT)
+		y += 10
+		c: Text
+		add_int(&c, watch_catch(g, PLAYER, m, false))
+		add(&c, " % to be caught. Worse if they keep a Watch at home.")
+		print(f, text(&c), x, y, COLOR_LIGHT)
+	} else if watch_rival_ok(g, r) {
+		print(f, "Nobody there yet. Right sends a watcher from home.", x, y, COLOR_LIGHT)
+	}
+	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: next.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }

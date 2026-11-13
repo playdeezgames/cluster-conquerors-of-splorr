@@ -384,12 +384,18 @@ end_turn :: proc(g: ^Game) {
 			ai_turn(g, e)
 		}
 	}
+	before: [MAX_EMPIRES]int
+	for e in 0 ..< g.empire_count {
+		before[e] = g.empires[e].bj
+	}
 	for i in 0 ..< g.star_count {
 		run_colony(g, i)
 	}
 	for e in 0 ..< g.empire_count {
+		fund_watch(g, e, before[e])
 		research_turn(g, e)
 	}
+	watch_turn(g)
 	for &f in g.fleets {
 		if !f.used || f.star != NO_STAR {
 			continue

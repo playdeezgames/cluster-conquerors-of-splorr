@@ -16,6 +16,7 @@ Sim_Stats :: struct {
 	presidents_you: int,
 	won, lost: int,
 	doormats: int, // rivals' forms at side 0
+	steals, sabotages, caught: int,
 }
 
 sim_first :: proc(list: ^[dynamic]int, seen: ^bool, turn: int, now: bool) {
@@ -102,6 +103,9 @@ test_simulate :: proc(t: ^testing.T) {
 			for e in 0 ..< g.empire_count {
 				st.colonies += colonies_of(g, e)
 			}
+			st.steals += g.steals
+			st.sabotages += g.sabotages
+			st.caught += g.spies_caught
 			if g.council.ever_won {
 				st.presidents_you += 1
 			}
@@ -123,6 +127,7 @@ test_simulate :: proc(t: ^testing.T) {
 		sim_summary("first pact", st.pact, SIM_GAMES)
 		sim_summary("first trade", st.trade, SIM_GAMES)
 		fmt.printfln("  rivals' forms on side 0's doormat: %.1f a game (pacts signed, demands paid only to the twice as strong)", f64(st.doormats) / f64(SIM_GAMES))
+		fmt.printfln("  the Watch: %.1f techs stolen, %.1f wrecks, %.1f watchers caught a game", f64(st.steals) / f64(SIM_GAMES), f64(st.sabotages) / f64(SIM_GAMES), f64(st.caught) / f64(SIM_GAMES))
 		fmt.printfln("  colonies at the end: %.1f per empire; side 0 won %v, lost %v, was President in %v", f64(st.colonies) / f64(SIM_GAMES * MAX_EMPIRES), st.won, st.lost, st.presidents_you)
 	}
 }

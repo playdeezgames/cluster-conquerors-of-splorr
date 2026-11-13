@@ -20,6 +20,7 @@ Command :: enum i32 {
 	End_Turn,
 	Research,
 	Forms, // P, gamepad X, the Forms pad: the forms desk
+	Watch, // W, gamepad LB, the Watch pad: the Neighbourhood Watch
 }
 
 DIRECTION := [Command][2]int {
@@ -36,6 +37,7 @@ DIRECTION := [Command][2]int {
 	.End_Turn   = {0, 0},
 	.Research   = {0, 0},
 	.Forms      = {0, 0},
+	.Watch      = {0, 0},
 }
 
 // How a click or tap reached the game (the page sends these numbers).
@@ -59,6 +61,7 @@ Mode :: enum u8 {
 	Game_Over,
 	Forms, // the forms desk
 	Doormat, // a rival's form to sign or refuse
+	Watch, // the Neighbourhood Watch
 }
 
 Game :: struct {
@@ -96,6 +99,9 @@ Game :: struct {
 	forms:      [MAX_FORMS]Form, // in the post
 	desk:       Desk,
 	doormat:    Doormat,
+	steals:     int, // techs stolen by watchers (for the simulator)
+	sabotages:  int,
+	spies_caught: int,
 }
 
 init_game :: proc(g: ^Game, seed: u64) {
@@ -150,8 +156,9 @@ choose_race :: proc(g: ^Game, r: Race) {
 	add(&b, empire_name(g, 1))
 	add(&b, " and the ")
 	add(&b, empire_name(g, 2))
-	add(&b, " are out there somewhere. Everybody hates everybody.")
+	add(&b, " are out there somewhere.")
 	say(g, text(&b))
+	say(g, "Everybody hates everybody.")
 }
 
 // Up and Down go down the list, Left and Right change column, Enter/OK picks it.
@@ -171,11 +178,20 @@ race_command :: proc(g: ^Game, c: Command) {
 
 command :: proc(g: ^Game, c: Command) {
 	if c == .Forms {
-		// P, gamepad X or the Forms pad opens the forms desk from the map, a colony or research.
+		// P, gamepad X or the Forms pad opens the forms desk from the map, a colony, research or the Watch.
 		if g.mode == .Forms {
 			g.mode = .Map
-		} else if g.mode == .Map || g.mode == .Colony || g.mode == .Research {
+		} else if g.mode == .Map || g.mode == .Colony || g.mode == .Research || g.mode == .Watch {
 			open_desk(g)
+		}
+		return
+	}
+	if c == .Watch {
+		// W, gamepad LB or the Watch pad opens the Neighbourhood Watch the same way.
+		if g.mode == .Watch {
+			g.mode = .Map
+		} else if g.mode == .Map || g.mode == .Colony || g.mode == .Research || g.mode == .Forms {
+			open_watch(g)
 		}
 		return
 	}
@@ -183,7 +199,7 @@ command :: proc(g: ^Game, c: Command) {
 		// R, gamepad Y or the Tech pad opens the research screen from anywhere but the middle of an order.
 		if g.mode == .Research {
 			g.mode = .Map
-		} else if g.mode == .Map || g.mode == .Colony || g.mode == .Forms {
+		} else if g.mode == .Map || g.mode == .Colony || g.mode == .Forms || g.mode == .Watch {
 			open_research(g)
 		}
 		return
@@ -191,6 +207,8 @@ command :: proc(g: ^Game, c: Command) {
 	switch g.mode {
 	case .Forms:
 		desk_command(g, c)
+	case .Watch:
+		watch_command(g, c)
 	case .Doormat:
 		doormat_command(g, c)
 	case .Council:
@@ -244,6 +262,8 @@ map_command :: proc(g: ^Game, c: Command) {
 		open_research(g)
 	case .Forms:
 		open_desk(g)
+	case .Watch:
+		open_watch(g)
 	}
 }
 
@@ -629,6 +649,10 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		desk_pointer(g, sx, sy)
 		return
 	}
+	if g.mode == .Watch && sx < PANEL_X {
+		watch_pointer(g, sx, sy)
+		return
+	}
 	if g.mode == .Battle {
 		battle_pointer(g, sx, sy)
 		return
@@ -682,7 +706,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet, .Forms, .Doormat:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet, .Forms, .Doormat, .Watch:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -864,15 +888,25 @@ research_pointer :: proc(g: ^Game, sx, sy: int) {
 
 RESEARCH_LINK_Y :: VIEW_H * TILE - 12 // "R: research" and "P: forms" at the foot of the panel
 FORMS_LINK_X :: PANEL_TEXT_X + 9 * GLYPH_W
+WATCH_LINK_Y :: RESEARCH_LINK_Y - 10 // "W: watch" above them
+
+// The screens the panel's links work from.
+on_screens :: proc(g: ^Game) -> bool {
+	return g.mode == .Map || g.mode == .Colony || g.mode == .Research || g.mode == .Forms || g.mode == .Watch
+}
 
 panel_pointer :: proc(g: ^Game, sx, sy: int) {
-	if on_row(sy, RESEARCH_LINK_Y) && (g.mode == .Map || g.mode == .Colony || g.mode == .Research || g.mode == .Forms) {
-		// "R: research" on the left, "P: forms" on the right.
+	if on_screens(g) && on_row(sy, RESEARCH_LINK_Y) {
+		// "R: tech" on the left, "P: forms" on the right.
 		command(g, sx < FORMS_LINK_X ? .Research : .Forms)
 		return
 	}
+	if on_screens(g) && on_row(sy, WATCH_LINK_Y) && sx < FORMS_LINK_X {
+		command(g, .Watch)
+		return
+	}
 	switch g.mode {
-	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Forms, .Doormat:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Forms, .Doormat, .Watch:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)
