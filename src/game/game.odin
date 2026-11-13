@@ -102,6 +102,8 @@ Game :: struct {
 	steals:     int, // techs stolen by watchers (for the simulator)
 	sabotages:  int,
 	spies_caught: int,
+	frames_worked: int,
+	frames_failed: int,
 }
 
 init_game :: proc(g: ^Game, seed: u64) {

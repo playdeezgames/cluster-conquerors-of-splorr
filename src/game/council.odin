@@ -35,6 +35,8 @@ Council :: struct {
 	candidates: [2]int,
 	choice:     int, // the highlighted row while voting
 	waiting:    bool, // a meeting is ready to show once yer battles are over
+	exposed:    [MAX_EXPOSED]Exposed, // frame-ups to read out (watch.odin)
+	exposed_n:  int,
 }
 
 MINUTES_COLS :: (VIEW_W * TILE - 12) / GLYPH_W
@@ -223,6 +225,7 @@ hold_meeting :: proc(g: ^Game) {
 			complaints(g, e)
 		}
 	}
+	read_out_frame_ups(g)
 	if c.lines == 1 {
 		minute(c, "No complaints. Nobody believes it.")
 	}

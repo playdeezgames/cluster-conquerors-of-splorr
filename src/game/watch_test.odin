@@ -271,3 +271,191 @@ test_the_watch_link :: proc(t: ^testing.T) {
 	pointer(g, PANEL_TEXT_X + 2, WATCH_LINK_Y + 3, .Mouse)
 	testing.expect_value(t, g.mode, Mode.Map)
 }
+
+// Whether the minutes of the last meeting say something (lines joined where they wrapped).
+minutes_have :: proc(g: ^Game, s: string) -> bool {
+	all: [MINUTES_LINES * LOG_CAP]u8
+	n := 0
+	for i in 0 ..< g.council.lines {
+		m := message(&g.council.minutes[i])
+		for len(m) > 0 && m[0] == ' ' {
+			m = m[1:]
+		}
+		if n > 0 {
+			all[n] = ' '
+			n += 1
+		}
+		copy(all[n:], m)
+		n += len(m)
+	}
+	j := string(all[:n])
+	for k := 0; k + len(s) <= len(j); k += 1 {
+		if j[k:k + len(s)] == s {
+			return true
+		}
+	}
+	return false
+}
+
+@(test)
+test_the_frame_up_row :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	init_game(g, SEED)
+	choose_race(g, .Owls)
+	e := &g.empires[PLAYER]
+	e.met[1] = true
+	open_watch(g)
+	g.row = 3 // the first rival's frame-up
+	r, kind := watch_row_rival(g.row)
+	testing.expect_value(t, r, 1)
+	testing.expect_value(t, kind, Watch_Row.Frame)
+	// Nobody else met: nobody to name.
+	command(g, .East)
+	testing.expect(t, !e.frame[1])
+	testing.expect(t, news_has(g, "nobody else to frame"))
+	label, _, _ := watch_row_text(g, 3)
+	testing.expect_value(t, label, "  frame-up: nobody else to name")
+	// The other rival met: Left/Right names them or nobody.
+	e.met[2] = true
+	command(g, .East)
+	testing.expect(t, e.frame[1])
+	_, value, tail := watch_row_text(g, 3)
+	testing.expect_value(t, value[4:], empire_name(g, 2))
+	testing.expect_value(t, tail, "(on missions only)") // just watching, so far
+	testing.expect(t, !framing(g, PLAYER, 1, e.mission[1]))
+	e.mission[1] = .Steal
+	testing.expect(t, framing(g, PLAYER, 1, e.mission[1]))
+	command(g, .West)
+	testing.expect(t, !e.frame[1])
+	// Back is now below three rows for each rival.
+	testing.expect_value(t, WATCH_BACK_ROW, 7)
+}
+
+@(test)
+test_frame_ups_work_or_backfire :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	g.empires[1].met[2] = true
+	g.empires[1].frame[2] = true
+	// The Owls (you) are framed by rival 1 at rival 2's.
+	worked, failed := 0, 0
+	for _ in 0 ..< 200 {
+		g.empires[2].grudge[PLAYER] = 50
+		g.empires[2].grudge[1] = 50
+		g.council.exposed_n = 0
+		blamed, exposed := pin_blame(g, 1, 2, 10)
+		if exposed {
+			failed += 1
+			testing.expect_value(t, blamed, 1)
+			testing.expect_value(t, g.empires[2].grudge[1], 70)
+			testing.expect_value(t, g.empires[2].grudge[PLAYER], 50)
+			testing.expect_value(t, g.council.exposed_n, 1)
+			testing.expect_value(t, g.council.exposed[0], Exposed{1, 2, PLAYER})
+		} else {
+			worked += 1
+			testing.expect_value(t, blamed, PLAYER)
+			testing.expect_value(t, g.empires[2].grudge[PLAYER], 60)
+			testing.expect_value(t, g.empires[2].grudge[1], 50)
+		}
+	}
+	// About three in four.
+	testing.expect(t, worked > 120 && worked < 180)
+	testing.expect_value(t, worked + failed, 200)
+	testing.expect_value(t, g.frames_worked, worked)
+	testing.expect_value(t, g.frames_failed, failed)
+}
+
+@(test)
+test_framing_on_a_mission :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	_, theirs := give_techs(g)
+	e := &g.empires[PLAYER]
+	e.placed[1] = 10
+	e.mission[1] = .Steal
+	e.frame[1] = true
+	for _ in 0 ..< 30 {
+		watch_turn(g)
+		if knows(g, PLAYER, theirs) {
+			break
+		}
+	}
+	testing.expect(t, knows(g, PLAYER, theirs))
+	testing.expect_value(t, g.frames_worked + g.frames_failed > 0, true)
+	testing.expect(t, news_has(g, "left their name all over it") || news_has(g, "fooled nobody"))
+	// Caught while framing: blamed on them, or exposed.
+	for _ in 0 ..< 40 {
+		watch_turn(g)
+	}
+	testing.expect(t, news_has(g, ", and blame the") || news_has(g, "Nobody was fooled"))
+}
+
+@(test)
+test_the_association_hears_of_it :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	g.empires[PLAYER].bj = 1000
+	g.council.exposed[0] = {PLAYER, 1, 2}
+	g.council.exposed[1] = {2, PLAYER, 1}
+	g.council.exposed_n = 2
+	hold_meeting(g)
+	testing.expect(t, minutes_have(g, "framing the"))
+	testing.expect(t, minutes_have(g, "caught at yer colonies"))
+	testing.expect(t, minutes_have(g, "Complaint, you: a watcher caught at the"))
+	testing.expect_value(t, g.empires[PLAYER].bj, 1000 - 1000 * FINE_PERCENT / 100)
+	testing.expect_value(t, g.council.exposed_n, 0)
+}
+
+@(test)
+test_rivals_frame :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	e := &g.empires[1]
+	e.watchers = 3
+	e.grudge[2] = 90 // they spy on the other rival, and frame you
+	e.grudge[PLAYER] = 60
+	e.met[2] = true
+	ai_watch(g, 1)
+	testing.expect_value(t, e.placed[2], 2)
+	testing.expect(t, e.frame[2])
+	testing.expect_value(t, frame_target(g, 1, 2), PLAYER)
+	// Not someone they have a pact with.
+	g.treaty[1][PLAYER] = .Pact
+	g.treaty[PLAYER][1] = .Pact
+	ai_watch(g, 1)
+	testing.expect(t, !e.frame[2])
+}
+
+@(test)
+test_read_outs_make_room_for_you :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	for e in 0 ..< g.empire_count {
+		for o in 0 ..< g.empire_count {
+			g.empires[e].met[o] = true
+		}
+	}
+	for g.council.exposed_n < MAX_EXPOSED || g.frames_failed < 20 {
+		pin_blame(g, 1, 2, 1) // rival on rival, framing you
+		if g.frames_failed > 200 {
+			break
+		}
+	}
+	testing.expect_value(t, g.council.exposed_n, MAX_EXPOSED)
+	// Rival 1 at rival 2's, framing you, does involve you; rival 2 framing rival 1 at yers too.
+	g.council.exposed = {}
+	g.council.exposed[0] = {1, 2, 2}
+	g.council.exposed[1] = {1, 2, 2}
+	g.council.exposed[2] = {1, 2, 2}
+	before := g.frames_failed
+	for g.frames_failed == before {
+		pin_blame(g, PLAYER, 1, 1)
+	}
+	testing.expect_value(t, g.council.exposed[0], Exposed{PLAYER, 1, 2})
+}

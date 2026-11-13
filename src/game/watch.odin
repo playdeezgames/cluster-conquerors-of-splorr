@@ -20,6 +20,14 @@ WATCH_CATCH_DEFENDED :: 10 // added to either when the rival has watchers at hom
 GRUDGE_SPY_CAUGHT :: 10
 SABOTAGE_FACTORIES :: 5 // factories wrecked by one sabotage
 AI_WATCH_SHARE :: 10
+FRAME_WORKS :: 75 // percent a frame-up fools the victim
+GRUDGE_FRAMED :: 10 // what a mission done under a frame-up adds, on whoever is blamed
+MAX_EXPOSED :: 3 // failed frame-ups read out at a meeting (the minutes hold 14 lines); yers come first
+
+// A frame-up that fooled nobody, waiting to be read out at the next meeting.
+Exposed :: struct {
+	spy, victim, framed: int,
+}
 
 Mission :: enum u8 {
 	Watch,
@@ -133,17 +141,68 @@ watch_turn :: proc(g: ^Game) {
 					done = sabotage(g, a, b, m)
 				}
 			}
+			if done && framing(g, a, b, m) {
+				blamed, exposed := pin_blame(g, a, b, GRUDGE_FRAMED)
+				report_frame(g, a, b, blamed, exposed)
+			}
 			if caught > 0 {
 				ea.placed[b] -= caught
 				g.spies_caught += caught
-				add_grudge(g, b, a, GRUDGE_SPY_CAUGHT * caught)
-				report_caught(g, a, b, caught)
+				blamed, exposed := a, false
+				if framing(g, a, b, m) {
+					blamed, exposed = pin_blame(g, a, b, GRUDGE_SPY_CAUGHT * caught)
+				} else {
+					add_grudge(g, b, a, GRUDGE_SPY_CAUGHT * caught)
+				}
+				report_caught(g, a, b, caught, blamed, exposed)
 			}
 		}
 	}
 }
 
-report_caught :: proc(g: ^Game, spy, target, n: int) {
+// The empire a frame-up would name: the third one, if the spy knows of it.
+frame_target :: proc(g: ^Game, spy, victim: int) -> int {
+	t := third_of(g, spy, victim)
+	if t == NO_OWNER || !g.empires[spy].met[t] {
+		return NO_OWNER
+	}
+	return t
+}
+
+// Whether the spy's watchers on `victim` are leaving someone else's name about.
+framing :: proc(g: ^Game, spy, victim: int, m: Mission) -> bool {
+	return m != .Watch && g.empires[spy].frame[victim] && frame_target(g, spy, victim) != NO_OWNER
+}
+
+// Whose fault the victim thinks it was: the framed empire takes the grudge if the frame-up works; if
+// not, the spy takes it twice over and the Association hears of it at the next meeting.
+pin_blame :: proc(g: ^Game, spy, victim, grudge: int) -> (blamed: int, exposed: bool) {
+	framed := frame_target(g, spy, victim)
+	if rng_int(&g.rng, 100) < FRAME_WORKS {
+		add_grudge(g, victim, framed, grudge)
+		g.frames_worked += 1
+		return framed, false
+	}
+	add_grudge(g, victim, spy, 2 * grudge)
+	g.frames_failed += 1
+	c := &g.council
+	x := Exposed{spy, victim, framed}
+	if c.exposed_n < MAX_EXPOSED {
+		c.exposed[c.exposed_n] = x
+		c.exposed_n += 1
+	} else if spy == PLAYER || victim == PLAYER || framed == PLAYER {
+		// A full list makes room for one about you.
+		for &old in c.exposed {
+			if old.spy != PLAYER && old.victim != PLAYER && old.framed != PLAYER {
+				old = x
+				break
+			}
+		}
+	}
+	return spy, true
+}
+
+report_caught :: proc(g: ^Game, spy, target, n, blamed: int, exposed: bool) {
 	if spy != PLAYER && target != PLAYER {
 		return
 	}
@@ -151,19 +210,99 @@ report_caught :: proc(g: ^Game, spy, target, n: int) {
 	if spy == PLAYER {
 		add(&b, "The ")
 		add(&b, empire_name(g, target))
-		add(&b, n == 1 ? " caught one of yer watchers. They will remember." : " caught ")
-		if n > 1 {
+		add(&b, " caught ")
+		if n == 1 {
+			add(&b, "one of yer watchers")
+		} else {
 			add_int(&b, n)
-			add(&b, " of yer watchers. They will remember.")
+			add(&b, " of yer watchers")
+		}
+		switch {
+		case exposed:
+			add(&b, " framing the ")
+			add(&b, empire_name(g, frame_target(g, spy, target)))
+			add(&b, ". Nobody was fooled.")
+		case blamed != spy:
+			add(&b, ", and blame the ")
+			add(&b, empire_name(g, blamed))
+			add(&b, ".")
+		case:
+			add(&b, ". They will remember.")
 		}
 	} else {
 		add(&b, g.empires[PLAYER].watchers > 0 ? "Yer Watch caught " : "The neighbours caught ")
 		add_int(&b, n)
 		add(&b, " ")
-		add(&b, empire_name(g, spy))
-		add(&b, n == 1 ? " watcher snooping. Nobody is surprised." : " watchers snooping. Nobody is surprised.")
+		// A frame-up that works fools you too.
+		add(&b, blamed == PLAYER ? "of yer own" : empire_name(g, blamed))
+		add(&b, n == 1 ? " watcher snooping" : " watchers snooping")
+		if exposed {
+			add(&b, ", badly dressed as ")
+			add(&b, empire_name(g, frame_target(g, spy, target)))
+			add(&b, ".")
+		} else {
+			add(&b, ". Nobody is surprised.")
+		}
 	}
 	say(g, text(&b))
+}
+
+// What a mission done under a frame-up left behind.
+report_frame :: proc(g: ^Game, spy, victim, blamed: int, exposed: bool) {
+	framed := frame_target(g, spy, victim)
+	b: Text
+	switch {
+	case spy == PLAYER && exposed:
+		add(&b, "Yer frame-up of the ")
+		add(&b, empire_name(g, framed))
+		add(&b, " fooled nobody. The ")
+		add(&b, empire_name(g, victim))
+		add(&b, " blame you, twice over.")
+	case spy == PLAYER:
+		add(&b, "The ")
+		add(&b, empire_name(g, victim))
+		add(&b, " blame the ")
+		add(&b, empire_name(g, framed))
+		add(&b, ". Yer Watch left their name all over it.")
+	case victim == PLAYER && exposed:
+		add(&b, "The evidence points at the ")
+		add(&b, empire_name(g, framed))
+		add(&b, ", but it was plainly the ")
+		add(&b, empire_name(g, spy))
+		add(&b, ".")
+	case victim == PLAYER:
+		add(&b, "The evidence points at the ")
+		add(&b, empire_name(g, blamed))
+		add(&b, ".")
+	case:
+		return
+	}
+	say(g, text(&b))
+}
+
+// At a meeting: every frame-up that fooled nobody is read out, and fined.
+read_out_frame_ups :: proc(g: ^Game) {
+	c := &g.council
+	for k in 0 ..< c.exposed_n {
+		x := c.exposed[k]
+		if !alive_empire(g, x.spy) {
+			continue
+		}
+		b: Text
+		add(&b, "a watcher caught at ")
+		if x.victim == PLAYER {
+			add(&b, "yer colonies")
+		} else {
+			add(&b, "the ")
+			add(&b, empire_name(g, x.victim))
+			add(&b, "' colonies")
+		}
+		add(&b, ", framing ")
+		add(&b, who(g, x.framed))
+		add(&b, ".")
+		fine(g, x.spy, text(&b))
+	}
+	c.exposed_n = 0
 }
 
 // A mission done: false if there was nothing to do it to.
@@ -297,7 +436,8 @@ watch_sight :: proc(g: ^Game) {
 }
 
 // The rivals' Watch: a tenth of income, one watcher kept home, the rest on the empire they hate most
-// (just watching a pact partner), stealing when there is something to steal, otherwise wrecking factories.
+// (just watching a pact partner), stealing when there is something to steal, otherwise wrecking factories,
+// and framing the third empire unless they have a pact with it.
 ai_watch :: proc(g: ^Game, owner: int) {
 	e := &g.empires[owner]
 	e.watch_share = AI_WATCH_SHARE
@@ -317,6 +457,8 @@ ai_watch :: proc(g: ^Game, owner: int) {
 		move_watcher(g, owner, target, 1)
 	}
 	_, lack := giveable(g, target, owner)
+	third := frame_target(g, owner, target)
+	e.frame[target] = third != NO_OWNER && !has_pact(g, owner, third)
 	switch {
 	case has_pact(g, owner, target):
 		e.mission[target] = .Watch
@@ -327,18 +469,24 @@ ai_watch :: proc(g: ^Game, owner: int) {
 	}
 }
 
-// ---- The Watch screen: the budget, then two rows a rival (watchers, mission), then Back ----
+// ---- The Watch screen: the budget, then three rows a rival (watchers, mission, frame-up), then Back ----
+
+Watch_Row :: enum u8 {
+	Count,
+	Mission,
+	Frame,
+}
 
 WATCH_BUDGET_ROW :: 0
-WATCH_BACK_ROW :: 1 + 2 * (MAX_EMPIRES - 1)
+WATCH_BACK_ROW :: 1 + len(Watch_Row) * (MAX_EMPIRES - 1)
 WATCH_ROWS :: WATCH_BACK_ROW + 1
 
-// The rival a row is about, and whether it is the mission row; -1 for the budget and Back.
-watch_row_rival :: proc(row: int) -> (rival: int, mission: bool) {
+// The rival a row is about, and which of its rows; -1 for the budget and Back.
+watch_row_rival :: proc(row: int) -> (rival: int, kind: Watch_Row) {
 	if row == WATCH_BUDGET_ROW || row >= WATCH_BACK_ROW {
-		return -1, false
+		return -1, .Count
 	}
-	return 1 + (row - 1) / 2, (row - 1) % 2 == 1
+	return 1 + (row - 1) / len(Watch_Row), Watch_Row((row - 1) % len(Watch_Row))
 }
 
 watch_rival_ok :: proc(g: ^Game, r: int) -> bool {
@@ -356,14 +504,23 @@ watch_change :: proc(g: ^Game, by: int) {
 		e.watch_share = clamp(e.watch_share + by * SLIDER_STEP, 0, WATCH_SHARE_MAX)
 		return
 	}
-	r, is_mission := watch_row_rival(g.row)
+	r, kind := watch_row_rival(g.row)
 	if !watch_rival_ok(g, r) {
 		return
 	}
-	if is_mission {
+	switch kind {
+	case .Mission:
 		n := len(Mission)
 		e.mission[r] = Mission((int(e.mission[r]) + by + n) % n)
 		return
+	case .Frame:
+		if frame_target(g, PLAYER, r) == NO_OWNER {
+			say(g, "You have met nobody else to frame.")
+		} else {
+			e.frame[r] = !e.frame[r]
+		}
+		return
+	case .Count:
 	}
 	if !move_watcher(g, PLAYER, r, by) {
 		say(g, by > 0 ? "No watchers at home to send." : "Nobody of yers is there.")
@@ -407,18 +564,31 @@ watch_row_text :: proc(g: ^Game, row: int) -> (label, value, tail: string) {
 	if row == WATCH_BACK_ROW {
 		return "Back to the map", "", ""
 	}
-	r, is_mission := watch_row_rival(row)
+	r, kind := watch_row_rival(row)
 	if r >= g.empire_count {
 		return "", "", ""
 	}
 	if !watch_rival_ok(g, r) {
-		if is_mission {
+		if kind != .Count {
 			return "", "", ""
 		}
 		return g.empires[r].out ? "Gone." : "Not met yet.", "", ""
 	}
-	if is_mission {
+	switch kind {
+	case .Mission:
 		return "  mission:", MISSION_NAMES[e.mission[r]], ""
+	case .Frame:
+		t := frame_target(g, PLAYER, r)
+		if t == NO_OWNER {
+			return "  frame-up: nobody else to name", "", ""
+		}
+		if !e.frame[r] {
+			return "  frame-up:", "nobody", ""
+		}
+		add(&v, "the ")
+		add(&v, empire_name(g, t))
+		return "  frame-up:", text(&v), e.mission[r] == .Watch ? "(on missions only)" : ""
+	case .Count:
 	}
 	add_int(&v, e.placed[r])
 	@(static) l: Text

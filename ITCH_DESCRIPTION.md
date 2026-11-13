@@ -32,12 +32,12 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **Sending ships:** pick how many of each go, then the star; the line turns red when they would run out of fuel on the way. Ships fill up only at yer colonies, or from a Gas Can.
 - **Research:** R (gamepad Y, the Tech button) shares Book Club's research among six hobbies.
 - **Paperwork:** P (gamepad X, the Forms button) opens the forms desk: file a non-aggression pact, an alliance, a trade agreement, tribute in BJ or a tech, a research swap or a threat with a rival you have met, or tear it all up. Answers come back in the news. Rivals' forms land on yer doormat to sign or refuse.
-- **The Neighbourhood Watch:** W (gamepad LB, the Watch button) sends a share of yer income to train watchers, then places them on a rival to watch, steal techs or wreck factories, bases or ships. Caught is gone, and they will remember.
+- **The Neighbourhood Watch:** W (gamepad LB, the Watch button) sends a share of yer income to train watchers, then places them on a rival to watch, steal techs or wreck factories, bases or ships, and leave the other rival's name all over it. Caught is gone, and they will remember. A frame-up that fools nobody is read out at the next HOA meeting.
 - **Battles:** pick a target, then fight a round, fight it out, or retreat.
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
 
-This is slice 2 of 3, being built: one small cluster and two rivals, now with all ten species, diplomacy by filed forms and the Neighbourhood Watch. Framing, bylaws, random events, bigger clusters and more rivals are still to come.
+This is slice 2 of 3, being built: one small cluster and two rivals, now with all ten species, diplomacy by filed forms and the Neighbourhood Watch with its frame-ups. Bylaws, the President's rulings, random events, bigger clusters and more rivals are still to come.
 
 ### About it
 

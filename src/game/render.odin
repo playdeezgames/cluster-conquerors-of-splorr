@@ -721,7 +721,7 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3, being built. Still to come: framing, bylaws,", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Slice 2 of 3, being built. Still to come: bylaws, rulings,", x, VIEW_H * TILE - 34, COLOR_MID)
 	print(f, "events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
@@ -1103,7 +1103,7 @@ draw_watch :: proc(f: ^Frame, g: ^Game) {
 		if g.row == row {
 			fill_rect(f, 0, y - 3, VIEW_W * TILE, DESK_H - 1, COLOR_NAVY)
 		}
-		print(f, label, x, y, value == "" && row != WATCH_BACK_ROW ? COLOR_DARK : COLOR_LIGHT)
+		print(f, label, x, y, value == "" && row != WATCH_BACK_ROW ? (g.row == row ? COLOR_MID : COLOR_DARK) : COLOR_LIGHT)
 		if value != "" {
 			print(f, "<", x + WATCH_VALUE_COL * GLYPH_W, y, COLOR_CYAN)
 			print(f, value, x + (WATCH_VALUE_COL + 2) * GLYPH_W, y, COLOR_WHITE)
@@ -1150,6 +1150,15 @@ draw_watch :: proc(f: ^Frame, g: ^Game) {
 		add_int(&c, watch_catch(g, PLAYER, m, false))
 		add(&c, " % to be caught. Worse if they keep a Watch at home.")
 		print(f, text(&c), x, y, COLOR_LIGHT)
+		if framing(g, PLAYER, r, m) {
+			y += 10
+			fr: Text
+			add(&fr, "A frame-up fools them ")
+			add_int(&fr, FRAME_WORKS)
+			add(&fr, " % of the time.")
+			print(f, text(&fr), x, y, COLOR_LIGHT)
+			print(f, "If not: twice the grudge, and the Association hears.", x, y + 10, COLOR_LIGHT)
+		}
 	} else if watch_rival_ok(g, r) {
 		print(f, "Nobody there yet. Right sends a watcher from home.", x, y, COLOR_LIGHT)
 	}

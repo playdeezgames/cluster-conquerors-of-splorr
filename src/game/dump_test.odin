@@ -67,10 +67,16 @@ test_dump_play :: proc(t: ^testing.T) {
 		}
 		e := &g.empires[PLAYER]
 		e.watch_share, e.watchers, e.watch_saved = 15, 2, 12
-		e.placed[1], e.mission[1] = 3, .Steal
+		e.placed[1], e.mission[1], e.frame[1] = 3, .Steal, true
 		open_watch(g)
-		g.row = 2
+		g.row = 3
 		shot(g, fr, "watch.ppm")
+		g.mode = .Map
+		g.council.exposed[0] = {PLAYER, 1, 2}
+		g.council.exposed[1] = {2, PLAYER, 1}
+		g.council.exposed_n = 2
+		hold_meeting(g)
+		shot(g, fr, "frame-ups.ppm")
 	}
 }
 

@@ -64,6 +64,7 @@ Empire :: struct {
 	watchers: int, // at home, looking out for the others'
 	placed:   [MAX_EMPIRES]int, // watchers on each rival
 	mission:  [MAX_EMPIRES]Mission,
+	frame:    [MAX_EMPIRES]bool, // leaving the third empire's name about on missions there
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.
