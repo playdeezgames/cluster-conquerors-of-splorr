@@ -215,6 +215,9 @@ research_points :: proc(g: ^Game, star: int) -> int {
 	if c := any_colony(g, star); c != nil && c.race == .Owls {
 		r = r * 3 / 2
 	}
+	if bylaw_is(g, .Quiet_Hours) {
+		r /= 2
+	}
 	return r
 }
 
@@ -305,6 +308,9 @@ run_colony :: proc(g: ^Game, star: int) {
 	for c.stored[.Fencing] >= BASE_COST {
 		c.stored[.Fencing] -= BASE_COST
 		c.bases += 1
+		if bylaw_is(g, .Fence_Height) {
+			break_bylaw(g, c.owner, "A new defence base.")
+		}
 	}
 
 	// Lawn Care: clean this turn's waste; spare points help households grow; uncleaned waste wears the
@@ -361,6 +367,13 @@ run_colony :: proc(g: ^Game, star: int) {
 		f.kit = empire_kit(g, c.owner)
 		f.refills = c.build == .Gas_Can ? GAS_CAN_REFILLS : 0
 		dock(g, f, star)
+		if bylaw_bans(g, c.build) {
+			nb: Text
+			add(&nb, "A new ")
+			add(&nb, SHIPS[c.build].name)
+			add(&nb, ".")
+			break_bylaw(g, c.owner, text(&nb))
+		}
 		b: Text
 		add(&b, "A new ")
 		add(&b, SHIPS[c.build].name)
@@ -425,6 +438,9 @@ movers_arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	}
 	f.ships[.Moving_Van] -= 1
 	found_colony(g, star, NEW_COLONY_HOUSEHOLDS, f.owner)
+	if bylaw_is(g, .No_New_Houses) {
+		break_bylaw(g, f.owner, "A Moving Van settled.")
+	}
 	add(&b, "The movers have unpacked at ")
 	add(&b, s.name)
 	add(&b, " (Lot ")

@@ -175,7 +175,13 @@ test_elected_with_two_thirds_and_the_duty :: proc(t: ^testing.T) {
 	colony_at(g, g.home).households = 1000 // far more than everyone else put together
 	council_turn(g)
 	testing.expect_value(t, g.council.candidates[0], PLAYER)
-	// Vote for yerselves by keys: the first row.
+	// The bylaw vote comes first (abstain: the third row); then vote for yerselves by keys, the first row.
+	testing.expect(t, g.council.bylaw_voting)
+	command(g, .South)
+	command(g, .South)
+	command(g, .Confirm)
+	testing.expect(t, !g.council.bylaw_voting)
+	testing.expect_value(t, g.council.choice, 0)
 	command(g, .Confirm)
 	testing.expect_value(t, g.council.president, PLAYER)
 	testing.expect(t, g.council.ever_won)
@@ -199,7 +205,8 @@ test_without_two_thirds_nobody_is_elected :: proc(t: ^testing.T) {
 	all_met(g)
 	council_turn(g)
 	// Everyone starts the same size: nobody can reach two thirds alone.
-	pointer(g, COLONY_X + 4, vote_row_y(2) + 3, .Touch) // abstain, by a tap
+	pointer(g, COLONY_X + 4, vote_row_y(2) + 3, .Touch) // abstain on the bylaw, by a tap
+	pointer(g, COLONY_X + 4, vote_row_y(2) + 3, .Touch) // and for President
 	testing.expect_value(t, g.council.president, NO_OWNER)
 	testing.expect(t, minutes_contain(g, "Nobody has two thirds"))
 	pointer(g, COLONY_X + 4, 20, .Touch)

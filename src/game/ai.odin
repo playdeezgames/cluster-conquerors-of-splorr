@@ -54,11 +54,14 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		case:
 			c.build = .Golf_Cart
 		}
+		if bylaw_bans(g, c.build) {
+			c.build = .Golf_Cart // the rivals keep the bylaws
+		}
 	}
 	ai_fleets(g, owner)
 	if !threat {
 		ai_attack(g, owner)
-		if prey != NO_STAR {
+		if prey != NO_STAR && !bylaw_is(g, .No_Carpools) {
 			ai_invade(g, owner, base, prey, need)
 		}
 	}
@@ -193,6 +196,10 @@ ai_sliders :: proc(g: ^Game, star: int, c: ^Colony, threat: bool) {
 		parking, fencing = 35, 10
 	} else if c.households < 10 {
 		parking = 0
+	}
+	if bylaw_is(g, .Fence_Height) {
+		parking += fencing
+		fencing = 0
 	}
 	books := 20
 	improve := 100 - care - parking - fencing - books

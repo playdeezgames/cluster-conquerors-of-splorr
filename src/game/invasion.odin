@@ -67,6 +67,9 @@ invade :: proc(g: ^Game, star: int, f: ^Fleet) {
 	c := any_colony(g, star)
 	defender := c.owner
 	attacker := f.owner
+	if bylaw_is(g, .No_Carpools) {
+		break_bylaw(g, attacker, "Yer Carpools landed.")
+	}
 	troops := f.ships[.Carpool] * CARPOOL_LOAD
 	f.ships[.Carpool] = 0
 	if fleet_size(f) == 0 {

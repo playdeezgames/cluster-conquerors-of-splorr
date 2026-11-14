@@ -483,6 +483,10 @@ draw_empire_panel :: proc(f: ^Frame, g: ^Game) {
 	add_int(&extra, factory_cost(g, PLAYER))
 	add(&extra, " each")
 	print(f, text(&extra), x, 180, COLOR_MID)
+	if g.council.bylaw != .None {
+		print(f, "Bylaw in force:", x, 194, COLOR_MID)
+		print(f, BYLAWS[g.council.bylaw].name, x + 2 * GLYPH_W, 204, COLOR_ORANGE)
+	}
 }
 
 // The six fields, each with its slider, its next tech and how far along it is.
@@ -640,7 +644,10 @@ draw_colony :: proc(f: ^Frame, g: ^Game) {
 	cost: Text
 	add_int(&cost, SHIPS[col.build].cost)
 	add(&cost, " each")
-	print(f, text(&cost), x + EFFECT_COL * GLYPH_W, rows_y, COLOR_MID)
+	if bylaw_bans(g, col.build) {
+		add(&cost, ", against the bylaw")
+	}
+	print(f, text(&cost), x + EFFECT_COL * GLYPH_W, rows_y, bylaw_bans(g, col.build) ? COLOR_ORANGE : COLOR_MID)
 
 	ships_y := colony_row_y(SHIPS_ROW)
 	if g.row == SHIPS_ROW {
@@ -721,7 +728,7 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3, being built. Still to come: bylaws, rulings,", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Slice 2 of 3, being built. Still to come: rulings,", x, VIEW_H * TILE - 34, COLOR_MID)
 	print(f, "events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
@@ -860,15 +867,18 @@ draw_council :: proc(f: ^Frame, g: ^Game) {
 		color: u8 = i == 0 ? COLOR_WHITE : COLOR_LIGHT
 		print(f, message(&c.minutes[i]), x, MINUTES_Y + i * 10, color)
 	}
-	if c.voting {
-		print(f, "Yer vote:", x, VOTE_Y - 14, COLOR_WHITE)
+	if c.bylaw_voting || c.voting {
+		print(f, c.bylaw_voting ? "Yer vote on the bylaw:" : "Yer vote for President:", x, VOTE_Y - 14, COLOR_WHITE)
 		for row in 0 ..< COUNCIL_CHOICES {
 			y := vote_row_y(row)
 			if c.choice == row {
 				fill_rect(f, 0, y - 2, VIEW_W * TILE, 11, COLOR_NAVY)
 			}
 			b: Text
-			if row < 2 {
+			if row < 2 && c.bylaw_voting {
+				add(&b, "Vote for ")
+				add(&b, BYLAWS[c.proposals[row]].name)
+			} else if row < 2 {
 				cand := c.candidates[row]
 				add(&b, "Vote for ")
 				add(&b, cand == PLAYER ? "yerselves" : who(g, cand))
@@ -876,6 +886,9 @@ draw_council :: proc(f: ^Frame, g: ^Game) {
 				add(&b, "Abstain")
 			}
 			print(f, text(&b), x, y, COLOR_CYAN)
+		}
+		if c.bylaw_voting && c.choice < 2 {
+			print(f, BYLAWS[c.proposals[c.choice]].says, x, vote_row_y(COUNCIL_CHOICES) + 2, COLOR_LIGHT)
 		}
 		print(f, "Up/Down: pick. Enter/OK or a tap: vote.", x, VIEW_H * TILE - 12, COLOR_DARK)
 	} else {

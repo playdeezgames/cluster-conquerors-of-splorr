@@ -37,6 +37,10 @@ Council :: struct {
 	waiting:    bool, // a meeting is ready to show once yer battles are over
 	exposed:    [MAX_EXPOSED]Exposed, // frame-ups to read out (watch.odin)
 	exposed_n:  int,
+	bylaw:      Bylaw, // in force until the next meeting (bylaws.odin)
+	proposals:  [2]Bylaw,
+	bylaw_voting: bool, // this meeting's bylaw vote is waiting for yers
+	broke:      [MAX_EMPIRES]bool, // broke the bylaw in force since it passed
 }
 
 MINUTES_COLS :: (VIEW_W * TILE - 12) / GLYPH_W
@@ -164,7 +168,7 @@ complaints :: proc(g: ^Game, owner: int) {
 	// And at most one other.
 	for i in 0 ..< g.star_count {
 		col := colony_of(g, i, owner)
-		if col != nil && col.waste >= MESS_WASTE {
+		if col != nil && col.waste >= (bylaw_is(g, .Tidy_Yards) ? TIDY_WASTE : MESS_WASTE) {
 			b: Text
 			add(&b, "the yards at Lot ")
 			add_int(&b, i + 1)
@@ -176,6 +180,14 @@ complaints :: proc(g: ^Game, owner: int) {
 	for &f in g.fleets {
 		if !f.used || f.owner != owner || f.star == NO_STAR {
 			continue
+		}
+		if bylaw_is(g, .No_Parking) && !parked_at_home(g, &f) {
+			b: Text
+			add(&b, "ships parked at Lot ")
+			add_int(&b, f.star + 1)
+			add(&b, ", under the no-parking bylaw.")
+			fine(g, owner, text(&b))
+			return
 		}
 		col := any_colony(g, f.star)
 		if col != nil && col.owner != owner && !allied(g, owner, col.owner) {
@@ -225,10 +237,12 @@ hold_meeting :: proc(g: ^Game) {
 			complaints(g, e)
 		}
 	}
+	bylaw_complaints(g)
 	read_out_frame_ups(g)
 	if c.lines == 1 {
 		minute(c, "No complaints. Nobody believes it.")
 	}
+	propose_bylaws(g)
 	if c.meetings % 2 == 1 {
 		start_vote(g)
 	}
@@ -357,6 +371,18 @@ COUNCIL_CHOICES :: 3 // while voting: the first candidate, the second, abstain
 // While voting: Up/Down pick, Enter/OK votes. Otherwise Enter/OK (or Escape/Back) closes the minutes.
 council_command :: proc(g: ^Game, cmd: Command) {
 	c := &g.council
+	if c.bylaw_voting {
+		#partial switch cmd {
+		case .North:
+			c.choice = (c.choice + COUNCIL_CHOICES - 1) % COUNCIL_CHOICES
+		case .South:
+			c.choice = (c.choice + 1) % COUNCIL_CHOICES
+		case .Confirm:
+			cast_bylaw_votes(g, council_vote_of(c.choice))
+			c.choice = 0
+		}
+		return
+	}
 	if c.voting {
 		#partial switch cmd {
 		case .North:

@@ -272,31 +272,6 @@ test_the_watch_link :: proc(t: ^testing.T) {
 	testing.expect_value(t, g.mode, Mode.Map)
 }
 
-// Whether the minutes of the last meeting say something (lines joined where they wrapped).
-minutes_have :: proc(g: ^Game, s: string) -> bool {
-	all: [MINUTES_LINES * LOG_CAP]u8
-	n := 0
-	for i in 0 ..< g.council.lines {
-		m := message(&g.council.minutes[i])
-		for len(m) > 0 && m[0] == ' ' {
-			m = m[1:]
-		}
-		if n > 0 {
-			all[n] = ' '
-			n += 1
-		}
-		copy(all[n:], m)
-		n += len(m)
-	}
-	j := string(all[:n])
-	for k := 0; k + len(s) <= len(j); k += 1 {
-		if j[k:k + len(s)] == s {
-			return true
-		}
-	}
-	return false
-}
-
 @(test)
 test_the_frame_up_row :: proc(t: ^testing.T) {
 	g := new(Game)
@@ -403,9 +378,9 @@ test_the_association_hears_of_it :: proc(t: ^testing.T) {
 	g.council.exposed[1] = {2, PLAYER, 1}
 	g.council.exposed_n = 2
 	hold_meeting(g)
-	testing.expect(t, minutes_have(g, "framing the"))
-	testing.expect(t, minutes_have(g, "caught at yer colonies"))
-	testing.expect(t, minutes_have(g, "Complaint, you: a watcher caught at the"))
+	testing.expect(t, minutes_contain(g, "framing the"))
+	testing.expect(t, minutes_contain(g, "caught at yer colonies"))
+	testing.expect(t, minutes_contain(g, "Complaint, you: a watcher caught at the"))
 	testing.expect_value(t, g.empires[PLAYER].bj, 1000 - 1000 * FINE_PERCENT / 100)
 	testing.expect_value(t, g.council.exposed_n, 0)
 }
