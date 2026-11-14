@@ -77,6 +77,12 @@ test_dump_play :: proc(t: ^testing.T) {
 		g.council.exposed_n = 2
 		hold_meeting(g)
 		shot(g, fr, "frame-ups.ppm")
+		g.mode = .Map
+		g.council.president = PLAYER
+		colony_at(g, g.home).waste = MESS_WASTE
+		hold_meeting(g)
+		command(g, .South)
+		shot(g, fr, "ruling.ppm")
 	}
 }
 

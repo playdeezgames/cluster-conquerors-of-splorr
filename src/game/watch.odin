@@ -300,7 +300,7 @@ read_out_frame_ups :: proc(g: ^Game) {
 		add(&b, ", framing ")
 		add(&b, who(g, x.framed))
 		add(&b, ".")
-		fine(g, x.spy, text(&b))
+		complain(g, x.spy, text(&b))
 	}
 	c.exposed_n = 0
 }

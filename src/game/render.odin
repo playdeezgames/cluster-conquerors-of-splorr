@@ -728,7 +728,7 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3, being built. Still to come: rulings,", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Slice 2 of 3, being built. Still to come: random", x, VIEW_H * TILE - 34, COLOR_MID)
 	print(f, "events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
@@ -863,6 +863,10 @@ draw_game_over :: proc(f: ^Frame, g: ^Game) {
 draw_council :: proc(f: ^Frame, g: ^Game) {
 	c := &g.council
 	x := COLONY_X
+	if c.ruling {
+		draw_ruling(f, g)
+		return
+	}
 	for i in 0 ..< c.lines {
 		color: u8 = i == 0 ? COLOR_WHITE : COLOR_LIGHT
 		print(f, message(&c.minutes[i]), x, MINUTES_Y + i * 10, color)
@@ -1176,4 +1180,52 @@ draw_watch :: proc(f: ^Frame, g: ^Game) {
 		print(f, "Nobody there yet. Right sends a watcher from home.", x, y, COLOR_LIGHT)
 	}
 	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: next.", x, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+// Yer ruling as President: the complaint at the top of the docket, then Uphold, Dismiss and Double.
+draw_ruling :: proc(f: ^Frame, g: ^Game) {
+	c := &g.council
+	x := COLONY_X
+	t: Text
+	add(&t, "The Homeowners' Association, meeting ")
+	add_int(&t, c.meetings)
+	add(&t, ", turn ")
+	add_int(&t, g.turn)
+	add(&t, ".")
+	print(f, text(&t), x, MINUTES_Y, COLOR_WHITE)
+	h: Text
+	add(&h, "For the President's ruling: complaint ")
+	add_int(&h, c.docket_i + 1)
+	add(&h, " of ")
+	add_int(&h, c.docket_n)
+	add(&h, ".")
+	print(f, text(&h), x, 40, COLOR_WHITE)
+	k := &c.docket[c.docket_i]
+	a: Text
+	add(&a, "Against ")
+	add(&a, k.accused == PLAYER ? "you (yes, you)" : who(g, k.accused))
+	add(&a, ", brought by ")
+	add(&a, k.complainer == NO_OWNER ? "nobody in particular" : (k.complainer == PLAYER ? "you" : who(g, k.complainer)))
+	add(&a, ":")
+	print(f, text(&a), x, 60, COLOR_LIGHT)
+	print_wrapped(f, text(&k.why), x + 2 * GLYPH_W, 74, MINUTES_COLS - 2, COLOR_WHITE)
+	amount := g.empires[k.accused].bj * FINE_PERCENT / 100
+	m: Text
+	add(&m, "The fine would be ")
+	add_int(&m, amount)
+	add(&m, " BJ (")
+	add_int(&m, FINE_PERCENT)
+	add(&m, k.accused == PLAYER ? " % of yer BJ); doubled, " : " % of their BJ); doubled, ")
+	add_int(&m, g.empires[k.accused].bj * FINE_PERCENT * 2 / 100)
+	add(&m, ".")
+	print(f, text(&m), x, 104, COLOR_MID)
+	print(f, "Yer ruling:", x, VOTE_Y - 14, COLOR_WHITE)
+	for r in Ruling {
+		y := vote_row_y(int(r))
+		if c.choice == int(r) {
+			fill_rect(f, 0, y - 2, VIEW_W * TILE, 11, COLOR_NAVY)
+		}
+		print(f, RULING_ROWS[r], x, y, COLOR_CYAN)
+	}
+	print(f, "Up/Down: pick. Enter/OK or a tap: rule.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }

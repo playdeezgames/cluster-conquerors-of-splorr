@@ -41,6 +41,10 @@ Council :: struct {
 	proposals:  [2]Bylaw,
 	bylaw_voting: bool, // this meeting's bylaw vote is waiting for yers
 	broke:      [MAX_EMPIRES]bool, // broke the bylaw in force since it passed
+	docket:     [MAX_COMPLAINTS]Complaint, // this meeting's complaints (rulings.odin)
+	docket_n:   int,
+	docket_i:   int, // the next to be ruled on
+	ruling:     bool, // waiting for yer ruling as President
 }
 
 MINUTES_COLS :: (VIEW_W * TILE - 12) / GLYPH_W
@@ -130,10 +134,10 @@ council_turn :: proc(g: ^Game) {
 	c.next = g.turn + COUNCIL_EVERY
 }
 
-fine :: proc(g: ^Game, owner: int, why: string) {
+fine :: proc(g: ^Game, owner: int, why: string, times := 1, how := "Fined") {
 	c := &g.council
 	e := &g.empires[owner]
-	amount := e.bj * FINE_PERCENT / 100
+	amount := e.bj * FINE_PERCENT * times / 100
 	e.bj -= amount
 	for other in 0 ..< g.empire_count {
 		add_grudge(g, other, owner, GRUDGE_COMPLAINT)
@@ -143,7 +147,9 @@ fine :: proc(g: ^Game, owner: int, why: string) {
 	add(&b, who(g, owner))
 	add(&b, ": ")
 	add(&b, why)
-	add(&b, " Fined ")
+	add(&b, " ")
+	add(&b, how)
+	add(&b, " ")
 	add_int(&b, amount)
 	add(&b, " BJ.")
 	minute(c, text(&b))
@@ -163,7 +169,7 @@ complaints :: proc(g: ^Game, owner: int) {
 		add(&b, " of Lot ")
 		add_int(&b, i + 1)
 		add(&b, " would like to speak to the manager.")
-		fine(g, owner, text(&b))
+		complain(g, owner, text(&b))
 	}
 	// And at most one other.
 	for i in 0 ..< g.star_count {
@@ -173,7 +179,7 @@ complaints :: proc(g: ^Game, owner: int) {
 			add(&b, "the yards at Lot ")
 			add_int(&b, i + 1)
 			add(&b, " are a mess.")
-			fine(g, owner, text(&b))
+			complain(g, owner, text(&b))
 			return
 		}
 	}
@@ -186,7 +192,7 @@ complaints :: proc(g: ^Game, owner: int) {
 			add(&b, "ships parked at Lot ")
 			add_int(&b, f.star + 1)
 			add(&b, ", under the no-parking bylaw.")
-			fine(g, owner, text(&b))
+			complain(g, owner, text(&b))
 			return
 		}
 		col := any_colony(g, f.star)
@@ -195,13 +201,13 @@ complaints :: proc(g: ^Game, owner: int) {
 			add(&b, "ships parked at Lot ")
 			add_int(&b, f.star + 1)
 			add(&b, ", which is not theirs.")
-			fine(g, owner, text(&b))
+			complain(g, owner, text(&b))
 			return
 		}
 	}
 	for &f in g.fleets {
 		if f.used && f.owner == owner && owed(g, &f) > 0 {
-			fine(g, owner, "upgrade fees unpaid.")
+			complain(g, owner, "upgrade fees unpaid.")
 			return
 		}
 	}
@@ -213,6 +219,8 @@ hold_meeting :: proc(g: ^Game) {
 	c.meetings += 1
 	c.lines = 0
 	c.voting = false
+	c.bylaw_voting = false
+	c.docket_n, c.docket_i = 0, 0
 	b: Text
 	add(&b, "Minutes of the Homeowners' Association, meeting ")
 	add_int(&b, c.meetings)
@@ -239,13 +247,7 @@ hold_meeting :: proc(g: ^Game) {
 	}
 	bylaw_complaints(g)
 	read_out_frame_ups(g)
-	if c.lines == 1 {
-		minute(c, "No complaints. Nobody believes it.")
-	}
-	propose_bylaws(g)
-	if c.meetings % 2 == 1 {
-		start_vote(g)
-	}
+	hear_complaints(g)
 	if g.mode == .Map {
 		g.mode = .Council
 		c.choice = 0
@@ -371,6 +373,17 @@ COUNCIL_CHOICES :: 3 // while voting: the first candidate, the second, abstain
 // While voting: Up/Down pick, Enter/OK votes. Otherwise Enter/OK (or Escape/Back) closes the minutes.
 council_command :: proc(g: ^Game, cmd: Command) {
 	c := &g.council
+	if c.ruling {
+		#partial switch cmd {
+		case .North:
+			c.choice = (c.choice + COUNCIL_CHOICES - 1) % COUNCIL_CHOICES
+		case .South:
+			c.choice = (c.choice + 1) % COUNCIL_CHOICES
+		case .Confirm:
+			give_ruling(g, Ruling(c.choice))
+		}
+		return
+	}
 	if c.bylaw_voting {
 		#partial switch cmd {
 		case .North:

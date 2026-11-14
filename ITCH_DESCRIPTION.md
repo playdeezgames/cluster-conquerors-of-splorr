@@ -20,7 +20,7 @@ Pick a species of animal. Survey the stars, settle them, run each colony on five
 - Surveys are filed, and sometimes misfiled. Some stars are not what the report said. Some are not stars.
 - Ships burn fuel away from home. Run dry and wait for the Gas Can.
 - New technology upgrades every ship at once. The fee is billed per ship.
-- The Homeowners' Association hears complaints, levies fines, votes in a bylaw that binds everyone (quiet hours, no parking, no new houses...) and holds elections. Win one and you get to run the meetings.
+- The Homeowners' Association hears complaints, levies fines, votes in a bylaw that binds everyone (quiet hours, no parking, no new houses...) and holds elections. Win one and you rule on every complaint: uphold it, dismiss it, or double it.
 - Somewhere in the cluster is the Clubhouse. It has a porch light.
 
 ### How to play
@@ -37,7 +37,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
 
-This is slice 2 of 3, being built: one small cluster and two rivals, now with all ten species, diplomacy by filed forms the Neighbourhood Watch with its frame-ups, and bylaws. The President's rulings, random events, bigger clusters and more rivals are still to come.
+This is slice 2 of 3, being built: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, and a President who rules on every complaint. Random events, bigger clusters and more rivals are still to come.
 
 ### About it
 

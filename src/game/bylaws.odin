@@ -79,7 +79,7 @@ bylaw_complaints :: proc(g: ^Game) {
 			add(&b, "broke the bylaw (")
 			add(&b, BYLAWS[c.bylaw].name)
 			add(&b, ").")
-			fine(g, e, text(&b))
+			complain(g, e, text(&b))
 		}
 	}
 	c.broke = {}

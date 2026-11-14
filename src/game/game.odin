@@ -105,6 +105,7 @@ Game :: struct {
 	frames_worked: int,
 	frames_failed: int,
 	bylaws_passed: int,
+	rulings:    [Ruling]int, // complaints ruled on, by ruling (for the simulator)
 }
 
 init_game :: proc(g: ^Game, seed: u64) {
@@ -826,11 +827,13 @@ vote_row_y :: proc(row: int) -> int {
 // A tap on a vote's choice votes it; anywhere else closes the minutes once the vote is done.
 council_pointer :: proc(g: ^Game, sx, sy: int) {
 	c := &g.council
-	if c.bylaw_voting || c.voting {
+	if c.ruling || c.bylaw_voting || c.voting {
 		for row in 0 ..< COUNCIL_CHOICES {
 			if on_row(sy, vote_row_y(row)) {
 				c.choice = row
-				if c.bylaw_voting {
+				if c.ruling {
+					give_ruling(g, Ruling(row))
+				} else if c.bylaw_voting {
 					cast_bylaw_votes(g, council_vote_of(row))
 					c.choice = 0
 				} else {

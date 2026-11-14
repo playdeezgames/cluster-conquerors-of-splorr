@@ -18,6 +18,7 @@ Sim_Stats :: struct {
 	doormats: int, // rivals' forms at side 0
 	steals, sabotages, caught, framed, exposed: int,
 	bylaws: int,
+	rulings: [Ruling]int,
 	bylaw_kinds: [Bylaw]int, // in force at the end of a game
 }
 
@@ -68,6 +69,10 @@ test_simulate :: proc(t: ^testing.T) {
 				for g.mode == .Battle {
 					battle_action(g, 1)
 				}
+				for g.council.ruling {
+					c := &g.council
+					give_ruling(g, ai_ruling(g, PLAYER, &c.docket[c.docket_i]))
+				}
 				if g.council.bylaw_voting {
 					cast_bylaw_votes(g, .Abstain)
 				}
@@ -114,6 +119,9 @@ test_simulate :: proc(t: ^testing.T) {
 			st.framed += g.frames_worked
 			st.exposed += g.frames_failed
 			st.bylaws += g.bylaws_passed
+			for r in Ruling {
+				st.rulings[r] += g.rulings[r]
+			}
 			st.bylaw_kinds[g.council.bylaw] += 1
 			if g.council.ever_won {
 				st.presidents_you += 1
@@ -139,6 +147,7 @@ test_simulate :: proc(t: ^testing.T) {
 		fmt.printfln("  the Watch: %.1f techs stolen, %.1f wrecks, %.1f watchers caught a game", f64(st.steals) / f64(SIM_GAMES), f64(st.sabotages) / f64(SIM_GAMES), f64(st.caught) / f64(SIM_GAMES))
 		fmt.printfln("  frame-ups: %.1f worked, %.1f fooled nobody a game", f64(st.framed) / f64(SIM_GAMES), f64(st.exposed) / f64(SIM_GAMES))
 		fmt.printfln("  bylaws passed: %.1f a game; in force at the end: %v", f64(st.bylaws) / f64(SIM_GAMES), st.bylaw_kinds)
+		fmt.printfln("  complaints ruled (or fined with nobody President), all games: %v", st.rulings)
 		fmt.printfln("  colonies at the end: %.1f per empire; side 0 won %v, lost %v, was President in %v", f64(st.colonies) / f64(SIM_GAMES * MAX_EMPIRES), st.won, st.lost, st.presidents_you)
 	}
 }
