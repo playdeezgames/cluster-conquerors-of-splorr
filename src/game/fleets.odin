@@ -396,6 +396,7 @@ end_turn :: proc(g: ^Game) {
 		research_turn(g, e)
 	}
 	watch_turn(g)
+	events_turn(g)
 	for &f in g.fleets {
 		if !f.used || f.star != NO_STAR {
 			continue

@@ -106,6 +106,10 @@ Game :: struct {
 	frames_failed: int,
 	bylaws_passed: int,
 	rulings:    [Ruling]int, // complaints ruled on, by ruling (for the simulator)
+	goat:       Goat, // the stray Goat, when there is one (events.odin)
+	events:     [Event]int, // events so far (for the simulator)
+	goat_ate:   int,
+	goats_seen_off: int,
 }
 
 init_game :: proc(g: ^Game, seed: u64) {

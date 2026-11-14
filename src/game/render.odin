@@ -82,6 +82,10 @@ draw_map :: proc(f: ^Frame, g: ^Game) {
 		if c := any_colony(g, i); c != nil && (c.owner == PLAYER || g.empires[PLAYER].sees[i]) {
 			frame_rect(f, sx - 1, sy - 1, TILE + 2, TILE + 2, EMPIRE_COLORS[c.owner])
 		}
+		// The stray Goat, if in sight: half a cell up and to the right of the star.
+		if g.goat.alive && g.goat.star == i && (g.empires[PLAYER].sees[i] || colony_at(g, i) != nil) {
+			draw_gfx(f, .Goat, sx + TILE / 2, sy - TILE / 2, COLOR_WHITE)
+		}
 		// Rivals' ships here, if in sight: a flag at the top left in their colour.
 		if g.empires[PLAYER].sees[i] {
 			for e in 1 ..< g.empire_count {
@@ -183,6 +187,11 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 	s := &g.stars[g.cursor]
 	draw_star_heading(f, g, g.cursor, y)
 	y += 24
+	if g.goat.alive && g.goat.star == g.cursor && g.empires[PLAYER].sees[g.cursor] {
+		print(f, "A stray Goat is", x, y, COLOR_WHITE)
+		print(f, "here, eating.", x, y + 9, COLOR_WHITE)
+		y += 22
+	}
 	if g.cursor == g.clubhouse && g.moth_alive {
 		print(f, "Guarded by a", x, y, COLOR_ORANGE)
 		print(f, "very large moth.", x, y + 9, COLOR_ORANGE)
@@ -323,8 +332,8 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 	if due > 0 {
 		d: Text
 		add_int(&d, due)
-		add(&d, due == 1 ? " fleet on its way" : " fleets on their way")
-		print(f, text(&d), x, BACK_Y, COLOR_LIGHT)
+		add(&d, due == 1 ? " fleet coming" : " fleets coming")
+		print(f, text(&d), x, ACTION_Y - 11, COLOR_LIGHT) // above the action: "W: watch" sits below it
 	}
 }
 
@@ -728,8 +737,8 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3, being built. Still to come: random", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "events, bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 2 of 3, nearly done. Still to come in slice 3:", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
@@ -1065,6 +1074,14 @@ draw_doormat :: proc(f: ^Frame, g: ^Game) {
 	d := &g.doormat
 	x := COLONY_X
 	print(f, "On yer doormat", x, 6, COLOR_WHITE)
+	if d.kind == .Notice {
+		print_wrapped(f, text(&d.note), x, 24, 58, COLOR_LIGHT)
+		ry := doormat_row_y(0)
+		fill_rect(f, 0, ry - 3, VIEW_W * TILE, DESK_H - 1, COLOR_NAVY)
+		print(f, "Noted", x, ry, COLOR_CYAN)
+		print(f, "Enter/OK or a tap: back to the map.", x, VIEW_H * TILE - 12, COLOR_DARK)
+		return
+	}
 	// Sentence by sentence: a Text holds only LOG_CAP characters.
 	y := 24
 	b: Text
@@ -1087,6 +1104,7 @@ draw_doormat :: proc(f: ^Frame, g: ^Game) {
 		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)
 		y += 10 * print_wrapped(f, "Each of you would take a share of the other's BJ income every turn, 5 % at first, growing to 15 %.", x, y, 58, COLOR_LIGHT)
 		print_wrapped(f, "They still hate you.", x, y + 6, 58, COLOR_MID)
+	case .Notice:
 	case .Pact_Offer:
 		add(&b, ": a non-aggression pact, already signed on their side.")
 		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)

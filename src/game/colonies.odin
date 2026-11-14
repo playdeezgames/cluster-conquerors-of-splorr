@@ -76,6 +76,9 @@ Colony :: struct {
 	locked:    [Chore]bool,
 	build:     Ship_Type, // what Parking builds
 	stored:    [Chore]int, // production put by towards the next ship, base or factory
+	flu:       int, // turns of Flu left (events.odin)
+	flu_loss:  int, // households it takes a turn
+	revolt:    int, // turns of Revolt left: the colony does nothing
 }
 
 HOME_SLIDERS := [Chore]int {
@@ -288,6 +291,9 @@ run_colony :: proc(g: ^Game, star: int) {
 	}
 	s := &g.stars[star]
 	e := &g.empires[c.owner]
+	if !colony_troubles(g, star, c) {
+		return
+	}
 	e.bj += tax(g, star)
 	e.research += research_points(g, star)
 

@@ -31,6 +31,7 @@ PICKS = [
     ('Moth_TR',     41, 48),
     ('Moth_BL',     40, 49),
     ('Moth_BR',     41, 49),
+    ('Goat',        10, 16),  # small horned beast: the stray Goat (slice 2 step 8)
 ]
 
 def tile(col, row):

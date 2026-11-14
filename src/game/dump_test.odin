@@ -83,6 +83,15 @@ test_dump_play :: proc(t: ^testing.T) {
 		hold_meeting(g)
 		command(g, .South)
 		shot(g, fr, "ruling.ppm")
+		g.council.ruling = false
+		g.mode = .Map
+		g.goat = {true, g.home, GOAT_HITS}
+		g.cursor = g.home
+		shot(g, fr, "goat.ppm")
+		g.doormat = {}
+		happen(g, .Flu, PLAYER)
+		show_doormat(g)
+		shot(g, fr, "notice.ppm")
 	}
 }
 

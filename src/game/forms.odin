@@ -69,6 +69,7 @@ Doormat_Kind :: enum u8 {
 	Demand, // pay up, or else
 	Pact_Offer,
 	Trade_Offer,
+	Notice, // an event of yers (events.odin): just to be read
 }
 
 Doormat :: struct {
@@ -78,6 +79,7 @@ Doormat :: struct {
 	from:    int,
 	amount:  int,
 	choice:  int, // 0 sign, 1 refuse
+	note:    Text, // a notice's words
 }
 
 // The forms desk on screen: the rival it is open at and the amounts in the blanks.
@@ -571,11 +573,15 @@ answer_doormat :: proc(g: ^Game, sign: bool) {
 	}
 	d.open = false
 	g.mode = .Map
+	if d.kind == .Notice {
+		return
+	}
 	e := d.from
 	b: Text
 	add(&b, "The ")
 	add(&b, empire_name(g, e))
 	switch d.kind {
+	case .Notice:
 	case .Demand:
 		if sign {
 			paid := min(d.amount, max(0, g.empires[PLAYER].bj))
@@ -785,7 +791,9 @@ desk_command :: proc(g: ^Game, c: Command) {
 doormat_command :: proc(g: ^Game, c: Command) {
 	#partial switch c {
 	case .North, .South:
-		g.doormat.choice = 1 - g.doormat.choice
+		if g.doormat.kind != .Notice {
+			g.doormat.choice = 1 - g.doormat.choice
+		}
 	case .Confirm:
 		answer_doormat(g, g.doormat.choice == 0)
 	}

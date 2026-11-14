@@ -69,6 +69,7 @@ Gfx :: enum {
 	Moth_TR,
 	Moth_BL,
 	Moth_BR,
+	Goat,
 }
 
 cls :: proc(f: ^Frame, c: u8) {

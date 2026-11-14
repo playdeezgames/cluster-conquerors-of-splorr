@@ -37,7 +37,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
 
-This is slice 2 of 3, being built: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, and a President who rules on every complaint. Random events, bigger clusters and more rivals are still to come.
+This is slice 2 of 3, being built: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Bigger clusters and more rivals come in slice 3.
 
 ### About it
 
