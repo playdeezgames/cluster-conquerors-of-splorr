@@ -22,7 +22,7 @@ tools/pages.sh                 # tests, size build, copy into docs/ for GitHub P
 ./shippit.sh [--push]          # tests, size build, zip; butler push to itch.io only with --push (only on the user's "ship")
 python3 -I tools/extract_gfx.py [--sheet out.png]  # regenerate src/game/gfx.odin and font.odin (add tiles to PICKS)
 python3 -I tools/make_cover.py # regenerate the placeholder assets/cover.png
-tools/make_shots.sh            # render real frames natively: assets/screenshots/01-04 and assets/portal.png (the portal card picture)
+tools/make_shots.sh            # render real frames natively: assets/screenshots/01-05 and assets/portal.png (the portal card picture; restore it with git unless the user asked for a new one)
 tools/sim.sh [games] [turns]   # the balance simulator: the computer plays every side, reports when things first happen
 ```
 

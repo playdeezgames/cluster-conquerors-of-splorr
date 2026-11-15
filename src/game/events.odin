@@ -3,8 +3,9 @@ package game
 // Random events (slice 2 step 8): the cluster's bad luck, and now and then some good. From turn 10, one
 // turn in 15 something happens to an empire picked at random by households (bigger empires, more
 // luck of both kinds), usually at one of its colonies:
-//   a stray Goat turns up at a star and wanders, a star a turn, eating 2 households a turn wherever
-//     there is a colony, until armed ships or bases there see it off (it has 20 hits);
+//   a stray Goat turns up next door to a colony and wanders, a star a turn (towards colonies), eating 2
+//     households a turn wherever there is one, while armed ships or bases there shoot at it (40 hits,
+//     half the shots hit);
 //   a Flu going round takes a fifth of a colony's households over 5 turns;
 //   a Star going out (one event in 50): a colony that is not a home is lost, and the planet is Dead;
 //   an abandoned car with a tech in the glovebox, from any field;
@@ -15,7 +16,8 @@ package game
 EVENT_IN :: 15 // one turn in this many
 EVENTS_FROM :: 10 // the first turn an event can happen
 STAR_OUT_IN :: 50 // one event in this many is a star going out
-GOAT_HITS :: 20
+GOAT_HITS :: 40 // after the balance pass (slice 2 step 9); was 20
+GOAT_HIT_PERCENT :: 50 // of the shots at it
 GOAT_EATS :: 2 // households a turn
 FLU_TURNS :: 5
 REVOLT_TURNS :: 5
@@ -123,18 +125,33 @@ happen :: proc(g: ^Game, ev: Event, e: int) -> bool {
 		if g.goat.alive {
 			return false
 		}
-		star := random_colony(g, e, true)
-		if star == NO_STAR {
-			star = random_colony(g, e)
+		near := random_colony(g, e, true)
+		if near == NO_STAR {
+			near = random_colony(g, e)
 		}
-		if star == NO_STAR {
+		if near == NO_STAR {
 			return false
+		}
+		// It turns up next door, at the nearest star nobody lives at, and wanders in.
+		star := near
+		best := max(int)
+		for i in 0 ..< g.star_count {
+			if any_colony(g, i) != nil || g.stars[i].wormhole || i == g.clubhouse {
+				continue
+			}
+			dx, dy := g.stars[i].x - g.stars[near].x, g.stars[i].y - g.stars[near].y
+			if dx * dx + dy * dy < best {
+				best = dx * dx + dy * dy
+				star = i
+			}
 		}
 		g.goat = {true, star, GOAT_HITS}
 		add(&b, "A stray Goat turned up at ")
 		lot_name(g, &b, star)
-		add(&b, ". Armed ships or bases will see it off.")
-		event_news(g, e, star, text(&b))
+		add(&b, ", next door to Lot ")
+		add_int(&b, near + 1)
+		add(&b, ". Armed ships will see it off.")
+		event_news(g, e, near, text(&b))
 	case .Flu:
 		star := random_colony(g, e)
 		if star == NO_STAR {
@@ -229,6 +246,25 @@ goat_turn :: proc(g: ^Game) {
 		return
 	}
 	star := gt.star
+	// It eats first (the balance pass, slice 2 step 9: it used to eat only where nothing was armed, and
+	// hardly ate at all)...
+	if c := any_colony(g, star); c != nil {
+		eaten := min(GOAT_EATS, c.households - 1)
+		if eaten > 0 {
+			c.households -= eaten
+			g.goat_ate += eaten
+			if c.owner == PLAYER {
+				b: Text
+				add(&b, "The Goat ate ")
+				add_int(&b, eaten)
+				add(&b, " households at ")
+				lot_name(g, &b, star)
+				add(&b, ".")
+				say(g, text(&b))
+			}
+		}
+	}
+	// ...then anything armed there shoots at it.
 	fire := 0
 	by := NO_OWNER
 	if c := any_colony(g, star); c != nil && c.bases > 0 {
@@ -245,35 +281,22 @@ goat_turn :: proc(g: ^Game) {
 			}
 		}
 	}
-	if fire > 0 {
-		gt.hp -= fire
-		if gt.hp <= 0 {
-			gt.alive = false
-			g.goats_seen_off += 1
-			b: Text
-			add(&b, "The Goat at ")
-			lot_name(g, &b, star)
-			add(&b, by == PLAYER ? " has been seen off by yer ships. It will not be back." : " has been seen off. It will not be back.")
-			if by == PLAYER || g.empires[PLAYER].sees[star] {
-				say(g, text(&b))
-			}
-			return
+	for _ in 0 ..< fire {
+		if rng_int(&g.rng, 100) < GOAT_HIT_PERCENT {
+			gt.hp -= 1
 		}
-	} else if c := any_colony(g, star); c != nil {
-		eaten := min(GOAT_EATS, c.households - 1)
-		if eaten > 0 {
-			c.households -= eaten
-			g.goat_ate += eaten
-			if c.owner == PLAYER {
-				b: Text
-				add(&b, "The Goat ate ")
-				add_int(&b, eaten)
-				add(&b, " households at ")
-				lot_name(g, &b, star)
-				add(&b, ".")
-				say(g, text(&b))
-			}
+	}
+	if gt.hp <= 0 {
+		gt.alive = false
+		g.goats_seen_off += 1
+		b: Text
+		add(&b, "The Goat at ")
+		lot_name(g, &b, star)
+		add(&b, by == PLAYER ? " has been seen off by yer ships. It will not be back." : " has been seen off. It will not be back.")
+		if by == PLAYER || g.empires[PLAYER].sees[star] {
+			say(g, text(&b))
 		}
+		return
 	}
 	// On to one of the three nearest stars.
 	near: [3]int = {NO_STAR, NO_STAR, NO_STAR}
@@ -294,13 +317,21 @@ goat_turn :: proc(g: ^Game) {
 			}
 		}
 	}
-	n := 0
+	// It prefers somewhere with a garden.
+	gardens: [3]int
+	ng, n := 0, 0
 	for k in 0 ..< 3 {
 		if near[k] != NO_STAR {
 			n += 1
+			if any_colony(g, near[k]) != nil {
+				gardens[ng] = near[k]
+				ng += 1
+			}
 		}
 	}
-	if n > 0 {
+	if ng > 0 {
+		gt.star = gardens[rng_int(&g.rng, ng)]
+	} else if n > 0 {
 		gt.star = near[rng_int(&g.rng, n)]
 	}
 }

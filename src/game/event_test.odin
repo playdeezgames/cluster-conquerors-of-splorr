@@ -97,8 +97,11 @@ test_the_goat :: proc(t: ^testing.T) {
 	star := second_colony(g)
 	testing.expect(t, happen(g, .Goat, PLAYER))
 	testing.expect(t, g.goat.alive)
-	testing.expect_value(t, g.goat.star, star) // not yer home while there is another
+	// It turns up next door to the colony (not yer home while there is another), where nobody lives.
+	testing.expect(t, any_colony(g, g.goat.star) == nil)
+	testing.expect(t, news_has(g, "next door to Lot"))
 	testing.expect(t, !happen(g, .Goat, PLAYER)) // one Goat at a time
+	g.goat.star = star // wandered in
 	c := any_colony(g, star)
 	before := c.households
 	goat_turn(g)

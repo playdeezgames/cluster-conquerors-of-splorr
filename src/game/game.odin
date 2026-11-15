@@ -110,6 +110,7 @@ Game :: struct {
 	events:     [Event]int, // events so far (for the simulator)
 	goat_ate:   int,
 	goats_seen_off: int,
+	wars:       int, // treaties torn up (for the simulator)
 }
 
 init_game :: proc(g: ^Game, seed: u64) {

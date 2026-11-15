@@ -361,11 +361,16 @@ test_framing_on_a_mission :: proc(t: ^testing.T) {
 	testing.expect(t, knows(g, PLAYER, theirs))
 	testing.expect_value(t, g.frames_worked + g.frames_failed > 0, true)
 	testing.expect(t, news_has(g, "left their name all over it") || news_has(g, "fooled nobody"))
-	// Caught while framing: blamed on them, or exposed.
-	for _ in 0 ..< 40 {
+	// Caught while framing: blamed on them, or exposed (the news keeps only a few lines, so count).
+	caught, framed := g.spies_caught, g.frames_worked + g.frames_failed
+	for _ in 0 ..< 500 {
+		if g.spies_caught > caught {
+			break
+		}
 		watch_turn(g)
 	}
-	testing.expect(t, news_has(g, ", and blame the") || news_has(g, "Nobody was fooled"))
+	testing.expect(t, g.spies_caught > caught)
+	testing.expect(t, g.frames_worked + g.frames_failed > framed)
 }
 
 @(test)

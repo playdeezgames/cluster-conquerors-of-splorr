@@ -737,7 +737,7 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3, nearly done. Still to come in slice 3:", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Slice 2 of 3 is done. Still to come in slice 3:", x, VIEW_H * TILE - 34, COLOR_MID)
 	print(f, "bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }

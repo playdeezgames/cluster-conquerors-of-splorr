@@ -19,7 +19,7 @@ WATCH_CATCH_WATCHING :: 5 // the same for one that only watches
 WATCH_CATCH_DEFENDED :: 10 // added to either when the rival has watchers at home
 GRUDGE_SPY_CAUGHT :: 10
 SABOTAGE_FACTORIES :: 5 // factories wrecked by one sabotage
-AI_WATCH_SHARE :: 10
+AI_WATCH_SHARE :: 5 // after the balance pass (slice 2 step 9); 10 trained and lost over 100 watchers a game
 FRAME_WORKS :: 75 // percent a frame-up fools the victim
 GRUDGE_FRAMED :: 10 // what a mission done under a frame-up adds, on whoever is blamed
 MAX_EXPOSED :: 3 // failed frame-ups read out at a meeting (the minutes hold 14 lines); yers come first

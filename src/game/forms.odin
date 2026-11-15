@@ -392,6 +392,7 @@ declare_war :: proc(g: ^Game, from, to: int) {
 	g.trade[to][from] = 0
 	if had {
 		add_grudge(g, to, from, GRUDGE_BROKEN_PACT)
+		g.wars += 1
 	}
 	if from != PLAYER && to != PLAYER {
 		return

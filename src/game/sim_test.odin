@@ -11,7 +11,7 @@ SIM_GAMES :: #config(SIM_GAMES, 0)
 SIM_TURNS :: #config(SIM_TURNS, 200)
 
 Sim_Stats :: struct {
-	contact, battle, meeting, capture, moth, president, out, pact, trade: [dynamic]int, // turns things first happened
+	contact, battle, meeting, capture, moth, president, out, pact, trade, war: [dynamic]int, // turns things first happened
 	colonies: int,
 	presidents_you: int,
 	won, lost: int,
@@ -61,10 +61,11 @@ test_simulate :: proc(t: ^testing.T) {
 			delete(st.out)
 			delete(st.pact)
 			delete(st.trade)
+			delete(st.war)
 		}
 		for seed in u64(1) ..= SIM_GAMES {
 			init_game(g, seed)
-			seen: [9]bool
+			seen: [10]bool
 			for turn in 1 ..= SIM_TURNS {
 				ai_turn(g, PLAYER)
 				next_turn(g)
@@ -108,6 +109,7 @@ test_simulate :: proc(t: ^testing.T) {
 				sim_first(&st.out, &seen[6], turn, anyone_out)
 				sim_first(&st.pact, &seen[7], turn, g.pacts > 0)
 				sim_first(&st.trade, &seen[8], turn, g.trades > 0)
+				sim_first(&st.war, &seen[9], turn, g.wars > 0)
 				if g.outcome != .Playing {
 					break
 				}
@@ -150,6 +152,7 @@ test_simulate :: proc(t: ^testing.T) {
 		sim_summary("someone out", st.out, SIM_GAMES)
 		sim_summary("first pact", st.pact, SIM_GAMES)
 		sim_summary("first trade", st.trade, SIM_GAMES)
+		sim_summary("first war", st.war, SIM_GAMES)
 		fmt.printfln("  rivals' forms on side 0's doormat: %.1f a game (pacts signed, demands paid only to the twice as strong)", f64(st.doormats) / f64(SIM_GAMES))
 		fmt.printfln("  the Watch: %.1f techs stolen, %.1f wrecks, %.1f watchers caught a game", f64(st.steals) / f64(SIM_GAMES), f64(st.sabotages) / f64(SIM_GAMES), f64(st.caught) / f64(SIM_GAMES))
 		fmt.printfln("  frame-ups: %.1f worked, %.1f fooled nobody a game", f64(st.framed) / f64(SIM_GAMES), f64(st.exposed) / f64(SIM_GAMES))
