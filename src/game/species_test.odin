@@ -31,6 +31,8 @@ test_all_ten_species_can_be_chosen :: proc(t: ^testing.T) {
 	testing.expect_value(t, Race(g.row), Race.Badgers)
 	pointer(g, x + 4, y + 2, .Touch)
 	testing.expect_value(t, g.empires[PLAYER].race, Race.Badgers)
+	testing.expect_value(t, g.mode, Mode.New_Game)
+	command(g, .Confirm)
 	testing.expect_value(t, colony_at(g, g.home).race, Race.Badgers)
 }
 

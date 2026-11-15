@@ -9,13 +9,14 @@ SEED :: 12345
 test_cluster_is_well_formed :: proc(t: ^testing.T) {
 	g := new(Game)
 	defer free(g)
-	for seed in u64(1) ..= 500 {
-		init_game(g, seed)
-		testing.expect_value(t, g.star_count, STAR_COUNT)
+	for size in Cluster_Size do for seed in u64(1) ..= 200 {
+		init_game(g, seed, {size = size})
+		testing.expect_value(t, g.star_count, CLUSTERS[size].stars)
+		testing.expect_value(t, g.galaxy_w, CLUSTERS[size].w)
 		wormholes := 0
 		for i in 0 ..< g.star_count {
 			s := g.stars[i]
-			testing.expect(t, s.x >= EDGE && s.x < GALAXY_W - EDGE && s.y >= EDGE && s.y < GALAXY_H - EDGE)
+			testing.expect(t, s.x >= EDGE && s.x < g.galaxy_w - EDGE && s.y >= EDGE && s.y < g.galaxy_h - EDGE)
 			testing.expect(t, i == g.home || !s.reports[PLAYER].filed)
 			if s.wormhole {
 				wormholes += 1
@@ -29,7 +30,7 @@ test_cluster_is_well_formed :: proc(t: ^testing.T) {
 				testing.expect(t, o.y < s.y || (o.y == s.y && o.x < s.x))
 			}
 		}
-		testing.expect_value(t, wormholes, WORMHOLES)
+		testing.expect_value(t, wormholes, wormholes_in(size))
 		h := g.stars[g.home]
 		testing.expect(t, h.reports[PLAYER].filed && !h.wormhole)
 		testing.expect_value(t, h.planet, Planet_Type.Terran)
@@ -57,8 +58,8 @@ test_same_seed_same_cluster :: proc(t: ^testing.T) {
 test_every_star_reachable_by_direction :: proc(t: ^testing.T) {
 	g := new(Game)
 	defer free(g)
-	for seed in u64(1) ..= 500 {
-		init_game(g, seed)
+	for size in Cluster_Size do for seed in u64(1) ..= 200 {
+		init_game(g, seed, {size = size})
 		seen: [MAX_STARS]bool
 		queue: [MAX_STARS]int
 		head, tail := 0, 0
@@ -78,7 +79,7 @@ test_every_star_reachable_by_direction :: proc(t: ^testing.T) {
 				}
 			}
 		}
-		if !testing.expectf(t, tail == g.star_count, "seed %v: %v of %v stars reachable", seed, tail, g.star_count) {
+		if !testing.expectf(t, tail == g.star_count, "%v seed %v: %v of %v stars reachable", size, seed, tail, g.star_count) {
 			return
 		}
 	}

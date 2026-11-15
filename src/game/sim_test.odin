@@ -9,6 +9,7 @@ import "core:testing"
 
 SIM_GAMES :: #config(SIM_GAMES, 0)
 SIM_TURNS :: #config(SIM_TURNS, 200)
+SIM_SIZE :: #config(SIM_SIZE, 0) // 0 small, 1 medium, 2 large, 3 huge
 
 Sim_Stats :: struct {
 	contact, battle, meeting, capture, moth, president, out, pact, trade, war: [dynamic]int, // turns things first happened
@@ -64,7 +65,7 @@ test_simulate :: proc(t: ^testing.T) {
 			delete(st.war)
 		}
 		for seed in u64(1) ..= SIM_GAMES {
-			init_game(g, seed)
+			init_game(g, seed, {size = Cluster_Size(SIM_SIZE)})
 			seen: [10]bool
 			for turn in 1 ..= SIM_TURNS {
 				ai_turn(g, PLAYER)
@@ -142,7 +143,7 @@ test_simulate :: proc(t: ^testing.T) {
 				st.lost += 1
 			}
 		}
-		fmt.printfln("SIM %v games of up to %v turns, the computer playing every side:", SIM_GAMES, SIM_TURNS)
+		fmt.printfln("SIM %v games of up to %v turns in a %v cluster, the computer playing every side:", SIM_GAMES, SIM_TURNS, CLUSTERS[Cluster_Size(SIM_SIZE)].name)
 		sim_summary("first contact", st.contact, SIM_GAMES)
 		sim_summary("first battle", st.battle, SIM_GAMES)
 		sim_summary("first meeting", st.meeting, SIM_GAMES)

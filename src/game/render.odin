@@ -13,6 +13,8 @@ draw_game :: proc(f: ^Frame, g: ^Game) {
 		draw_battle(f, g)
 	case .Choose_Race:
 		draw_races(f, g)
+	case .New_Game:
+		draw_new_game(f, g)
 	case .Colony:
 		draw_colony(f, g)
 	case .Research:
@@ -163,7 +165,7 @@ draw_panel :: proc(f: ^Frame, g: ^Game) {
 	case .Game_Over:
 	case .Battle:
 		draw_battle_panel(f, g)
-	case .Choose_Race:
+	case .Choose_Race, .New_Game:
 	case .Map:
 		draw_star_panel(f, g)
 	case .Colony, .Research, .Forms, .Doormat, .Watch:
@@ -737,9 +739,44 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 2 of 3 is done. Still to come in slice 3:", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "bigger clusters and more rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 3 of 3 is under way: four cluster sizes are in.", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Still to come: more rivals, difficulty, personalities.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+// The new-game screen: the cluster's size (and, in later steps, the rivals and how hard they play).
+draw_new_game :: proc(f: ^Frame, g: ^Game) {
+	x := COLONY_X
+	print(f, "Lay out the cluster", x, 6, COLOR_WHITE)
+	b: Text
+	add(&b, "Yer the ")
+	add(&b, RACES[g.empires[PLAYER].race].name)
+	add(&b, ". How big a neighbourhood?")
+	print(f, text(&b), x, 18, COLOR_LIGHT)
+	for row in New_Game_Row {
+		y := new_game_row_y(int(row))
+		picked := g.row == int(row)
+		if picked {
+			fill_rect(f, 0, y - 3, VIEW_W * TILE, NEW_GAME_ROW_H - 1, COLOR_NAVY)
+		}
+		col: u8 = picked ? COLOR_WHITE : COLOR_LIGHT
+		switch row {
+		case .Size:
+			print(f, "Size", x, y, col)
+			v: Text
+			add(&v, "< ")
+			add(&v, CLUSTERS[g.setup.size].name)
+			add(&v, " >")
+			print(f, text(&v), x + NEW_GAME_VALUE_COL * GLYPH_W, y, col)
+		case .Start:
+			print(f, "Start", x, y, col)
+		}
+	}
+	y := new_game_row_y(len(New_Game_Row)) + 8
+	print(f, CLUSTERS[g.setup.size].says, x, y, COLOR_MID)
+	print(f, "Bigger clusters take longer to cross. Two rivals for now.", x, y + 12, COLOR_DARK)
+	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: start.", x, VIEW_H * TILE - 24, COLOR_DARK)
+	print(f, "Escape/Back: choose another species.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
 SHIP_GFX := [Ship_Type]Gfx {

@@ -57,3 +57,26 @@ test_a_bad_save_is_ignored :: proc(t: ^testing.T) {
 	testing.expect_value(t, g.turn, turn)
 	testing.expect(t, g.stars[0].name != "")
 }
+
+// A huge cluster saves and loads like a small one (slice 3 step 1).
+@(test)
+test_save_every_size :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	h := new(Game)
+	defer free(h)
+	buf := make([]u8, SAVE_SIZE)
+	defer delete(buf)
+	for size in Cluster_Size {
+		init_game(g, SEED, {size = size})
+		for _ in 0 ..< 5 {
+			command(g, .End_Turn)
+		}
+		testing.expect_value(t, write_save(g, buf), SAVE_SIZE)
+		testing.expect(t, read_save(h, buf))
+		testing.expect_value(t, h.setup.size, size)
+		testing.expect_value(t, h.star_count, CLUSTERS[size].stars)
+		testing.expect_value(t, h.stars[h.home].name, g.stars[g.home].name)
+	}
+	testing.expectf(t, SAVE_SIZE < 1_000_000, "a save is %v bytes", SAVE_SIZE)
+}

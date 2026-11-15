@@ -62,10 +62,20 @@ Mode :: enum u8 {
 	Forms, // the forms desk
 	Doormat, // a rival's form to sign or refuse
 	Watch, // the Neighbourhood Watch
+	New_Game, // the new-game screen, after the species screen
+}
+
+// What the new-game screen sets (slice 3 step 1: the cluster's size). A new cluster after a game ends
+// keeps it.
+Setup :: struct {
+	size: Cluster_Size,
 }
 
 Game :: struct {
 	seed:       u64,
+	setup:      Setup,
+	galaxy_w:   int, // map cells, from the cluster's size
+	galaxy_h:   int,
 	rng:        Rng, // everything random after the cluster is made
 	stars:      [MAX_STARS]Star,
 	star_count: int,
@@ -113,9 +123,11 @@ Game :: struct {
 	wars:       int, // treaties torn up (for the simulator)
 }
 
-init_game :: proc(g: ^Game, seed: u64) {
+init_game :: proc(g: ^Game, seed: u64, setup := Setup{}) {
 	g^ = {}
 	g.seed = seed
+	g.setup = setup
+	g.galaxy_w, g.galaxy_h = CLUSTERS[setup.size].w, CLUSTERS[setup.size].h
 	g.rng = Rng{seed ~ 0x5A17_C0DE_0000_0001}
 	make_cluster(g, seed)
 	g.empires[PLAYER].race = .Geese // until chosen; their trait waits for combat, so tests see plain numbers
@@ -170,6 +182,53 @@ choose_race :: proc(g: ^Game, r: Race) {
 	say(g, "Everybody hates everybody.")
 }
 
+// The species screen's choice: on to the new-game screen.
+pick_race :: proc(g: ^Game, r: Race) {
+	g.empires[PLAYER].race = r
+	g.mode = .New_Game
+	g.row = 0
+}
+
+// The new-game screen's Enter/OK: the cluster is made again for the setup, with yer species.
+start_cluster :: proc(g: ^Game) {
+	r := g.empires[PLAYER].race
+	init_game(g, g.seed, g.setup)
+	choose_race(g, r)
+}
+
+// The new-game screen's rows.
+New_Game_Row :: enum u8 {
+	Size,
+	Start,
+}
+
+// Up and Down pick a row, Left and Right change it, Enter/OK starts, Escape/Back goes back to the species.
+new_game_command :: proc(g: ^Game, c: Command) {
+	n := len(New_Game_Row)
+	#partial switch c {
+	case .North:
+		g.row = (g.row + n - 1) % n
+	case .South:
+		g.row = (g.row + 1) % n
+	case .West, .East:
+		change_setup(g, New_Game_Row(g.row), c == .West ? -1 : 1)
+	case .Confirm:
+		start_cluster(g)
+	case .Cancel:
+		g.mode = .Choose_Race
+		g.row = int(g.empires[PLAYER].race)
+	}
+}
+
+change_setup :: proc(g: ^Game, row: New_Game_Row, by: int) {
+	switch row {
+	case .Size:
+		n := len(Cluster_Size)
+		g.setup.size = Cluster_Size((int(g.setup.size) + n + by) % n)
+	case .Start:
+	}
+}
+
 // Up and Down go down the list, Left and Right change column, Enter/OK picks it.
 race_command :: proc(g: ^Game, c: Command) {
 	n := len(Race)
@@ -181,7 +240,7 @@ race_command :: proc(g: ^Game, c: Command) {
 	case .West, .East:
 		g.row = (g.row + RACES_PER_COL) % n
 	case .Confirm:
-		choose_race(g, Race(g.row))
+		pick_race(g, Race(g.row))
 	}
 }
 
@@ -226,13 +285,15 @@ command :: proc(g: ^Game, c: Command) {
 		// Enter/OK starts a new cluster.
 		if c == .Confirm {
 			seed := g.seed + 1
-			init_game(g, seed)
+			init_game(g, seed, g.setup)
 			start_choosing(g)
 		}
 	case .Battle:
 		battle_command(g, c)
 	case .Choose_Race:
 		race_command(g, c)
+	case .New_Game:
+		new_game_command(g, c)
 	case .Map:
 		map_command(g, c)
 	case .Research:
@@ -627,7 +688,7 @@ screen_to_cell :: proc(g: ^Game, sx, sy: int) -> (x, y: int, ok: bool) {
 // Top-left map cell of the view: the cursor's star in the middle, held inside the galaxy.
 view_origin :: proc(g: ^Game) -> (x, y: int) {
 	s := g.stars[g.cursor]
-	return clamp(s.x - VIEW_W / 2, 0, GALAXY_W - VIEW_W), clamp(s.y - VIEW_H / 2, 0, GALAXY_H - VIEW_H)
+	return clamp(s.x - VIEW_W / 2, 0, g.galaxy_w - VIEW_W), clamp(s.y - VIEW_H / 2, 0, g.galaxy_h - VIEW_H)
 }
 
 // Panel rows that can be clicked or tapped (render.odin draws them at these places).
@@ -671,13 +732,17 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 			x, y := race_col_x(i), race_row_y(i)
 			if sx >= x - 2 && sx < x - 2 + RACE_COL_W && sy >= y - 3 && sy < y - 3 + RACE_H {
 				if g.row == i {
-					choose_race(g, Race(i))
+					pick_race(g, Race(i))
 				} else {
 					g.row = i
 				}
 				return
 			}
 		}
+		return
+	}
+	if g.mode == .New_Game {
+		new_game_pointer(g, sx, sy)
 		return
 	}
 	if sx >= PANEL_X {
@@ -715,7 +780,7 @@ pointer :: proc(g: ^Game, sx, sy: int, p: Pointer) {
 		b: Text
 		describe_star(g, i, &b)
 		say(g, text(&b))
-	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Fleet, .Forms, .Doormat, .Watch:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .New_Game, .Research, .Colony, .Fleet, .Forms, .Doormat, .Watch:
 	case .Destination:
 		if i == NO_STAR {
 			return
@@ -922,7 +987,7 @@ panel_pointer :: proc(g: ^Game, sx, sy: int) {
 		return
 	}
 	switch g.mode {
-	case .Council, .Game_Over, .Battle, .Choose_Race, .Research, .Colony, .Forms, .Doormat, .Watch:
+	case .Council, .Game_Over, .Battle, .Choose_Race, .New_Game, .Research, .Colony, .Forms, .Doormat, .Watch:
 	case .Map:
 		if on_row(sy, ACTION_Y) && colony_at(g, g.cursor) != nil {
 			open_colony(g, g.cursor)
@@ -1090,5 +1155,37 @@ doormat_pointer :: proc(g: ^Game, sx, sy: int) {
 			answer_doormat(g, row == 0)
 			return
 		}
+	}
+}
+
+// ---- The new-game screen ----
+
+NEW_GAME_TOP :: 40 // the first row
+NEW_GAME_ROW_H :: 14
+NEW_GAME_VALUE_COL :: 10 // where "< Small >" starts, in glyphs from the left of the screen's text
+
+new_game_row_y :: proc(row: int) -> int {
+	return NEW_GAME_TOP + row * NEW_GAME_ROW_H
+}
+
+// A tap on a row picks it; on the row already picked, the left half of a value turns it down and the
+// right half up, and Start starts.
+new_game_pointer :: proc(g: ^Game, sx, sy: int) {
+	for row in New_Game_Row {
+		y := new_game_row_y(int(row))
+		if sy < y - 3 || sy >= y - 3 + NEW_GAME_ROW_H || sx >= PANEL_X {
+			continue
+		}
+		if g.row != int(row) {
+			g.row = int(row)
+			return
+		}
+		if row == .Start {
+			start_cluster(g)
+			return
+		}
+		mid := COLONY_X + (NEW_GAME_VALUE_COL + 5) * GLYPH_W
+		change_setup(g, row, sx < mid ? -1 : 1)
+		return
 	}
 }

@@ -158,7 +158,7 @@ test_rivals_invade_what_they_saw_undefended :: proc(t: ^testing.T) {
 		}
 	}
 	// Bring it within a Carpool's reach (a hand-made layout, whatever the seed).
-	g.stars[target].x = clamp(g.stars[h].x + 6, 0, GALAXY_W - 1)
+	g.stars[target].x = clamp(g.stars[h].x + 6, 0, g.galaxy_w - 1)
 	g.stars[target].y = g.stars[h].y
 	found_colony(g, target, 10)
 	update_sight(g)

@@ -26,6 +26,25 @@ test_dump_play :: proc(t: ^testing.T) {
 			path := strings.concatenate({DUMP_PLAY, "/", name}, context.temp_allocator)
 			write_ppm(path, fr)
 		}
+		// The new-game screen and a huge cluster (slice 3 step 1): its home, and a far corner.
+		init_game(g, u64(DUMP_SEED))
+		start_choosing(g)
+		pick_race(g, .Beavers)
+		command(g, .West)
+		shot(g, fr, "new-game.ppm")
+		start_cluster(g)
+		for _ in 0 ..< 12 {
+			ai_turn(g, PLAYER)
+			next_turn(g)
+			for g.mode == .Battle {
+				battle_action(g, 1)
+			}
+			g.mode = .Map
+		}
+		g.cursor = g.home
+		shot(g, fr, "huge.ppm")
+		g.cursor = g.star_count - 1
+		shot(g, fr, "huge-corner.ppm")
 		init_game(g, u64(DUMP_SEED))
 		choose_race(g, .Beavers)
 		for _ in 0 ..< 12 {

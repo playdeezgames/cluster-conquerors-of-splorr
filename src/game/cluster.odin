@@ -3,15 +3,38 @@ package game
 import "core:slice"
 
 // The cluster: stars placed from the game's seed, each with one planet (as in Master of Orion), and a
-// few wormholes that look exactly like unsurveyed stars. Slice 1 has one size, "small".
+// few wormholes that look exactly like unsurveyed stars. Four sizes since slice 3 step 1, picked on the
+// new-game screen; small is the cluster of slices 1 and 2.
 
-GALAXY_W :: 60 // map cells
-GALAXY_H :: 40
 EDGE :: 2 // no star within this many cells of the map's edge
 MIN_SPACING :: 5 // cells between any two stars, at least
-STAR_COUNT :: 20 // stars in a small cluster, wormholes included
-WORMHOLES :: STAR_COUNT / 8 // one in eight
-MAX_STARS :: 32
+MAX_STARS :: 72
+
+Cluster_Size :: enum u8 {
+	Small,
+	Medium,
+	Large,
+	Huge,
+}
+
+Cluster_Info :: struct {
+	name:  string,
+	stars: int, // wormholes included
+	w, h:  int, // map cells
+	says:  string, // for the new-game screen
+}
+
+CLUSTERS := [Cluster_Size]Cluster_Info {
+	.Small  = {"Small", 20, 60, 40, "20 stars. A cul-de-sac: a game of an evening or so."},
+	.Medium = {"Medium", 36, 80, 52, "36 stars. A few streets: a couple of evenings."},
+	.Large  = {"Large", 54, 100, 64, "54 stars. An estate: several evenings."},
+	.Huge   = {"Huge", 72, 120, 76, "72 stars. The whole subdivision: many evenings."},
+}
+
+// Wormholes: one star in eight.
+wormholes_in :: proc(size: Cluster_Size) -> int {
+	return CLUSTERS[size].stars / 8
+}
 
 NO_STAR :: -1
 
@@ -139,12 +162,14 @@ STAR_NAMES := [?]string {
 	"Nunki", "Menkent", "Saiph", "Tiaki", "Ankaa", "Merak", "Enif", "Izar",
 	"Sabik", "Scheat", "Markab", "Phecda", "Aludra", "Gienah", "Zosma", "Arneb",
 	"Muhlifain", "Kochab", "Rasalhague", "Algol", "Naos", "Alderamin", "Denebola", "Tarazed",
+	"Sadr", "Acamar", "Albireo", "Vindemiatrix", "Caph", "Ruchbah", "Mintaka", "Alnitak",
+	"Thuban", "Errai", "Alcor", "Mizar", "Talitha", "Furud", "Lesath", "Wasat",
 }
 
-// Fills g.stars from the seed: places STAR_COUNT stars at least MIN_SPACING apart, numbers them in
+// Fills g.stars from the seed (for g.setup.size, with g.galaxy_w and g.galaxy_h already set): places the stars at least MIN_SPACING apart, numbers them in
 // reading order (so Lot 1 is top left), names them, gives each a planet, picks yer home star away from
 // the edges and the rivals' homes as far from it and each other as can be (all Medium Terran worlds),
-// and hides WORMHOLES wormholes among the rest.
+// and hides the wormholes among the rest.
 make_cluster :: proc(g: ^Game, seed: u64) {
 	r := Rng{seed}
 	for {
@@ -184,7 +209,7 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 	n := 0
 	for i in 0 ..< g.star_count {
 		s := g.stars[i]
-		if s.x >= 8 && s.y >= 8 && s.x < GALAXY_W - 8 && s.y < GALAXY_H - 8 {
+		if s.x >= 8 && s.y >= 8 && s.x < g.galaxy_w - 8 && s.y < g.galaxy_h - 8 {
 			candidates[n] = i
 			n += 1
 		}
@@ -244,7 +269,7 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 		}
 	}
 	// Wormholes: any stars but homes.
-	for placed := 0; placed < WORMHOLES; {
+	for placed := 0; placed < wormholes_in(g.setup.size); {
 		i := rng_int(&r, g.star_count)
 		if !is_home(g, i) && i != g.clubhouse && !g.stars[i].wormhole {
 			g.stars[i].wormhole = true
@@ -256,9 +281,9 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 // One attempt at placing every star by throwing darts; false if it ran out of tries.
 place_stars :: proc(g: ^Game, r: ^Rng) -> bool {
 	g.star_count = 0
-	for _ in 0 ..< 5000 {
-		x := rng_range(r, EDGE, GALAXY_W - 1 - EDGE)
-		y := rng_range(r, EDGE, GALAXY_H - 1 - EDGE)
+	for _ in 0 ..< 20000 {
+		x := rng_range(r, EDGE, g.galaxy_w - 1 - EDGE)
+		y := rng_range(r, EDGE, g.galaxy_h - 1 - EDGE)
 		ok := true
 		for i in 0 ..< g.star_count {
 			dx, dy := g.stars[i].x - x, g.stars[i].y - y
@@ -273,7 +298,7 @@ place_stars :: proc(g: ^Game, r: ^Rng) -> bool {
 				y = y,
 			}
 			g.star_count += 1
-			if g.star_count == STAR_COUNT {
+			if g.star_count == CLUSTERS[g.setup.size].stars {
 				return true
 			}
 		}

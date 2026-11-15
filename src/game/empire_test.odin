@@ -46,6 +46,8 @@ test_choosing_a_species :: proc(t: ^testing.T) {
 			command(g, .South)
 		}
 		command(g, .Confirm)
+		testing.expect_value(t, g.mode, Mode.New_Game)
+		command(g, .Confirm)
 		testing.expect_value(t, g.mode, Mode.Map)
 		testing.expect_value(t, g.empires[PLAYER].race, r)
 		testing.expect_value(t, colony_at(g, g.home).race, r)
