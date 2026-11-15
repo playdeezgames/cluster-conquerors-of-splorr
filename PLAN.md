@@ -6,7 +6,7 @@ Drafted November 10, 2026. `DESIGN.md` is the specification; this file is how it
 
 1. **The neighbourhood** (this plan): the smallest galaxy, you and two rivals, the whole explore, expand, exploit loop, tactical combat and invasion, the Clubhouse and its moth, and the HOA council's complaints and vote. A game you can win, lose and be elected in.
 2. **The paperwork** (planned November 12, 2026, complete November 15, 2026; see "Slice 2" below). Diplomacy (treaties, trade, tribute, threats), spies (steal, sabotage, frame), bylaws, the presidency's duties in full, all ten races offered, random events.
-3. **Proposed: the subdivision.** All galaxy sizes up to huge, up to six empires, the computer rivals' personalities, balance with a simulator (as Skirmishers' `sim.sh`), sound, the cover, then itch.io on a Coxswain-booked day.
+3. **The subdivision** (planned November 15, 2026; see "Slice 3" below). Four cluster sizes up to huge, up to six empires, five difficulty levels, the rivals' personalities, a smarter computer player and its balance pass. Still Pages only: sound, the cover and itch.io are left for a later decision (the user's choice, November 15, 2026).
 
 ## Slice 1: the neighbourhood
 
@@ -149,3 +149,95 @@ Planned November 12, 2026, after slice 1 went live on Pages. Same cluster (about
 - Every number above, for review step by step and in step 9's balance pass.
 - The text drafts: the forms' wording, the rivals' answers, the doormat, the Watch's reports, the bylaws, the rulings, the events.
 - The new keys (P, W) and gamepad buttons, checked against the controls already taken.
+
+## Slice 3: the subdivision
+
+Planned November 15, 2026, after slice 2 went live on Pages.
+
+**Goal:** the neighbourhood becomes a subdivision. Pick a cluster from small to huge, up to five rivals and how hard they play. Every rival now has a temper and an aim of its own, and the computer finally plays to win: it gathers its fleets, escorts its Carpools, reaches far with Gas Cans, and knocks empires out.
+
+**In the slice:** a new-game screen; four cluster sizes; two to six empires; five difficulty levels; the rivals' tempers and aims; the smarter computer player; a simulator and balance pass across sizes; saves carried over (a new save version); Pages at each step, at the user's word.
+
+**Not in the slice:** sound, the cover, itch.io (the user's choice, November 15, 2026, left for a later decision).
+
+## Decided for slice 3 (November 15, 2026)
+
+1. **Four cluster sizes**, as in Master of Orion: small, medium, large and huge. The map field grows with the size.
+2. **Up to six empires**, yers and up to five computer rivals (from `DESIGN.md`).
+3. **Personalities are a temper and an aim**, HOA-named and paired as Master of Orion paired them. Both are shown once you have met that rival.
+4. **Five difficulty levels**, picked at the start. They scale the rivals' production, research and starting grudges.
+5. **Slice 3 ends on Pages**: no sound, cover or itch.io in this slice.
+
+## Proposed for slice 3 (Claude's, until the user reviews them step by step)
+
+**The new-game screen**, after the species screen: size, number of rivals and difficulty, one row each, Left/Right to change, with a line saying what each choice means. The last game's choices are kept.
+
+**Sizes** (stars, wormholes included; map cells):
+
+| Size | Stars | Map | Rivals by default (most allowed) |
+|---|---|---|---|
+| Small | 20 | 60x40 | 2 (3) |
+| Medium | 36 | 80x52 | 3 (4) |
+| Large | 54 | 100x64 | 4 (5) |
+| Huge | 72 | 120x76 | 5 (5) |
+
+Homes are placed as far apart as the cluster allows, each with a Garden or Terran planet within a few cells, as now. The Clubhouse stays in the middle. A small cluster plays as it does today.
+
+**Six empires:**
+- Colours: green (yers), red, orange, yellow, cyan and purple. The moth stays light grey.
+- Every screen that lists the rivals scrolls or pages: the forms desk, the Watch (one rival at a time, Left/Right to change), the council, and the empires' summary.
+- The council's two-thirds vote, pacts and alliances already count any number of empires.
+- The rivals are drawn from the nine species that are not yers.
+
+**Difficulty**, in the Metaphor's words:
+
+| Level | Rivals' production and research | Starting grudge against you |
+|---|---|---|
+| Quiet street | 60 % | 40 |
+| Nice area | 80 % | 50 |
+| Average neighbourhood (default) | 100 % | 60 |
+| Gated community | 125 % | 70 |
+| Cul-de-sac from hell | 150 % | 80 |
+
+**Tempers**, which steer grudges and forms:
+- *Petty*: grudges grow half as much again and cool half as fast.
+- *Pushy*: files threats and tribute demands often, and backs down from nobody weaker.
+- *Two-faced*: signs pacts easily and breaks them when it suits.
+- *Neighbourly*: grudges cool twice as fast, and it signs pacts and trade more easily.
+- *Touchy*: a complaint against it, or a caught watcher, counts double.
+
+**Aims**, which steer what it builds and whom it fights:
+- *Builder*: factories and settling first, war only when crowded.
+- *Bully*: warships, and war on the weakest neighbour.
+- *Busybody*: a big Neighbourhood Watch, and it files complaints.
+- *Committee type*: households and votes. It wants the presidency and courts whoever can give it votes.
+- *Tinkerer*: research first, and swaps techs freely.
+
+Each rival is dealt one temper and one aim at random. Both show on the forms desk and the empires' summary once you have met it.
+
+**The smarter computer player:**
+- *Gathering*: warships wait at a staging colony near the target until together they reach the strength they need, then go in together.
+- *Escorts*: Carpools travel with warships, or wait for the target to be cleared, instead of flying in alone.
+- *Reach*: Gas Cans go with fleets aimed beyond fuel range.
+- *Finishing*: a rival down to its last colonies is targeted until it is out, if that empire is within reach.
+
+The goal is someone knocked out in a fair share of simulated games (none so far, in slices 1 and 2).
+
+## Build order for slice 3 (each step ends playable in the browser and tested natively)
+
+1. **Sizes.** The new-game screen (size only at first) and clusters of 20, 36, 54 and 72 stars with the map field to match. `MAX_STARS` becomes 72. Scrolling and the map's edges work at every size.
+2. **Up to six empires.** The new-game screen's number of rivals, six colours, homes spread out, and every rival-listing screen (forms desk, Watch, council, summary) fitting five rivals.
+3. **Difficulty.** The five levels on the new-game screen and their effect on the rivals.
+4. **Tempers.** The five tempers dealt, shown, and steering grudges and forms.
+5. **Aims.** The five aims dealt, shown, and steering building, the Watch, forms and war.
+6. **The smarter computer, part 1:** gathering fleets and escorting Carpools.
+7. **The smarter computer, part 2:** reach with Gas Cans, and finishing off a beaten empire.
+8. **Big clusters in practice.** Turn time in the browser at huge with six empires, the simulator at every size, and fixes for anything slow or crowded on screen.
+9. **Saves, balance and polish.** A new save version, the balance pass across sizes and difficulties, screenshots (the portal picture still the user's call), and the slice-3 notice on the species screen and in the manual. Then Pages at the user's word.
+
+## Open for slice 3
+
+- Every number above, for review step by step and in step 9's balance pass.
+- The text drafts: the new-game screen, the difficulty names, the tempers and aims and how they are described.
+- The keys for the new-game screen and paging the rivals, checked against the controls already taken.
+- Sound, the cover and itch.io, for a later decision.
