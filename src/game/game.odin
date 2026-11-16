@@ -65,11 +65,12 @@ Mode :: enum u8 {
 	New_Game, // the new-game screen, after the species screen
 }
 
-// What the new-game screen sets: the cluster's size (slice 3 step 1) and the number of rivals (step 2;
-// 0 for the size's default). A new cluster after a game ends keeps it.
+// What the new-game screen sets: the cluster's size (slice 3 step 1), the number of rivals (step 2; 0
+// for the size's default) and the difficulty (step 3). A new cluster after a game ends keeps it.
 Setup :: struct {
-	size:   Cluster_Size,
-	rivals: int,
+	size:       Cluster_Size,
+	rivals:     int,
+	difficulty: Difficulty,
 }
 
 Game :: struct {
@@ -126,10 +127,13 @@ Game :: struct {
 }
 
 init_game :: proc(g: ^Game, seed: u64, setup := Setup{}) {
+	// Copied first: the caller may pass g.setup itself, and Odin passes a struct this size by reference,
+	// so clearing the game would clear it too.
+	kept := setup
 	g^ = {}
 	g.seed = seed
-	g.setup = setup
-	g.galaxy_w, g.galaxy_h = CLUSTERS[setup.size].w, CLUSTERS[setup.size].h
+	g.setup = kept
+	g.galaxy_w, g.galaxy_h = CLUSTERS[kept.size].w, CLUSTERS[kept.size].h
 	g.rng = Rng{seed ~ 0x5A17_C0DE_0000_0001}
 	make_cluster(g, seed)
 	g.empires[PLAYER].race = .Geese // until chosen; their trait waits for combat, so tests see plain numbers
@@ -207,6 +211,7 @@ start_cluster :: proc(g: ^Game) {
 New_Game_Row :: enum u8 {
 	Size,
 	Rivals,
+	Difficulty,
 	Start,
 }
 
@@ -238,6 +243,9 @@ change_setup :: proc(g: ^Game, row: New_Game_Row, by: int) {
 	case .Rivals:
 		most := RIVALS_MOST[g.setup.size]
 		g.setup.rivals = (rivals_in(g.setup) - 1 + by + most) % most + 1
+	case .Difficulty:
+		lo, n := int(min(Difficulty)), len(Difficulty)
+		g.setup.difficulty = Difficulty((int(g.setup.difficulty) - lo + by + n) % n + lo)
 	case .Start:
 	}
 }
@@ -1175,7 +1183,7 @@ doormat_pointer :: proc(g: ^Game, sx, sy: int) {
 
 NEW_GAME_TOP :: 40 // the first row
 NEW_GAME_ROW_H :: 14
-NEW_GAME_VALUE_COL :: 10 // where "< Small >" starts, in glyphs from the left of the screen's text
+NEW_GAME_VALUE_COL :: 12 // where "< Small >" starts, past "Difficulty", in glyphs from the left of the screen's text
 
 new_game_row_y :: proc(row: int) -> int {
 	return NEW_GAME_TOP + row * NEW_GAME_ROW_H
@@ -1198,7 +1206,13 @@ new_game_pointer :: proc(g: ^Game, sx, sy: int) {
 			return
 		}
 		// The middle of "< Medium >" or "< 3 >".
-		width := row == .Size ? len(CLUSTERS[g.setup.size].name) + 4 : 5
+		width := 5
+		#partial switch row {
+		case .Size:
+			width = len(CLUSTERS[g.setup.size].name) + 4
+		case .Difficulty:
+			width = len(DIFFICULTIES[g.setup.difficulty].name) + 4
+		}
 		mid := COLONY_X + NEW_GAME_VALUE_COL * GLYPH_W + width * GLYPH_W / 2
 		change_setup(g, row, sx < mid ? -1 : 1)
 		return

@@ -68,7 +68,7 @@ test_save_every_size :: proc(t: ^testing.T) {
 	buf := make([]u8, SAVE_SIZE)
 	defer delete(buf)
 	for size in Cluster_Size {
-		init_game(g, SEED, {size = size, rivals = RIVALS_MOST[size]})
+		init_game(g, SEED, {size = size, rivals = RIVALS_MOST[size], difficulty = .From_Hell})
 		for _ in 0 ..< 5 {
 			command(g, .End_Turn)
 		}
@@ -77,6 +77,7 @@ test_save_every_size :: proc(t: ^testing.T) {
 		testing.expect_value(t, h.setup.size, size)
 		testing.expect_value(t, h.star_count, CLUSTERS[size].stars)
 		testing.expect_value(t, h.empire_count, 1 + RIVALS_MOST[size])
+		testing.expect_value(t, h.setup.difficulty, Difficulty.From_Hell)
 		testing.expect_value(t, h.stars[h.home].name, g.stars[g.home].name)
 	}
 	testing.expectf(t, SAVE_SIZE < 1_000_000, "a save is %v bytes", SAVE_SIZE)

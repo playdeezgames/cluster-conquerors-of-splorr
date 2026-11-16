@@ -743,12 +743,12 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 3 of 3 under way: cluster sizes, up to five rivals.", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "Still to come: difficulty, personalities, smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 3 under way: sizes, up to five rivals, difficulty.", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Still to come: personalities and smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
-// The new-game screen: the cluster's size (and, in later steps, the rivals and how hard they play).
+// The new-game screen: the cluster's size, the number of rivals and how hard they play.
 draw_new_game :: proc(f: ^Frame, g: ^Game) {
 	x := COLONY_X
 	print(f, "Lay out the cluster", x, 6, COLOR_WHITE)
@@ -786,6 +786,13 @@ draw_new_game :: proc(f: ^Frame, g: ^Game) {
 			add(&m, CLUSTERS[g.setup.size].name)
 			add(&m, " cluster)")
 			print(f, text(&m), x + (NEW_GAME_VALUE_COL + 6) * GLYPH_W, y, COLOR_MID)
+		case .Difficulty:
+			print(f, "Difficulty", x, y, col)
+			v: Text
+			add(&v, "< ")
+			add(&v, DIFFICULTIES[g.setup.difficulty].name)
+			add(&v, " >")
+			print(f, text(&v), x + NEW_GAME_VALUE_COL * GLYPH_W, y, col)
 		case .Start:
 			print(f, "Start", x, y, col)
 		}
@@ -793,6 +800,7 @@ draw_new_game :: proc(f: ^Frame, g: ^Game) {
 	y := new_game_row_y(len(New_Game_Row)) + 8
 	print(f, CLUSTERS[g.setup.size].says, x, y, COLOR_MID)
 	print(f, "Bigger clusters take longer to cross. They all hate you.", x, y + 12, COLOR_DARK)
+	print(f, DIFFICULTIES[g.setup.difficulty].says, x, y + 28, COLOR_MID)
 	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: start.", x, VIEW_H * TILE - 24, COLOR_DARK)
 	print(f, "Escape/Back: choose another species.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }

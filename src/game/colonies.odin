@@ -174,7 +174,8 @@ factory_cap :: proc(c: ^Colony) -> int {
 }
 
 // What a colony makes in a turn: half a point per household, a point per worked factory (half as much
-// again where the people are Beavers), more on a Rich world and less on a Poor one.
+// again where the people are Beavers), more on a Rich world and less on a Poor one. A rival's is scaled
+// by the difficulty (slice 3 step 3), and with it their tax, chores and research.
 production :: proc(g: ^Game, star: int) -> int {
 	c := any_colony(g, star)
 	if c == nil {
@@ -190,6 +191,9 @@ production :: proc(g: ^Game, star: int) -> int {
 		p = p * 3 / 2
 	case .Poor:
 		p = p / 2
+	}
+	if c.owner != PLAYER {
+		p = p * DIFFICULTIES[g.setup.difficulty].percent / 100
 	}
 	return p
 }

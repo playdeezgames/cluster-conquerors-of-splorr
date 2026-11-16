@@ -11,6 +11,7 @@ SIM_GAMES :: #config(SIM_GAMES, 0)
 SIM_TURNS :: #config(SIM_TURNS, 200)
 SIM_SIZE :: #config(SIM_SIZE, 0) // 0 small, 1 medium, 2 large, 3 huge
 SIM_RIVALS :: #config(SIM_RIVALS, 0) // 0 for the size's default
+SIM_DIFFICULTY :: #config(SIM_DIFFICULTY, 0) // -2 quiet street to 2 cul-de-sac from hell
 
 Sim_Stats :: struct {
 	contact, battle, meeting, capture, moth, president, out, pact, trade, war: [dynamic]int, // turns things first happened
@@ -66,7 +67,7 @@ test_simulate :: proc(t: ^testing.T) {
 			delete(st.war)
 		}
 		for seed in u64(1) ..= SIM_GAMES {
-			init_game(g, seed, {size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS})
+			init_game(g, seed, {size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS, difficulty = Difficulty(SIM_DIFFICULTY)})
 			seen: [10]bool
 			for turn in 1 ..= SIM_TURNS {
 				ai_turn(g, PLAYER)
@@ -144,7 +145,7 @@ test_simulate :: proc(t: ^testing.T) {
 				st.lost += 1
 			}
 		}
-		fmt.printfln("SIM %v games of up to %v turns in a %v cluster with %v rivals, the computer playing every side:", SIM_GAMES, SIM_TURNS, CLUSTERS[Cluster_Size(SIM_SIZE)].name, rivals_in({size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS}))
+		fmt.printfln("SIM %v games of up to %v turns in a %v cluster with %v rivals (%v), the computer playing every side:", SIM_GAMES, SIM_TURNS, CLUSTERS[Cluster_Size(SIM_SIZE)].name, rivals_in({size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS}), DIFFICULTIES[Difficulty(SIM_DIFFICULTY)].name)
 		sim_summary("first contact", st.contact, SIM_GAMES)
 		sim_summary("first battle", st.battle, SIM_GAMES)
 		sim_summary("first meeting", st.meeting, SIM_GAMES)

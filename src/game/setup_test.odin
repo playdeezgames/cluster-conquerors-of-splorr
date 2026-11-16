@@ -189,3 +189,52 @@ test_frame_up_and_busy_with_many :: proc(t: ^testing.T) {
 	testing.expect(t, busy_elsewhere(g, 1, PLAYER))
 	testing.expect(t, !busy_elsewhere(g, 1, 4))
 }
+
+// Difficulty (slice 3 step 3): five levels round the Difficulty row; a rival's production (and with it
+// its BJ and research) and its grudge against you follow it; yers do not.
+@(test)
+test_difficulty :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	init_game(g, SEED)
+	start_choosing(g)
+	pick_race(g, .Beavers)
+	testing.expect_value(t, g.setup.difficulty, Difficulty.Average)
+	command(g, .South)
+	command(g, .South)
+	command(g, .East)
+	testing.expect_value(t, g.setup.difficulty, Difficulty.Gated)
+	command(g, .East)
+	command(g, .East)
+	testing.expect_value(t, g.setup.difficulty, Difficulty.Quiet_Street) // round the end
+	command(g, .West)
+	testing.expect_value(t, g.setup.difficulty, Difficulty.From_Hell)
+	// A tap on the left half of the value turns it down.
+	y := new_game_row_y(int(New_Game_Row.Difficulty)) + 3
+	pointer(g, COLONY_X + (NEW_GAME_VALUE_COL + 1) * GLYPH_W, y, .Touch)
+	testing.expect_value(t, g.setup.difficulty, Difficulty.Gated)
+	command(g, .East)
+	command(g, .Confirm)
+	testing.expect_value(t, g.setup.difficulty, Difficulty.From_Hell)
+	// The rivals' homes make half as much again; yers as usual. Grudges against you start at 80.
+	plain := new(Game)
+	defer free(plain)
+	init_game(plain, SEED)
+	choose_race(plain, .Beavers)
+	for e in 1 ..< g.empire_count {
+		testing.expect_value(t, production(g, g.empires[e].home), production(plain, plain.empires[e].home) * 150 / 100)
+		testing.expect_value(t, g.empires[e].grudge[PLAYER], GRUDGE_AT_YOU + 20)
+	}
+	testing.expect_value(t, production(g, g.home), production(plain, plain.home))
+	// Quiet street: 60 % and 40.
+	init_game(g, SEED, {difficulty = .Quiet_Street})
+	choose_race(g, .Beavers)
+	testing.expect_value(t, production(g, g.empires[1].home), production(plain, plain.empires[1].home) * 60 / 100)
+	testing.expect_value(t, g.empires[1].grudge[PLAYER], GRUDGE_AT_YOU - 20)
+	// Cooling stops at the level's start, not at 60.
+	g.empires[1].grudge[PLAYER] = 70
+	for _ in 0 ..< 40 {
+		grudge_turn(g)
+	}
+	testing.expect_value(t, g.empires[1].grudge[PLAYER], GRUDGE_AT_YOU - 20)
+}

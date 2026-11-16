@@ -41,6 +41,32 @@ rivals_in :: proc(s: Setup) -> int {
 	return clamp(n, 1, RIVALS_MOST[s.size])
 }
 
+// How hard the rivals play (slice 3 step 3), picked on the new-game screen: their production (and so
+// their BJ and research) and where their grudge against you starts and cools back to. Average is the
+// game of slices 1 and 2, and a setup's zero value.
+Difficulty :: enum i8 {
+	Quiet_Street = -2,
+	Nice_Area    = -1,
+	Average      = 0,
+	Gated        = 1,
+	From_Hell    = 2,
+}
+
+Difficulty_Info :: struct {
+	name:    string,
+	percent: int, // of the rivals' production
+	grudge:  int, // the rivals' starting grudge against you
+	says:    string, // for the new-game screen
+}
+
+DIFFICULTIES := [Difficulty]Difficulty_Info {
+	.Quiet_Street = {"Quiet street", 60, GRUDGE_AT_YOU - 20, "The rivals make 60 % as much and start out calmer."},
+	.Nice_Area    = {"Nice area", 80, GRUDGE_AT_YOU - 10, "The rivals make 80 % as much and mind a little less."},
+	.Average      = {"Average neighbourhood", 100, GRUDGE_AT_YOU, "The rivals make as much as you and hate you as usual."},
+	.Gated        = {"Gated community", 125, GRUDGE_AT_YOU + 10, "The rivals make 125 % as much and mind a little more."},
+	.From_Hell    = {"Cul-de-sac from hell", 150, GRUDGE_AT_YOU + 20, "The rivals make half as much again and loathe you."},
+}
+
 // Wormholes: one star in eight.
 wormholes_in :: proc(size: Cluster_Size) -> int {
 	return CLUSTERS[size].stars / 8

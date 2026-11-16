@@ -7,7 +7,7 @@ package game
 // attack and invade by it, and you hear about it only as gossip. Numbers are Claude's (PLAN.md).
 
 GRUDGE_MAX :: 100
-GRUDGE_AT_YOU :: 60 // where the rivals start against you
+GRUDGE_AT_YOU :: 60 // where the rivals start against you, at Average difficulty (cluster.odin)
 GRUDGE_AT_RIVAL :: 30 // where empires start against each other
 DOG_GRUDGE_OFF :: 20 // Dogs start this much lower on both
 GRUDGE_COOL :: 1 // a turn, down to the start
@@ -19,7 +19,7 @@ GRUDGE_AT_MOTH :: 45 // how much the rivals mind the moth, for choosing targets
 
 // Where an empire's grudge against another starts, and the floor it cools to.
 grudge_floor :: proc(g: ^Game, against: int) -> int {
-	base := against == PLAYER ? GRUDGE_AT_YOU : GRUDGE_AT_RIVAL
+	base := against == PLAYER ? DIFFICULTIES[g.setup.difficulty].grudge : GRUDGE_AT_RIVAL
 	if g.empires[against].race == .Dogs {
 		base -= DOG_GRUDGE_OFF
 	}
