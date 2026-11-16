@@ -17,7 +17,7 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		}
 	}
 	threat := threatened(g, owner)
-	have_van := ships_owned(g, owner, .Moving_Van) > 0
+	vans := ships_owned(g, owner, .Moving_Van)
 	target_exists := best_settle_target(g, owner, e.home, nil) != NO_STAR
 	inspectors := 0 // Inspectors that can still fly
 	for &f in g.fleets {
@@ -40,17 +40,20 @@ ai_turn :: proc(g: ^Game, owner: int) {
 			continue
 		}
 		ai_sliders(g, i, c, threat)
+		aim_sliders(g, c, threat)
 		switch {
 		case threat:
 			c.build = i == e.home ? .Pickup : .Golf_Cart
 		case prey != NO_STAR && i == base && carpools < need:
 			c.build = .Carpool
-		case !have_van && target_exists:
+		case vans < vans_wanted(g, owner) && target_exists:
 			c.build = .Moving_Van
-			have_van = true // one colony at a time builds the next van
+			vans += 1 // one colony at a time builds the next van (a Builder's two)
 		case inspectors < 2 && unknown:
 			c.build = .Inspector
 			inspectors += 1
+		case aim_of(g, owner) == .Bully && i == e.home:
+			c.build = .Pickup
 		case:
 			c.build = .Golf_Cart
 		}
@@ -60,8 +63,8 @@ ai_turn :: proc(g: ^Game, owner: int) {
 	}
 	ai_fleets(g, owner)
 	if !threat {
-		ai_attack(g, owner)
-		if prey != NO_STAR && !bylaw_is(g, .No_Carpools) {
+		ai_attack(g, owner, goes_to_war(g, owner, target_exists))
+		if prey != NO_STAR && !bylaw_is(g, .No_Carpools) && goes_to_war(g, owner, target_exists) {
 			ai_invade(g, owner, base, prey, need)
 		}
 	}
@@ -74,6 +77,7 @@ invasion_target :: proc(g: ^Game, owner: int) -> (target, need, base: int) {
 	e := &g.empires[owner]
 	target, base = NO_STAR, NO_STAR
 	best_grudge, best_d := -1, max(int)
+	weakest := weakest_met(g, owner)
 	trial := Fleet {
 		ships = ship_one(.Carpool),
 	}
@@ -92,7 +96,7 @@ invasion_target :: proc(g: ^Game, owner: int) -> (target, need, base: int) {
 			}
 			a, b := g.stars[from], g.stars[t]
 			d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
-			gr := grudge_at(g, owner, in_)
+			gr := target_score(g, owner, in_, weakest)
 			if gr > best_grudge || (gr == best_grudge && d < best_d) {
 				target, base, best_grudge, best_d = t, from, gr, d
 				militia := militia_of(in_.households)
@@ -139,8 +143,9 @@ warships_of :: proc(f: ^Fleet) -> (ships: [Ship_Type]int) {
 // Warships at a colony go after the nearest enemy colony or fleet they remember seeing, if they are
 // clearly stronger than what they saw there and can reach it; warships idling away from home with
 // nothing to fight come home.
-ai_attack :: proc(g: ^Game, owner: int) {
+ai_attack :: proc(g: ^Game, owner: int, at_empires := true) {
 	e := &g.empires[owner]
+	weakest := weakest_met(g, owner)
 	for i in 0 ..< g.star_count {
 		f := fleet_of(g, i, owner)
 		if f == nil || stranded(g, f) || warship_hits(f) == 0 {
@@ -162,7 +167,7 @@ ai_attack :: proc(g: ^Game, owner: int) {
 			if t == i || !in_.seen || in_.strength == 0 {
 				continue
 			}
-			if in_.owner == owner || has_pact(g, owner, in_.owner) || mine * 100 < ATTACK_PERCENT * in_.strength {
+			if in_.owner == owner || has_pact(g, owner, in_.owner) || mine * 100 < attack_percent(g, owner) * in_.strength || (in_.owner >= 0 && !at_empires) {
 				continue
 			}
 			if send_problem(g, owner, i, t, warships_of(f)) != "" {
@@ -170,7 +175,7 @@ ai_attack :: proc(g: ^Game, owner: int) {
 			}
 			a, b := g.stars[i], g.stars[t]
 			d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
-			gr := grudge_at(g, owner, in_)
+			gr := target_score(g, owner, in_, weakest)
 			if gr > best_grudge || (gr == best_grudge && d < best_d) {
 				best, best_grudge, best_d = t, gr, d
 			}

@@ -35,8 +35,11 @@ complain :: proc(g: ^Game, accused: int, why: string) {
 	if c.docket_n >= MAX_COMPLAINTS {
 		return
 	}
-	by := NO_OWNER
+	by := busybody_complainer(g, accused)
 	for e in 0 ..< g.empire_count {
+		if by != NO_OWNER && aim_of(g, by) == .Busybody {
+			break
+		}
 		if e != accused && alive_empire(g, e) && (by == NO_OWNER || g.empires[e].grudge[accused] > g.empires[by].grudge[accused]) {
 			by = e
 		}

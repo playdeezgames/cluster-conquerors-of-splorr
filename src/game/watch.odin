@@ -447,7 +447,7 @@ watch_sight :: proc(g: ^Game) {
 // and framing the third empire unless they have a pact with it.
 ai_watch :: proc(g: ^Game, owner: int) {
 	e := &g.empires[owner]
-	e.watch_share = AI_WATCH_SHARE
+	e.watch_share = AI_WATCH_SHARE * (aim_of(g, owner) == .Busybody ? BUSYBODY_WATCH : 1)
 	target := -1
 	for b in 0 ..< g.empire_count {
 		if b == owner || !e.met[b] || g.empires[b].out {

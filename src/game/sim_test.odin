@@ -25,6 +25,7 @@ Sim_Stats :: struct {
 	events: [Event]int,
 	goat_ate, goats_off: int,
 	bylaw_kinds: [Bylaw]int, // in force at the end of a game
+	aim_n, aim_colonies, aim_techs, aim_strength, aim_president, aim_households: [Aim]int, // by the rival's aim, at the end
 	temper_n, temper_grudge, temper_pact, temper_forms: [Temper]int, // by the rival's temper: rivals, grudge at side 0 and pacts with it at the end, forms at it
 }
 
@@ -125,6 +126,21 @@ test_simulate :: proc(t: ^testing.T) {
 				st.colonies += colonies_of(g, e)
 			}
 			for e in 1 ..< g.empire_count {
+				am := g.empires[e].aim
+				st.aim_n[am] += 1
+				st.aim_colonies[am] += colonies_of(g, e)
+				st.aim_households[am] += households_of(g, e)
+				st.aim_strength[am] += empire_strength(g, e)
+				for f in Field {
+					for i in 0 ..< TECHS_PER_FIELD {
+						if g.empires[e].tech.known[f][i] {
+							st.aim_techs[am] += 1
+						}
+					}
+				}
+				if g.council.president == e {
+					st.aim_president[am] += 1
+				}
 				tp := g.empires[e].temper
 				st.temper_n[tp] += 1
 				st.temper_grudge[tp] += g.empires[e].grudge[PLAYER]
@@ -174,6 +190,13 @@ test_simulate :: proc(t: ^testing.T) {
 		fmt.printfln("  bylaws passed: %.1f a game; in force at the end: %v", f64(st.bylaws) / f64(SIM_GAMES), st.bylaw_kinds)
 		fmt.printfln("  complaints ruled (or fined with nobody President), all games: %v", st.rulings)
 		fmt.printfln("  events, all games: %v; the Goat ate %.1f households a game, seen off %v times", st.events, f64(st.goat_ate) / f64(SIM_GAMES), st.goats_off)
+		for am in Aim {
+			if am == .None || st.aim_n[am] == 0 {
+				continue
+			}
+			n := st.aim_n[am]
+			fmt.printfln("  %-14s %3v rivals at the end: %.1f colonies, %v households, %.1f techs, strength %v; President in %v", AIMS[am].name, n, f64(st.aim_colonies[am]) / f64(n), st.aim_households[am] / n, f64(st.aim_techs[am]) / f64(n), st.aim_strength[am] / n, st.aim_president[am])
+		}
 		for tp in Temper {
 			if tp == .None || st.temper_n[tp] == 0 {
 				continue

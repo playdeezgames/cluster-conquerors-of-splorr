@@ -69,6 +69,7 @@ Doormat_Kind :: enum u8 {
 	Demand, // pay up, or else
 	Pact_Offer,
 	Trade_Offer,
+	Swap_Offer, // a Tinkerer's (aims.odin): its tech for one of yers
 	Notice, // an event of yers (events.odin): just to be read
 }
 
@@ -79,6 +80,8 @@ Doormat :: struct {
 	from:    int,
 	amount:  int,
 	choice:  int, // 0 sign, 1 refuse
+	tech:    int, // a swap offer's: what they give (tech_id)
+	want:    int, // and what they want of yers
 	note:    Text, // a notice's words
 }
 
@@ -220,7 +223,7 @@ pact_value :: proc(g: ^Game, holder, other: int) -> int {
 	if busy_elsewhere(g, holder, other) {
 		v += PACT_VALUE_BUSY
 	}
-	return v + temper_pact_value(g, holder)
+	return v + temper_pact_value(g, holder) + aim_pact_value(g, holder)
 }
 
 // What a trade agreement or a swap is worth to `holder`.
@@ -231,6 +234,9 @@ deal_value :: proc(g: ^Game, holder, other: int, kind: Form_Kind) -> int {
 	}
 	if temper_of(g, holder) == .Neighbourly {
 		v += NEIGHBOURLY_DEAL
+	}
+	if kind == .Swap && aim_of(g, holder) == .Tinkerer {
+		v += TINKERER_SWAP
 	}
 	return v
 }
@@ -538,6 +544,13 @@ rival_files :: proc(g: ^Game, e: int) {
 	}
 	mine, yers := empire_strength(g, e), empire_strength(g, PLAYER)
 	d := &g.doormat
+	if aim_of(g, e) == .Tinkerer && rng_int(&g.rng, TINKERER_SWAP_IN) == 0 {
+		give, want := swap_back(g, PLAYER, e), swap_back(g, e, PLAYER)
+		if give != NO_TECH && want != NO_TECH {
+			d^ = {waiting = true, kind = .Swap_Offer, from = e, tech = give, want = want}
+			return
+		}
+	}
 	switch {
 	case !has_pact(g, e, PLAYER) && mine * 100 >= (temper_of(g, e) == .Pushy ? PUSHY_DEMANDS : DEMAND_PERCENT) * max(1, yers):
 		amount := clamp(g.empires[PLAYER].bj / 5 / FORM_AMOUNT_STEP * FORM_AMOUNT_STEP, FORM_AMOUNT_STEP, 200)
@@ -607,6 +620,21 @@ answer_doormat :: proc(g: ^Game, sign: bool) {
 		} else {
 			add_grudge(g, e, PLAYER, GRUDGE_REFUSED_PACT)
 			add(&b, " got their pact back unsigned.")
+		}
+	case .Swap_Offer:
+		if sign && !knows(g, PLAYER, d.tech) && knows(g, e, d.tech) && knows(g, PLAYER, d.want) && !knows(g, e, d.want) {
+			fa, ia := tech_of(d.tech)
+			learn(g, PLAYER, fa, ia, "A swap brings ")
+			fb, ib := tech_of(d.want)
+			learn(g, e, fb, ib, "A swap: ")
+			add(&b, " and you swapped. They got ")
+			add(&b, tech_name(d.want))
+			add(&b, ".")
+		} else if sign {
+			add(&b, " have withdrawn the swap. Things have moved on.")
+		} else {
+			add_grudge(g, e, PLAYER, GRUDGE_REFUSED_PACT)
+			add(&b, " got their swap back unsigned.")
 		}
 	case .Trade_Offer:
 		if sign && !trading(g, e, PLAYER) {

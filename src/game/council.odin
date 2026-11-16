@@ -247,6 +247,7 @@ hold_meeting :: proc(g: ^Game) {
 		}
 	}
 	bylaw_complaints(g)
+	busybody_complaints(g)
 	read_out_frame_ups(g)
 	hear_complaints(g)
 	if g.mode == .Map {
@@ -296,7 +297,7 @@ rival_vote :: proc(g: ^Game, e: int) -> Vote {
 	}
 	for k in 0 ..< 2 {
 		other := c.candidates[k]
-		if other != PLAYER && rng_int(&g.rng, RIVAL_BACKS_RIVAL_IN) == 0 {
+		if other != PLAYER && rng_int(&g.rng, aim_of(g, other) == .Committee ? COMMITTEE_BACKED_IN : RIVAL_BACKS_RIVAL_IN) == 0 {
 			return Vote(k + 1)
 		}
 	}

@@ -743,8 +743,8 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 3 under way: sizes, rivals, difficulty, tempers.", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "Still to come: the rivals' aims, and smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 3: sizes, rivals, difficulty, tempers and aims.", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Still to come: smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
@@ -1059,6 +1059,12 @@ draw_desk :: proc(f: ^Frame, g: ^Game) {
 		add(&tm, ". ")
 		add(&tm, TEMPERS[temper_of(g, r)].says)
 		y += 10 * print_wrapped(f, text(&tm), x, y + 10, 58, COLOR_MID)
+		am: Text
+		add(&am, "Aim: ")
+		add(&am, AIMS[aim_of(g, r)].name)
+		add(&am, ". ")
+		add(&am, AIMS[aim_of(g, r)].says)
+		y += 10 * print_wrapped(f, text(&am), x, y + 10, 58, COLOR_MID)
 		m: Text
 		add(&m, "Last heard: they ")
 		add(&m, MOOD_NEWS[g.empires[r].mood])
@@ -1172,6 +1178,17 @@ draw_doormat :: proc(f: ^Frame, g: ^Game) {
 		add(&b, ": a trade agreement, already signed on their side.")
 		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)
 		y += 10 * print_wrapped(f, "Each of you would take a share of the other's BJ income every turn, 5 % at first, growing to 15 %.", x, y, 58, COLOR_LIGHT)
+		print_wrapped(f, "They still hate you.", x, y + 6, 58, COLOR_MID)
+	case .Swap_Offer:
+		add(&b, ": a research swap, already signed on their side.")
+		y += 10 * print_wrapped(f, text(&b), x, y, 58, COLOR_LIGHT)
+		s: Text
+		add(&s, "They give ")
+		add(&s, tech_name(d.tech))
+		add(&s, ", for yer ")
+		add(&s, tech_name(d.want))
+		add(&s, ".")
+		y += 10 * print_wrapped(f, text(&s), x, y, 58, COLOR_LIGHT)
 		print_wrapped(f, "They still hate you.", x, y + 6, 58, COLOR_MID)
 	case .Notice:
 	case .Pact_Offer:

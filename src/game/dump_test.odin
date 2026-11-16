@@ -70,7 +70,14 @@ test_dump_play :: proc(t: ^testing.T) {
 		file_form(g, PLAYER, 4, .Threat, 50)
 		open_desk(g)
 		g.desk.rival = 4
+		g.empires[4].aim = .Committee
 		shot(g, fr, "desk-temper.ppm")
+		// A Tinkerer's swap offer on yer doormat (slice 3 step 5).
+		g.doormat = {open = true, kind = .Swap_Offer, from = 4, tech = tech_id(.Commuting, 2), want = tech_id(.Landscaping, 1)}
+		g.mode = .Doormat
+		shot(g, fr, "doormat-swap.ppm")
+		g.doormat = {}
+		g.mode = .Map
 		// Every rival's home, to see the colours.
 		for r in 1 ..< g.empire_count {
 			g.empires[PLAYER].sees[g.empires[r].home] = true

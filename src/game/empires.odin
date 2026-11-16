@@ -66,6 +66,7 @@ Empire :: struct {
 	mission:  [MAX_EMPIRES]Mission,
 	frame:    [MAX_EMPIRES]bool, // leaving another empire's name about on missions there
 	temper:   Temper, // a rival's (tempers.odin); .None for yers
+	aim:      Aim, // a rival's (aims.odin); .None for yers
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.
@@ -136,6 +137,7 @@ assign_rivals :: proc(g: ^Game) {
 		g.empires[e].race = others[e - 1]
 	}
 	deal_tempers(g)
+	deal_aims(g)
 	reset_grudges(g)
 }
 
