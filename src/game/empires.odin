@@ -65,6 +65,7 @@ Empire :: struct {
 	placed:   [MAX_EMPIRES]int, // watchers on each rival
 	mission:  [MAX_EMPIRES]Mission,
 	frame:    [MAX_EMPIRES]bool, // leaving another empire's name about on missions there
+	temper:   Temper, // a rival's (tempers.odin); .None for yers
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.
@@ -134,6 +135,7 @@ assign_rivals :: proc(g: ^Game) {
 	for e in 1 ..< g.empire_count {
 		g.empires[e].race = others[e - 1]
 	}
+	deal_tempers(g)
 	reset_grudges(g)
 }
 
@@ -236,6 +238,7 @@ update_sight :: proc(g: ^Game) {
 				add_int(&t, spot + 1)
 				add(&t, "). They hate you. The Homeowners' Association has been notified.")
 				say(g, text(&t))
+				temper_news(g, b)
 			}
 		}
 	}

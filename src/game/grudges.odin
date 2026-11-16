@@ -10,7 +10,7 @@ GRUDGE_MAX :: 100
 GRUDGE_AT_YOU :: 60 // where the rivals start against you, at Average difficulty (cluster.odin)
 GRUDGE_AT_RIVAL :: 30 // where empires start against each other
 DOG_GRUDGE_OFF :: 20 // Dogs start this much lower on both
-GRUDGE_COOL :: 1 // a turn, down to the start
+GRUDGE_COOL :: 1 // a turn, down to the start (tempers.odin changes it for the Petty and the Neighbourly)
 GRUDGE_BATTLE :: 10 // each side, for every battle
 GRUDGE_LANDING :: 10 // the defender, for a landing seen off
 GRUDGE_CAPTURE :: 25 // the defender, for a colony taken
@@ -42,7 +42,7 @@ add_grudge :: proc(g: ^Game, holder, against, amount: int) {
 		return
 	}
 	gr := &g.empires[holder].grudge[against]
-	gr^ = clamp(gr^ + amount, 0, GRUDGE_MAX)
+	gr^ = clamp(gr^ + tempered_grudge(g, holder, amount), 0, GRUDGE_MAX)
 }
 
 // How much `holder` minds whatever it saw at a star: the owner's grudge, or the moth's.
@@ -90,7 +90,7 @@ grudge_turn :: proc(g: ^Game) {
 			gr := &g.empires[a].grudge[b]
 			floor := grudge_floor(g, b)
 			if gr^ > floor {
-				gr^ = max(floor, gr^ - GRUDGE_COOL)
+				gr^ = max(floor, gr^ - grudge_cooling(g, a))
 			}
 		}
 	}

@@ -150,9 +150,9 @@ watch_turn :: proc(g: ^Game) {
 				g.spies_caught += caught
 				blamed, exposed := a, false
 				if framing(g, a, b, m) {
-					blamed, exposed = pin_blame(g, a, b, GRUDGE_SPY_CAUGHT * caught)
+					blamed, exposed = pin_blame(g, a, b, touchy(g, b, GRUDGE_SPY_CAUGHT * caught))
 				} else {
-					add_grudge(g, b, a, GRUDGE_SPY_CAUGHT * caught)
+					add_grudge(g, b, a, touchy(g, b, GRUDGE_SPY_CAUGHT * caught))
 				}
 				report_caught(g, a, b, caught, blamed, exposed)
 			}

@@ -25,6 +25,7 @@ Sim_Stats :: struct {
 	events: [Event]int,
 	goat_ate, goats_off: int,
 	bylaw_kinds: [Bylaw]int, // in force at the end of a game
+	temper_n, temper_grudge, temper_pact, temper_forms: [Temper]int, // by the rival's temper: rivals, grudge at side 0 and pacts with it at the end, forms at it
 }
 
 sim_first :: proc(list: ^[dynamic]int, seen: ^bool, turn: int, now: bool) {
@@ -90,6 +91,9 @@ test_simulate :: proc(t: ^testing.T) {
 				}
 				for g.mode == .Doormat {
 					st.doormats += 1
+					if g.doormat.kind != .Notice {
+						st.temper_forms[temper_of(g, g.doormat.from)] += 1
+					}
 					answer_doormat(g, ai_doormat_sign(g))
 				}
 				g.mode = g.outcome == .Playing ? .Map : g.mode
@@ -119,6 +123,14 @@ test_simulate :: proc(t: ^testing.T) {
 			}
 			for e in 0 ..< g.empire_count {
 				st.colonies += colonies_of(g, e)
+			}
+			for e in 1 ..< g.empire_count {
+				tp := g.empires[e].temper
+				st.temper_n[tp] += 1
+				st.temper_grudge[tp] += g.empires[e].grudge[PLAYER]
+				if has_pact(g, e, PLAYER) {
+					st.temper_pact[tp] += 1
+				}
 			}
 			st.steals += g.steals
 			st.sabotages += g.sabotages
@@ -162,6 +174,13 @@ test_simulate :: proc(t: ^testing.T) {
 		fmt.printfln("  bylaws passed: %.1f a game; in force at the end: %v", f64(st.bylaws) / f64(SIM_GAMES), st.bylaw_kinds)
 		fmt.printfln("  complaints ruled (or fined with nobody President), all games: %v", st.rulings)
 		fmt.printfln("  events, all games: %v; the Goat ate %.1f households a game, seen off %v times", st.events, f64(st.goat_ate) / f64(SIM_GAMES), st.goats_off)
+		for tp in Temper {
+			if tp == .None || st.temper_n[tp] == 0 {
+				continue
+			}
+			n := st.temper_n[tp]
+			fmt.printfln("  %-12s %3v rivals: grudge at side 0 %v at the end, a pact with it in %v %%, %.1f forms at it each", TEMPERS[tp].name, n, st.temper_grudge[tp] / n, st.temper_pact[tp] * 100 / n, f64(st.temper_forms[tp]) / f64(n))
+		}
 		fmt.printfln("  colonies at the end: %.1f per empire; side 0 won %v, lost %v, was President in %v", f64(st.colonies) / f64(SIM_GAMES * (1 + rivals_in({size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS}))), st.won, st.lost, st.presidents_you)
 	}
 }

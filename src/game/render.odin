@@ -743,8 +743,8 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 3 under way: sizes, up to five rivals, difficulty.", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "Still to come: personalities and smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 3 under way: sizes, rivals, difficulty, tempers.", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Still to come: the rivals' aims, and smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
@@ -1053,6 +1053,12 @@ draw_desk :: proc(f: ^Frame, g: ^Game) {
 			y += 10
 			print(f, text(&tr), x, y, COLOR_MID)
 		}
+		tm: Text
+		add(&tm, "Temper: ")
+		add(&tm, TEMPERS[temper_of(g, r)].name)
+		add(&tm, ". ")
+		add(&tm, TEMPERS[temper_of(g, r)].says)
+		y += 10 * print_wrapped(f, text(&tm), x, y + 10, 58, COLOR_MID)
 		m: Text
 		add(&m, "Last heard: they ")
 		add(&m, MOOD_NEWS[g.empires[r].mood])

@@ -61,6 +61,16 @@ test_dump_play :: proc(t: ^testing.T) {
 		open_watch(g)
 		g.row = WATCH_RIVAL_ROW
 		shot(g, fr, "huge-watch.ppm")
+		// The forms desk with a temper (slice 3 step 4), at its fullest: a pact, trade, a long temper.
+		g.empires[4].temper = .Touchy
+		set_treaty(g, PLAYER, 4, .Pact)
+		g.trade[PLAYER][4], g.trade[4][PLAYER] = TRADE_START, TRADE_START
+		g.empires[PLAYER].bj = 500
+		file_form(g, PLAYER, 4, .Tribute, 50)
+		file_form(g, PLAYER, 4, .Threat, 50)
+		open_desk(g)
+		g.desk.rival = 4
+		shot(g, fr, "desk-temper.ppm")
 		// Every rival's home, to see the colours.
 		for r in 1 ..< g.empire_count {
 			g.empires[PLAYER].sees[g.empires[r].home] = true

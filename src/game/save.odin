@@ -6,7 +6,7 @@ package game
 // and a new cluster starts.
 
 SAVE_MAGIC :: u32(0x5343_4343) // "CCCS"
-SAVE_VERSION :: u32(13) // 13: slice 3 step 3 (difficulty); 12: slice 3 step 2 (up to six empires); 11: slice 3 step 1 (cluster sizes); 2: slice 2 step 1 (grudges); 3: step 2 (forms); 4: step 3 (alliances, trade); 5: step 4 (the Watch); 6: step 5 (framing); 7: step 6 (bylaws); 8: step 7 (rulings); 9: step 8 (events); 10: step 9 (slice 2 complete)
+SAVE_VERSION :: u32(14) // 14: slice 3 step 4 (tempers); 13: slice 3 step 3 (difficulty); 12: slice 3 step 2 (up to six empires); 11: slice 3 step 1 (cluster sizes); 2: slice 2 step 1 (grudges); 3: step 2 (forms); 4: step 3 (alliances, trade); 5: step 4 (the Watch); 6: step 5 (framing); 7: step 6 (bylaws); 8: step 7 (rulings); 9: step 8 (events); 10: step 9 (slice 2 complete)
 
 Save_Header :: struct {
 	magic:   u32,
@@ -42,6 +42,11 @@ read_save :: proc(g: ^Game, data: []u8) -> bool {
 	copy((cast([^]u8)loaded)[:size_of(Game)], data[size_of(Save_Header):])
 	if int(loaded.setup.size) >= len(Cluster_Size) || loaded.setup.difficulty < min(Difficulty) || loaded.setup.difficulty > max(Difficulty) || loaded.empire_count < 2 || loaded.empire_count > MAX_EMPIRES {
 		return false
+	}
+	for e in 0 ..< MAX_EMPIRES {
+		if int(loaded.empires[e].temper) >= len(Temper) {
+			return false
+		}
 	}
 	info := CLUSTERS[loaded.setup.size]
 	if loaded.star_count != info.stars || loaded.galaxy_w != info.w || loaded.galaxy_h != info.h || loaded.empire_count != 1 + rivals_in(loaded.setup) {

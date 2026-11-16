@@ -220,7 +220,7 @@ pact_value :: proc(g: ^Game, holder, other: int) -> int {
 	if busy_elsewhere(g, holder, other) {
 		v += PACT_VALUE_BUSY
 	}
-	return v
+	return v + temper_pact_value(g, holder)
 }
 
 // What a trade agreement or a swap is worth to `holder`.
@@ -228,6 +228,9 @@ deal_value :: proc(g: ^Game, holder, other: int, kind: Form_Kind) -> int {
 	v := kind == .Trade ? TRADE_VALUE : SWAP_VALUE
 	if has_pact(g, holder, other) {
 		v += TREATY_BONUS
+	}
+	if temper_of(g, holder) == .Neighbourly {
+		v += NEIGHBOURLY_DEAL
 	}
 	return v
 }
@@ -428,7 +431,7 @@ forms_turn :: proc(g: ^Game) {
 			if !has_pact(g, e, other) {
 				continue
 			}
-			if g.empires[e].grudge[other] >= PACT_BREAK_GRUDGE || (g.empires[e].grudge[other] >= grudge_floor(g, other) && empire_strength(g, e) >= 2 * max(1, empire_strength(g, other))) {
+			if breaks_pact(g, e, other) {
 				declare_war(g, e, other)
 			}
 		}
@@ -530,13 +533,13 @@ rival_files :: proc(g: ^Game, e: int) {
 	if !g.empires[e].met[PLAYER] || g.empires[PLAYER].out || g.doormat.waiting || g.doormat.open {
 		return
 	}
-	if rng_int(&g.rng, RIVAL_FORM_IN) != 0 {
+	if rng_int(&g.rng, temper_of(g, e) == .Pushy ? PUSHY_FORM_IN : RIVAL_FORM_IN) != 0 {
 		return
 	}
 	mine, yers := empire_strength(g, e), empire_strength(g, PLAYER)
 	d := &g.doormat
 	switch {
-	case !has_pact(g, e, PLAYER) && mine * 100 >= DEMAND_PERCENT * max(1, yers):
+	case !has_pact(g, e, PLAYER) && mine * 100 >= (temper_of(g, e) == .Pushy ? PUSHY_DEMANDS : DEMAND_PERCENT) * max(1, yers):
 		amount := clamp(g.empires[PLAYER].bj / 5 / FORM_AMOUNT_STEP * FORM_AMOUNT_STEP, FORM_AMOUNT_STEP, 200)
 		d^ = {waiting = true, kind = .Demand, from = e, amount = amount}
 	case !has_pact(g, e, PLAYER) && pact_value(g, e, PLAYER) + GRUDGE_REFUSED_PACT > g.empires[e].grudge[PLAYER]:

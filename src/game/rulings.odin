@@ -89,6 +89,9 @@ rule :: proc(g: ^Game, r: Ruling) {
 	k := &c.docket[c.docket_i]
 	c.docket_i += 1
 	g.rulings[r] += 1
+	if r != .Dismiss && temper_of(g, k.accused) == .Touchy && k.complainer != NO_OWNER {
+		add_grudge(g, k.accused, k.complainer, TOUCHY_COMPLAINT) // a Touchy empire takes it personally
+	}
 	if !president_sits(g) {
 		fine(g, k.accused, text(&k.why))
 		return
@@ -100,7 +103,7 @@ rule :: proc(g: ^Game, r: Ruling) {
 	case .Double:
 		fine(g, k.accused, text(&k.why), 2, "Doubled, fined")
 		if k.accused != p {
-			add_grudge(g, k.accused, p, GRUDGE_DOUBLED)
+			add_grudge(g, k.accused, p, touchy(g, k.accused, GRUDGE_DOUBLED))
 		}
 	case .Dismiss:
 		b: Text
