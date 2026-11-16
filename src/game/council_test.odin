@@ -96,7 +96,7 @@ minutes_contain :: proc(g: ^Game, s: string) -> bool {
 }
 
 @(test)
-test_no_meetings_until_everyone_has_met :: proc(t: ^testing.T) {
+test_no_meetings_until_you_have_met_everyone :: proc(t: ^testing.T) {
 	g := new(Game)
 	defer free(g)
 	init_game(g, SEED)
@@ -230,4 +230,22 @@ test_a_meeting_waits_for_yer_battles :: proc(t: ^testing.T) {
 	command(g, .South)
 	command(g, .Confirm) // fight it out
 	testing.expect_value(t, g.mode, Mode.Council)
+}
+
+// Since November 16, 2026: the first meeting waits only for you to have met every rival still
+// standing, not for the rivals to have met each other.
+@(test)
+test_meetings_start_when_you_have_met_them :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	init_game(g, SEED, {size = .Huge, rivals = 5})
+	for r in 1 ..< g.empire_count - 1 {
+		g.empires[PLAYER].met[r] = true
+		g.empires[r].met[PLAYER] = true
+	}
+	council_turn(g)
+	testing.expect(t, !g.council.started) // one rival still not met
+	g.empires[g.empire_count - 1].out = true
+	council_turn(g)
+	testing.expect(t, g.council.started) // that one is gone, and the rivals never met each other
 }

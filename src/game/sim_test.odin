@@ -10,6 +10,7 @@ import "core:testing"
 SIM_GAMES :: #config(SIM_GAMES, 0)
 SIM_TURNS :: #config(SIM_TURNS, 200)
 SIM_SIZE :: #config(SIM_SIZE, 0) // 0 small, 1 medium, 2 large, 3 huge
+SIM_RIVALS :: #config(SIM_RIVALS, 0) // 0 for the size's default
 
 Sim_Stats :: struct {
 	contact, battle, meeting, capture, moth, president, out, pact, trade, war: [dynamic]int, // turns things first happened
@@ -65,7 +66,7 @@ test_simulate :: proc(t: ^testing.T) {
 			delete(st.war)
 		}
 		for seed in u64(1) ..= SIM_GAMES {
-			init_game(g, seed, {size = Cluster_Size(SIM_SIZE)})
+			init_game(g, seed, {size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS})
 			seen: [10]bool
 			for turn in 1 ..= SIM_TURNS {
 				ai_turn(g, PLAYER)
@@ -143,7 +144,7 @@ test_simulate :: proc(t: ^testing.T) {
 				st.lost += 1
 			}
 		}
-		fmt.printfln("SIM %v games of up to %v turns in a %v cluster, the computer playing every side:", SIM_GAMES, SIM_TURNS, CLUSTERS[Cluster_Size(SIM_SIZE)].name)
+		fmt.printfln("SIM %v games of up to %v turns in a %v cluster with %v rivals, the computer playing every side:", SIM_GAMES, SIM_TURNS, CLUSTERS[Cluster_Size(SIM_SIZE)].name, rivals_in({size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS}))
 		sim_summary("first contact", st.contact, SIM_GAMES)
 		sim_summary("first battle", st.battle, SIM_GAMES)
 		sim_summary("first meeting", st.meeting, SIM_GAMES)
@@ -160,6 +161,6 @@ test_simulate :: proc(t: ^testing.T) {
 		fmt.printfln("  bylaws passed: %.1f a game; in force at the end: %v", f64(st.bylaws) / f64(SIM_GAMES), st.bylaw_kinds)
 		fmt.printfln("  complaints ruled (or fined with nobody President), all games: %v", st.rulings)
 		fmt.printfln("  events, all games: %v; the Goat ate %.1f households a game, seen off %v times", st.events, f64(st.goat_ate) / f64(SIM_GAMES), st.goats_off)
-		fmt.printfln("  colonies at the end: %.1f per empire; side 0 won %v, lost %v, was President in %v", f64(st.colonies) / f64(SIM_GAMES * MAX_EMPIRES), st.won, st.lost, st.presidents_you)
+		fmt.printfln("  colonies at the end: %.1f per empire; side 0 won %v, lost %v, was President in %v", f64(st.colonies) / f64(SIM_GAMES * (1 + rivals_in({size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS}))), st.won, st.lost, st.presidents_you)
 	}
 }

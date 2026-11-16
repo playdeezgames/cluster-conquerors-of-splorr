@@ -201,13 +201,14 @@ empire_strength :: proc(g: ^Game, e: int) -> int {
 }
 
 // The third empire, if there is one.
-third_of :: proc(g: ^Game, a, b: int) -> int {
+// Whether `holder` has a big enough grudge against some empire other than `other` to be busy with it.
+busy_elsewhere :: proc(g: ^Game, holder, other: int) -> bool {
 	for e in 0 ..< g.empire_count {
-		if e != a && e != b && !g.empires[e].out {
-			return e
+		if e != holder && e != other && !g.empires[e].out && g.empires[holder].grudge[e] >= PACT_BUSY_GRUDGE {
+			return true
 		}
 	}
-	return NO_OWNER
+	return false
 }
 
 // What a pact with `other` is worth to `holder`; it signs when this beats its grudge.
@@ -216,7 +217,7 @@ pact_value :: proc(g: ^Game, holder, other: int) -> int {
 	if empire_strength(g, other) > empire_strength(g, holder) {
 		v += PACT_VALUE_WEAKER
 	}
-	if t := third_of(g, holder, other); t != NO_OWNER && g.empires[holder].grudge[t] >= PACT_BUSY_GRUDGE {
+	if busy_elsewhere(g, holder, other) {
 		v += PACT_VALUE_BUSY
 	}
 	return v

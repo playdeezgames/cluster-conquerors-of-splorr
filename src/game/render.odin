@@ -241,18 +241,22 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 	}
 	if g.empires[PLAYER].sees[g.cursor] {
 		if c := any_colony(g, g.cursor); c != nil && c.owner != PLAYER {
+			// "A Tardigrade colony", then its households and bases on lines of their own (the panel is 20
+			// glyphs wide).
 			who: Text
-			add(&who, "The ")
-			add(&who, empire_name(g, c.owner))
-			add(&who, "' colony")
+			add(&who, RACES[g.empires[c.owner].race].one)
+			add(&who, " colony")
 			print(f, text(&who), x, y, EMPIRE_COLORS[c.owner])
 			y += 10
 			what: Text
 			add_int(&what, c.households)
-			add(&what, " households, ")
-			add_int(&what, c.bases)
-			add(&what, c.bases == 1 ? " base" : " bases")
+			add(&what, " households")
 			print(f, text(&what), x, y, COLOR_LIGHT)
+			y += 10
+			bases: Text
+			add_int(&bases, c.bases)
+			add(&bases, c.bases == 1 ? " base" : " bases")
+			print(f, text(&bases), x, y, COLOR_LIGHT)
 			y += 10
 		}
 		for e in 1 ..< g.empire_count {
@@ -722,7 +726,7 @@ chore_effect :: proc(g: ^Game, star: int, ch: Chore) -> string {
 draw_races :: proc(f: ^Frame, g: ^Game) {
 	x := COLONY_X
 	print(f, "Choose yer species", x, 6, COLOR_WHITE)
-	print(f, "Two of the others will be yer neighbours. They will hate you.", x, 18, COLOR_LIGHT)
+	print(f, "Some of the others will be yer neighbours. They will hate you.", x, 18, COLOR_LIGHT)
 	for r in Race {
 		row := int(r)
 		rx, ry := race_col_x(row), race_row_y(row)
@@ -739,8 +743,8 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 3 of 3 is under way: four cluster sizes are in.", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "Still to come: more rivals, difficulty, personalities.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 3 of 3 is under way: cluster sizes and up to five rivals.", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Still to come: difficulty, personalities, a smarter computer.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
@@ -768,13 +772,27 @@ draw_new_game :: proc(f: ^Frame, g: ^Game) {
 			add(&v, CLUSTERS[g.setup.size].name)
 			add(&v, " >")
 			print(f, text(&v), x + NEW_GAME_VALUE_COL * GLYPH_W, y, col)
+		case .Rivals:
+			print(f, "Rivals", x, y, col)
+			v: Text
+			add(&v, "< ")
+			add_int(&v, rivals_in(g.setup))
+			add(&v, " >")
+			print(f, text(&v), x + NEW_GAME_VALUE_COL * GLYPH_W, y, col)
+			m: Text
+			add(&m, "(up to ")
+			add_int(&m, RIVALS_MOST[g.setup.size])
+			add(&m, " in a ")
+			add(&m, CLUSTERS[g.setup.size].name)
+			add(&m, " cluster)")
+			print(f, text(&m), x + (NEW_GAME_VALUE_COL + 6) * GLYPH_W, y, COLOR_MID)
 		case .Start:
 			print(f, "Start", x, y, col)
 		}
 	}
 	y := new_game_row_y(len(New_Game_Row)) + 8
 	print(f, CLUSTERS[g.setup.size].says, x, y, COLOR_MID)
-	print(f, "Bigger clusters take longer to cross. Two rivals for now.", x, y + 12, COLOR_DARK)
+	print(f, "Bigger clusters take longer to cross. They all hate you.", x, y + 12, COLOR_DARK)
 	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: start.", x, VIEW_H * TILE - 24, COLOR_DARK)
 	print(f, "Escape/Back: choose another species.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
@@ -1205,7 +1223,7 @@ draw_watch :: proc(f: ^Frame, g: ^Game) {
 	}
 	print(f, text(&n), x, y, COLOR_MID)
 	y += 14
-	r, _ := watch_row_rival(g.row)
+	r := g.watch_on
 	if watch_rival_ok(g, r) && e.placed[r] > 0 {
 		o: Text
 		m := e.mission[r]

@@ -33,6 +33,7 @@ test_dump_play :: proc(t: ^testing.T) {
 		command(g, .West)
 		shot(g, fr, "new-game.ppm")
 		start_cluster(g)
+		testing.expect_value(t, g.empire_count, MAX_EMPIRES)
 		for _ in 0 ..< 12 {
 			ai_turn(g, PLAYER)
 			next_turn(g)
@@ -45,6 +46,24 @@ test_dump_play :: proc(t: ^testing.T) {
 		shot(g, fr, "huge.ppm")
 		g.cursor = g.star_count - 1
 		shot(g, fr, "huge-corner.ppm")
+		for r in 1 ..< g.empire_count {
+			g.empires[PLAYER].met[r] = r != 2
+		}
+		g.empires[PLAYER].watchers = 3
+		g.empires[PLAYER].placed[4] = 2
+		g.empires[PLAYER].mission[4] = .Steal
+		g.empires[PLAYER].frame[4] = true
+		g.watch_on = 4
+		open_watch(g)
+		g.row = WATCH_RIVAL_ROW
+		shot(g, fr, "huge-watch.ppm")
+		// Every rival's home, to see the colours.
+		for r in 1 ..< g.empire_count {
+			g.empires[PLAYER].sees[g.empires[r].home] = true
+		}
+		g.mode = .Map
+		g.cursor = g.empires[3].home
+		shot(g, fr, "rival-home.ppm")
 		init_game(g, u64(DUMP_SEED))
 		choose_race(g, .Beavers)
 		for _ in 0 ..< 12 {

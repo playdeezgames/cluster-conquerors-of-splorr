@@ -32,12 +32,12 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **Sending ships:** pick how many of each go, then the star; the line turns red when they would run out of fuel on the way. Ships fill up only at yer colonies, or from a Gas Can.
 - **Research:** R (gamepad Y, the Tech button) shares Book Club's research among six hobbies.
 - **Paperwork:** P (gamepad X, the Forms button) opens the forms desk: file a non-aggression pact, an alliance, a trade agreement, tribute in BJ or a tech, a research swap or a threat with a rival you have met, or tear it all up. Answers come back in the news. Rivals' forms land on yer doormat to sign or refuse.
-- **The Neighbourhood Watch:** W (gamepad LB, the Watch button) sends a share of yer income to train watchers, then places them on a rival to watch, steal techs or wreck factories, bases or ships, and leave the other rival's name all over it. Caught is gone, and they will remember. A frame-up that fools nobody is read out at the next HOA meeting.
+- **The Neighbourhood Watch:** W (gamepad LB, the Watch button) sends a share of yer income to train watchers, then places them on a rival to watch, steal techs or wreck factories, bases or ships, and leave someone else's name all over it. Caught is gone, and they will remember. A frame-up that fools nobody is read out at the next HOA meeting.
 - **Battles:** pick a target, then fight a round, fight it out, or retreat.
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
 
-This is slice 2 of 3, done: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 has begun: clusters now come in four sizes, from 20 stars to 72. More rivals, difficulty levels and the rivals' personalities are still to come.
+This is slice 2 of 3, done: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 has begun: clusters now come in four sizes, from 20 stars to 72, with up to five rivals. Difficulty levels and the rivals' personalities are still to come.
 
 ### About it
 

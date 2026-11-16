@@ -60,11 +60,14 @@ test_the_watch_screen :: proc(t: ^testing.T) {
 	testing.expect_value(t, e.watch_share, 20)
 	// A rival not met yet: nothing to do.
 	e.watchers = 2
-	command(g, .South)
+	command(g, .South) // the rival row
+	_, who, _ := watch_row_text(g, WATCH_RIVAL_ROW)
+	testing.expect_value(t, who, "not met yet")
+	command(g, .South) // its watchers
 	command(g, .East)
 	testing.expect_value(t, e.placed[1], 0)
-	label, _, _ := watch_row_text(g, 1)
-	testing.expect_value(t, label, "Not met yet.")
+	label, _, _ := watch_row_text(g, WATCH_RIVAL_ROW + 1)
+	testing.expect_value(t, label, "")
 	// Met: Right sends a watcher, Left calls one home, the mission row changes the mission.
 	g.empires[PLAYER].met[1] = true
 	command(g, .East)
@@ -281,21 +284,21 @@ test_the_frame_up_row :: proc(t: ^testing.T) {
 	e := &g.empires[PLAYER]
 	e.met[1] = true
 	open_watch(g)
-	g.row = 3 // the first rival's frame-up
-	r, kind := watch_row_rival(g.row)
+	g.row = 4 // the rival's frame-up
+	r, kind := watch_row_rival(g, g.row)
 	testing.expect_value(t, r, 1)
 	testing.expect_value(t, kind, Watch_Row.Frame)
 	// Nobody else met: nobody to name.
 	command(g, .East)
 	testing.expect(t, !e.frame[1])
 	testing.expect(t, news_has(g, "nobody else to frame"))
-	label, _, _ := watch_row_text(g, 3)
-	testing.expect_value(t, label, "  frame-up: nobody else to name")
+	label, _, _ := watch_row_text(g, 4)
+	testing.expect_value(t, label, "Frame-up: nobody else to name")
 	// The other rival met: Left/Right names them or nobody.
 	e.met[2] = true
 	command(g, .East)
 	testing.expect(t, e.frame[1])
-	_, value, tail := watch_row_text(g, 3)
+	_, value, tail := watch_row_text(g, 4)
 	testing.expect_value(t, value[4:], empire_name(g, 2))
 	testing.expect_value(t, tail, "(on missions only)") // just watching, so far
 	testing.expect(t, !framing(g, PLAYER, 1, e.mission[1]))
@@ -303,8 +306,8 @@ test_the_frame_up_row :: proc(t: ^testing.T) {
 	testing.expect(t, framing(g, PLAYER, 1, e.mission[1]))
 	command(g, .West)
 	testing.expect(t, !e.frame[1])
-	// Back is now below three rows for each rival.
-	testing.expect_value(t, WATCH_BACK_ROW, 7)
+	// One rival at a time (slice 3 step 2): Back is below the budget, the rival and its three rows.
+	testing.expect_value(t, WATCH_BACK_ROW, 5)
 }
 
 @(test)
@@ -438,4 +441,37 @@ test_read_outs_make_room_for_you :: proc(t: ^testing.T) {
 		pin_blame(g, PLAYER, 1, 1)
 	}
 	testing.expect_value(t, g.council.exposed[0], Exposed{PLAYER, 1, 2})
+}
+
+// Up to five rivals (slice 3 step 2): the rival row picks which one the rows below are about.
+@(test)
+test_the_watch_rival_row :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	init_game(g, SEED, {size = .Huge, rivals = 5})
+	choose_race(g, .Owls)
+	e := &g.empires[PLAYER]
+	e.met[3] = true
+	e.watchers = 1
+	open_watch(g)
+	testing.expect_value(t, g.watch_on, 3) // the first one met
+	g.row = WATCH_RIVAL_ROW
+	_, value, tail := watch_row_text(g, WATCH_RIVAL_ROW)
+	testing.expect_value(t, value[4:], empire_name(g, 3))
+	testing.expect_value(t, tail, "(3 of 5)")
+	command(g, .South)
+	command(g, .East)
+	testing.expect_value(t, e.placed[3], 1)
+	g.row = WATCH_RIVAL_ROW
+	command(g, .East)
+	command(g, .East)
+	testing.expect_value(t, g.watch_on, 5)
+	command(g, .East)
+	testing.expect_value(t, g.watch_on, 1) // round the end
+	command(g, .West)
+	testing.expect_value(t, g.watch_on, 5)
+	// Shut and opened again: the same rival if still met, otherwise the first met.
+	command(g, .Watch)
+	command(g, .Watch)
+	testing.expect_value(t, g.watch_on, 3)
 }

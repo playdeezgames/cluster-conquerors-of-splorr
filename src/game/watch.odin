@@ -160,11 +160,18 @@ watch_turn :: proc(g: ^Game) {
 	}
 }
 
-// The empire a frame-up would name: the third one, if the spy knows of it.
+// The empire a frame-up would name, if the spy knows of any.
 frame_target :: proc(g: ^Game, spy, victim: int) -> int {
-	t := third_of(g, spy, victim)
-	if t == NO_OWNER || !g.empires[spy].met[t] {
-		return NO_OWNER
+	// Since slice 3 step 2 (more than one other empire): whoever the victim already hates most, of the
+	// empires the spy has met, so the frame-up is believed.
+	t := NO_OWNER
+	for e in 0 ..< g.empire_count {
+		if e == spy || e == victim || g.empires[e].out || !g.empires[spy].met[e] {
+			continue
+		}
+		if t == NO_OWNER || g.empires[victim].grudge[e] > g.empires[victim].grudge[t] {
+			t = e
+		}
 	}
 	return t
 }
@@ -469,7 +476,8 @@ ai_watch :: proc(g: ^Game, owner: int) {
 	}
 }
 
-// ---- The Watch screen: the budget, then three rows a rival (watchers, mission, frame-up), then Back ----
+// ---- The Watch screen: the budget, which rival, that rival's three rows (watchers, mission, frame-up),
+// then Back. Since slice 3 step 2 it shows one rival at a time (up to five would not fit). ----
 
 Watch_Row :: enum u8 {
 	Count,
@@ -478,24 +486,37 @@ Watch_Row :: enum u8 {
 }
 
 WATCH_BUDGET_ROW :: 0
-WATCH_BACK_ROW :: 1 + len(Watch_Row) * (MAX_EMPIRES - 1)
+WATCH_RIVAL_ROW :: 1
+WATCH_BACK_ROW :: 2 + len(Watch_Row)
 WATCH_ROWS :: WATCH_BACK_ROW + 1
 
-// The rival a row is about, and which of its rows; -1 for the budget and Back.
-watch_row_rival :: proc(row: int) -> (rival: int, kind: Watch_Row) {
-	if row == WATCH_BUDGET_ROW || row >= WATCH_BACK_ROW {
+// The rival a row is about (the one on screen), and which of its rows; -1 for the budget, the rival
+// row and Back.
+watch_row_rival :: proc(g: ^Game, row: int) -> (rival: int, kind: Watch_Row) {
+	if row <= WATCH_RIVAL_ROW || row >= WATCH_BACK_ROW {
 		return -1, .Count
 	}
-	return 1 + (row - 1) / len(Watch_Row), Watch_Row((row - 1) % len(Watch_Row))
+	return g.watch_on, Watch_Row(row - 2)
 }
 
 watch_rival_ok :: proc(g: ^Game, r: int) -> bool {
 	return r > 0 && r < g.empire_count && g.empires[PLAYER].met[r] && !g.empires[r].out
 }
 
+// Opens on the rival shown last time, or the first one met.
 open_watch :: proc(g: ^Game) {
 	g.mode = .Watch
 	g.row = WATCH_BUDGET_ROW
+	if watch_rival_ok(g, g.watch_on) {
+		return
+	}
+	g.watch_on = 1
+	for r in 1 ..< g.empire_count {
+		if watch_rival_ok(g, r) {
+			g.watch_on = r
+			return
+		}
+	}
 }
 
 watch_change :: proc(g: ^Game, by: int) {
@@ -504,7 +525,12 @@ watch_change :: proc(g: ^Game, by: int) {
 		e.watch_share = clamp(e.watch_share + by * SLIDER_STEP, 0, WATCH_SHARE_MAX)
 		return
 	}
-	r, kind := watch_row_rival(g.row)
+	if g.row == WATCH_RIVAL_ROW {
+		n := g.empire_count - 1
+		g.watch_on = (g.watch_on - 1 + by + n) % n + 1
+		return
+	}
+	r, kind := watch_row_rival(g, g.row)
 	if !watch_rival_ok(g, r) {
 		return
 	}
@@ -564,42 +590,51 @@ watch_row_text :: proc(g: ^Game, row: int) -> (label, value, tail: string) {
 	if row == WATCH_BACK_ROW {
 		return "Back to the map", "", ""
 	}
-	r, kind := watch_row_rival(row)
-	if r >= g.empire_count {
-		return "", "", ""
-	}
-	if !watch_rival_ok(g, r) {
-		if kind != .Count {
-			return "", "", ""
+	r := g.watch_on
+	if row == WATCH_RIVAL_ROW {
+		@(static) t: Text
+		t = {}
+		add(&t, "(")
+		add_int(&t, r)
+		add(&t, " of ")
+		add_int(&t, g.empire_count - 1)
+		add(&t, ")")
+		switch {
+		case g.empires[r].out:
+			add(&v, "gone")
+		case !g.empires[PLAYER].met[r]:
+			add(&v, "not met yet")
+		case:
+			add(&v, "the ")
+			add(&v, empire_name(g, r))
 		}
-		return g.empires[r].out ? "Gone." : "Not met yet.", "", ""
+		return "Rival:", text(&v), g.empire_count > 2 ? text(&t) : ""
+	}
+	_, kind := watch_row_rival(g, row)
+	if !watch_rival_ok(g, r) {
+		return "", "", ""
 	}
 	switch kind {
 	case .Mission:
-		return "  mission:", MISSION_NAMES[e.mission[r]], ""
+		return "Mission:", MISSION_NAMES[e.mission[r]], ""
 	case .Frame:
 		t := frame_target(g, PLAYER, r)
 		if t == NO_OWNER {
-			return "  frame-up: nobody else to name", "", ""
+			return "Frame-up: nobody else to name", "", ""
 		}
 		if !e.frame[r] {
-			return "  frame-up:", "nobody", ""
+			return "Frame-up:", "nobody", ""
 		}
 		add(&v, "the ")
 		add(&v, empire_name(g, t))
-		return "  frame-up:", text(&v), e.mission[r] == .Watch ? "(on missions only)" : ""
+		return "Frame-up:", text(&v), e.mission[r] == .Watch ? "(on missions only)" : ""
 	case .Count:
 	}
 	add_int(&v, e.placed[r])
-	@(static) l: Text
-	l = {}
-	add(&l, "On the ")
-	add(&l, empire_name(g, r))
-	add(&l, ":")
-	return text(&l), text(&v), e.placed[r] == 1 ? "watcher" : "watchers"
+	return "Watchers there:", text(&v), e.placed[r] == 1 ? "watcher" : "watchers"
 }
 
-WATCH_VALUE_COL :: 21 // past "On the Tardigrades:"
+WATCH_VALUE_COL :: 16 // past "Watchers there:"
 
 watch_row_y :: proc(row: int) -> int {
 	return DESK_TOP + row * DESK_H

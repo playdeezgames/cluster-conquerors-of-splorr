@@ -95,12 +95,13 @@ alive_empire :: proc(g: ^Game, e: int) -> bool {
 	return !g.empires[e].out
 }
 
-everyone_has_met :: proc(g: ^Game) -> bool {
-	for a in 0 ..< g.empire_count {
-		for b in 0 ..< g.empire_count {
-			if a != b && alive_empire(g, a) && alive_empire(g, b) && !g.empires[a].met[b] {
-				return false
-			}
+// Whether the Association can start sitting: once you have met every rival still standing (the user's
+// rule, November 16, 2026; until slice 3 step 2 every empire had to have met every other, which with up
+// to six empires in a big cluster hardly ever happened).
+you_have_met_everyone :: proc(g: ^Game) -> bool {
+	for r in 1 ..< g.empire_count {
+		if alive_empire(g, r) && !g.empires[PLAYER].met[r] {
+			return false
 		}
 	}
 	return true
@@ -120,7 +121,7 @@ households_of :: proc(g: ^Game, owner: int) -> int {
 council_turn :: proc(g: ^Game) {
 	c := &g.council
 	if !c.started {
-		if !everyone_has_met(g) {
+		if !you_have_met_everyone(g) {
 			return
 		}
 		c.started = true

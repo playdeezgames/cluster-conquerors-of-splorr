@@ -65,10 +65,11 @@ Mode :: enum u8 {
 	New_Game, // the new-game screen, after the species screen
 }
 
-// What the new-game screen sets (slice 3 step 1: the cluster's size). A new cluster after a game ends
-// keeps it.
+// What the new-game screen sets: the cluster's size (slice 3 step 1) and the number of rivals (step 2;
+// 0 for the size's default). A new cluster after a game ends keeps it.
 Setup :: struct {
-	size: Cluster_Size,
+	size:   Cluster_Size,
+	rivals: int,
 }
 
 Game :: struct {
@@ -121,6 +122,7 @@ Game :: struct {
 	goat_ate:   int,
 	goats_seen_off: int,
 	wars:       int, // treaties torn up (for the simulator)
+	watch_on:   int, // the rival the Watch screen shows
 }
 
 init_game :: proc(g: ^Game, seed: u64, setup := Setup{}) {
@@ -173,13 +175,18 @@ choose_race :: proc(g: ^Game, r: Race) {
 	b: Text
 	add(&b, "Yer the ")
 	add(&b, RACES[r].name)
-	add(&b, ". The ")
-	add(&b, empire_name(g, 1))
-	add(&b, " and the ")
-	add(&b, empire_name(g, 2))
-	add(&b, " are out there somewhere.")
+	add(&b, ". Everybody hates everybody.")
 	say(g, text(&b))
-	say(g, "Everybody hates everybody.")
+	o: Text
+	add(&o, "Out there somewhere: ")
+	for e in 1 ..< g.empire_count {
+		if e > 1 {
+			add(&o, e == g.empire_count - 1 ? " and " : ", ")
+		}
+		add(&o, RACES[g.empires[e].race].name)
+	}
+	add(&o, ".")
+	say(g, text(&o))
 }
 
 // The species screen's choice: on to the new-game screen.
@@ -199,6 +206,7 @@ start_cluster :: proc(g: ^Game) {
 // The new-game screen's rows.
 New_Game_Row :: enum u8 {
 	Size,
+	Rivals,
 	Start,
 }
 
@@ -223,8 +231,13 @@ new_game_command :: proc(g: ^Game, c: Command) {
 change_setup :: proc(g: ^Game, row: New_Game_Row, by: int) {
 	switch row {
 	case .Size:
+		// A new size brings its own number of rivals.
 		n := len(Cluster_Size)
 		g.setup.size = Cluster_Size((int(g.setup.size) + n + by) % n)
+		g.setup.rivals = RIVALS_BY_DEFAULT[g.setup.size]
+	case .Rivals:
+		most := RIVALS_MOST[g.setup.size]
+		g.setup.rivals = (rivals_in(g.setup) - 1 + by + most) % most + 1
 	case .Start:
 	}
 }
@@ -1184,7 +1197,9 @@ new_game_pointer :: proc(g: ^Game, sx, sy: int) {
 			start_cluster(g)
 			return
 		}
-		mid := COLONY_X + (NEW_GAME_VALUE_COL + 5) * GLYPH_W
+		// The middle of "< Medium >" or "< 3 >".
+		width := row == .Size ? len(CLUSTERS[g.setup.size].name) + 4 : 5
+		mid := COLONY_X + NEW_GAME_VALUE_COL * GLYPH_W + width * GLYPH_W / 2
 		change_setup(g, row, sx < mid ? -1 : 1)
 		return
 	}

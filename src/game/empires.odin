@@ -1,10 +1,10 @@
 package game
 
-// Empires (slice 1 step 5): you and two computer rivals, each an animal species played straight, each
+// Empires (slice 1 step 5): you and the computer rivals (two until slice 3 step 2; now one to five), each an animal species played straight, each
 // with its own BJ, research, survey reports and sight. Everybody hates everybody.
 
 PLAYER :: 0
-MAX_EMPIRES :: 3
+MAX_EMPIRES :: 6
 NO_OWNER :: -1
 SIGHT_RANGE :: 7 // cells an empire can see from its colonies and ships
 
@@ -45,7 +45,7 @@ RACES := [Race]Race_Info {
 }
 
 // The colour each empire's colonies and ships are drawn in.
-EMPIRE_COLORS := [MAX_EMPIRES]u8{COLOR_GREEN, COLOR_RED, COLOR_ORANGE}
+EMPIRE_COLORS := [MAX_EMPIRES]u8{COLOR_GREEN, COLOR_RED, COLOR_ORANGE, COLOR_YELLOW, COLOR_CYAN, COLOR_BLUE}
 
 Empire :: struct {
 	race:     Race,
@@ -64,7 +64,7 @@ Empire :: struct {
 	watchers: int, // at home, looking out for the others'
 	placed:   [MAX_EMPIRES]int, // watchers on each rival
 	mission:  [MAX_EMPIRES]Mission,
-	frame:    [MAX_EMPIRES]bool, // leaving the third empire's name about on missions there
+	frame:    [MAX_EMPIRES]bool, // leaving another empire's name about on missions there
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.

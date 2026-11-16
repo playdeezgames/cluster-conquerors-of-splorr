@@ -31,6 +31,16 @@ CLUSTERS := [Cluster_Size]Cluster_Info {
 	.Huge   = {"Huge", 72, 120, 76, "72 stars. The whole subdivision: many evenings."},
 }
 
+// The number of rivals for each size: by default, and the most allowed (slice 3 step 2).
+RIVALS_BY_DEFAULT := [Cluster_Size]int{.Small = 2, .Medium = 3, .Large = 4, .Huge = 5}
+RIVALS_MOST := [Cluster_Size]int{.Small = 3, .Medium = 4, .Large = 5, .Huge = 5}
+
+// How many rivals a setup has: its own number (0 for the size's default), never more than the size allows.
+rivals_in :: proc(s: Setup) -> int {
+	n := s.rivals == 0 ? RIVALS_BY_DEFAULT[s.size] : s.rivals
+	return clamp(n, 1, RIVALS_MOST[s.size])
+}
+
 // Wormholes: one star in eight.
 wormholes_in :: proc(size: Cluster_Size) -> int {
 	return CLUSTERS[size].stars / 8
@@ -215,7 +225,7 @@ make_cluster :: proc(g: ^Game, seed: u64) {
 		}
 	}
 	g.home = n > 0 ? candidates[rng_int(&r, n)] : rng_int(&r, g.star_count)
-	g.empire_count = MAX_EMPIRES
+	g.empire_count = 1 + rivals_in(g.setup)
 	g.empires[PLAYER].home = g.home
 	// The rivals' homes: each as far as can be from every home already placed.
 	for e in 1 ..< g.empire_count {
