@@ -29,6 +29,7 @@ test_dump_play :: proc(t: ^testing.T) {
 		// The new-game screen and a huge cluster (slice 3 step 1): its home, and a far corner.
 		init_game(g, u64(DUMP_SEED))
 		start_choosing(g)
+		shot(g, fr, "species.ppm")
 		pick_race(g, .Beavers)
 		command(g, .West)
 		shot(g, fr, "new-game.ppm")

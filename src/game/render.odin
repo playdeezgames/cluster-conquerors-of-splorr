@@ -726,7 +726,7 @@ chore_effect :: proc(g: ^Game, star: int, ch: Chore) -> string {
 draw_races :: proc(f: ^Frame, g: ^Game) {
 	x := COLONY_X
 	print(f, "Choose yer species", x, 6, COLOR_WHITE)
-	print(f, "Some of the others will be yer neighbours. They will hate you.", x, 18, COLOR_LIGHT)
+	print(f, "The others will be yer neighbours. They will all hate you.", x, 18, COLOR_LIGHT)
 	for r in Race {
 		row := int(r)
 		rx, ry := race_col_x(row), race_row_y(row)
@@ -743,8 +743,8 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 	if info.later != "" {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
-	print(f, "Slice 3 of 3 is under way: cluster sizes and up to five rivals.", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "Still to come: difficulty, personalities, a smarter computer.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Slice 3 of 3 under way: cluster sizes, up to five rivals.", x, VIEW_H * TILE - 34, COLOR_MID)
+	print(f, "Still to come: difficulty, personalities, smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
