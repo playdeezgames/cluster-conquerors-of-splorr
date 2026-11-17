@@ -167,12 +167,15 @@ test_rivals_invade_what_they_saw_undefended :: proc(t: ^testing.T) {
 		owner      = PLAYER,
 		households = 10,
 	}
-	prey, need, base := invasion_target(g, 1)
-	testing.expect_value(t, prey, target)
-	testing.expect_value(t, base, h)
+	plan_campaign(g, 1, true)
+	cp := g.empires[1].campaign
+	testing.expect(t, cp.on)
+	testing.expect_value(t, cp.target, target)
+	testing.expect_value(t, cp.staging, h)
+	need := campaign_carpools_wanted(g, 1)
 	testing.expect_value(t, need, 1) // 3 militia, half as many again: 4 troops, one Carpool
 	fleet_of(g, h, 1).ships[.Carpool] = need
-	ai_invade(g, 1, base, prey, need)
+	testing.expect_value(t, run_campaign(g, 1), NO_STAR) // gone in
 	going := false
 	for &f in g.fleets {
 		if f.used && f.owner == 1 && f.star == NO_STAR && f.to == target && f.ships[.Carpool] == need {

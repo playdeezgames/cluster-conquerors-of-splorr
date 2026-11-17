@@ -32,8 +32,18 @@ ai_turn :: proc(g: ^Game, owner: int) {
 			break
 		}
 	}
-	prey, need, base := invasion_target(g, owner)
-	carpools := ships_owned(g, owner, .Carpool)
+	at_war := goes_to_war(g, owner, target_exists)
+	if !threat {
+		plan_campaign(g, owner, at_war)
+	}
+	camp := e.campaign
+	need := campaign_carpools_wanted(g, owner)
+	carpools := 0
+	if camp.on {
+		if f := fleet_of(g, camp.staging, owner); f != nil {
+			carpools = f.ships[.Carpool]
+		}
+	}
 	for i in 0 ..< g.star_count {
 		c := colony_of(g, i, owner)
 		if c == nil {
@@ -44,8 +54,9 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		switch {
 		case threat:
 			c.build = i == e.home ? .Pickup : .Golf_Cart
-		case prey != NO_STAR && i == base && carpools < need:
+		case camp.on && i == camp.staging && carpools < need:
 			c.build = .Carpool
+			carpools += 1
 		case vans < vans_wanted(g, owner) && target_exists:
 			c.build = .Moving_Van
 			vans += 1 // one colony at a time builds the next van (a Builder's two)
@@ -63,59 +74,8 @@ ai_turn :: proc(g: ^Game, owner: int) {
 	}
 	ai_fleets(g, owner)
 	if !threat {
-		ai_attack(g, owner, goes_to_war(g, owner, target_exists))
-		if prey != NO_STAR && !bylaw_is(g, .No_Carpools) && goes_to_war(g, owner, target_exists) {
-			ai_invade(g, owner, base, prey, need)
-		}
-	}
-}
-
-// The nearest pair of one of the empire's colonies big enough to spare Carpools and an enemy colony it
-// remembers with nothing left to defend it, in a Carpool's reach; and how many Carpools it would want
-// (half as many troops again as the colony's militia).
-invasion_target :: proc(g: ^Game, owner: int) -> (target, need, base: int) {
-	e := &g.empires[owner]
-	target, base = NO_STAR, NO_STAR
-	best_grudge, best_d := -1, max(int)
-	weakest := weakest_met(g, owner)
-	trial := Fleet {
-		ships = ship_one(.Carpool),
-	}
-	for from in 0 ..< g.star_count {
-		c := colony_of(g, from, owner)
-		if c == nil || c.households <= CARPOOL_LOAD * 2 {
-			continue
-		}
-		for t in 0 ..< g.star_count {
-			in_ := e.intel[t]
-			if !in_.seen || in_.owner == NO_OWNER || in_.owner == owner || has_pact(g, owner, in_.owner) || in_.strength > 0 {
-				continue
-			}
-			if trip_turns(g, from, t, fleet_speed(&trial)) > fleet_range(&trial) {
-				continue
-			}
-			a, b := g.stars[from], g.stars[t]
-			d := (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
-			gr := target_score(g, owner, in_, weakest)
-			if gr > best_grudge || (gr == best_grudge && d < best_d) {
-				target, base, best_grudge, best_d = t, from, gr, d
-				militia := militia_of(in_.households)
-				need = (militia * 3 / 2) / CARPOOL_LOAD + 1
-			}
-		}
-	}
-	return
-}
-
-// Sends the Carpools at the launching colony once there are enough of them.
-ai_invade :: proc(g: ^Game, owner, home, target, need: int) {
-	f := fleet_of(g, home, owner)
-	if f == nil || f.ships[.Carpool] < need {
-		return
-	}
-	cars := ship_n(.Carpool, f.ships[.Carpool])
-	if send_problem(g, owner, home, target, cars) == "" {
-		send_fleet(g, owner, home, target, cars)
+		staging := run_campaign(g, owner)
+		ai_attack(g, owner, at_war, staging)
 	}
 }
 
@@ -143,12 +103,12 @@ warships_of :: proc(f: ^Fleet) -> (ships: [Ship_Type]int) {
 // Warships at a colony go after the nearest enemy colony or fleet they remember seeing, if they are
 // clearly stronger than what they saw there and can reach it; warships idling away from home with
 // nothing to fight come home.
-ai_attack :: proc(g: ^Game, owner: int, at_empires := true) {
+ai_attack :: proc(g: ^Game, owner: int, at_empires := true, skip := NO_STAR) {
 	e := &g.empires[owner]
 	weakest := weakest_met(g, owner)
 	for i in 0 ..< g.star_count {
 		f := fleet_of(g, i, owner)
-		if f == nil || stranded(g, f) || warship_hits(f) == 0 {
+		if f == nil || i == skip || stranded(g, f) || warship_hits(f) == 0 {
 			continue
 		}
 		if colony_of(g, i, owner) == nil {

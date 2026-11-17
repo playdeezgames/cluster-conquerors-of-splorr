@@ -6,7 +6,7 @@ package game
 // and a new cluster starts.
 
 SAVE_MAGIC :: u32(0x5343_4343) // "CCCS"
-SAVE_VERSION :: u32(15) // 15: slice 3 step 5 (aims); 14: slice 3 step 4 (tempers); 13: slice 3 step 3 (difficulty); 12: slice 3 step 2 (up to six empires); 11: slice 3 step 1 (cluster sizes); 2: slice 2 step 1 (grudges); 3: step 2 (forms); 4: step 3 (alliances, trade); 5: step 4 (the Watch); 6: step 5 (framing); 7: step 6 (bylaws); 8: step 7 (rulings); 9: step 8 (events); 10: step 9 (slice 2 complete)
+SAVE_VERSION :: u32(16) // 16: slice 3 step 6 (campaigns); 15: slice 3 step 5 (aims); 14: slice 3 step 4 (tempers); 13: slice 3 step 3 (difficulty); 12: slice 3 step 2 (up to six empires); 11: slice 3 step 1 (cluster sizes); 2: slice 2 step 1 (grudges); 3: step 2 (forms); 4: step 3 (alliances, trade); 5: step 4 (the Watch); 6: step 5 (framing); 7: step 6 (bylaws); 8: step 7 (rulings); 9: step 8 (events); 10: step 9 (slice 2 complete)
 
 Save_Header :: struct {
 	magic:   u32,
@@ -44,7 +44,8 @@ read_save :: proc(g: ^Game, data: []u8) -> bool {
 		return false
 	}
 	for e in 0 ..< MAX_EMPIRES {
-		if int(loaded.empires[e].temper) >= len(Temper) || int(loaded.empires[e].aim) >= len(Aim) {
+		cp := loaded.empires[e].campaign
+		if int(loaded.empires[e].temper) >= len(Temper) || int(loaded.empires[e].aim) >= len(Aim) || (cp.on && (cp.target < 0 || cp.target >= loaded.star_count || cp.staging < 0 || cp.staging >= loaded.star_count)) {
 			return false
 		}
 	}

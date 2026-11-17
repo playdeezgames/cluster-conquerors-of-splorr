@@ -97,6 +97,10 @@ Game :: struct {
 	council:    Council, // the Homeowners' Association
 	battles:    int, // battles fought so far (for the simulator)
 	captures:   int, // colonies taken so far (for the simulator)
+	launched:   int, // campaigns gone in (campaigns.odin; for the simulator)
+	planned:    int, // campaigns planned
+	timed_out:  int, // campaigns given up for taking too long
+	dropped:    int, // campaigns given up because the target went (or the staging colony did)
 	battle:     Battle, // the player's battle on screen
 	pending:    [8][2]int, // the player's battles this turn: star, enemy
 	pending_n:  int,

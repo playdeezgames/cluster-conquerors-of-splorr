@@ -65,8 +65,9 @@ test_a_pact_keeps_the_peace :: proc(t: ^testing.T) {
 	testing.expect(t, colony_of(g, h, 1) != nil)
 	testing.expect(t, !threatened(g, 1))
 	g.empires[1].intel[h] = {seen = true, owner = PLAYER, strength = 1}
-	prey, _, _ := invasion_target(g, 1)
-	testing.expect(t, prey == NO_STAR || g.empires[1].intel[prey].owner != PLAYER)
+	plan_campaign(g, 1, true)
+	cp := g.empires[1].campaign
+	testing.expect(t, !cp.on || g.empires[1].intel[cp.target].owner != PLAYER)
 	// Torn up: the Pickups are a threat again, and the Carpools land.
 	declare_war(g, PLAYER, 1)
 	testing.expect(t, threatened(g, 1))

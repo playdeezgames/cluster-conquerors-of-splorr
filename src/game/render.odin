@@ -744,7 +744,7 @@ draw_races :: proc(f: ^Frame, g: ^Game) {
 		print(f, info.later, x + 2 * GLYPH_W, y + 36, COLOR_DARK)
 	}
 	print(f, "Slice 3: sizes, rivals, difficulty, tempers and aims.", x, VIEW_H * TILE - 34, COLOR_MID)
-	print(f, "Still to come: smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
+	print(f, "Under way: smarter rivals.", x, VIEW_H * TILE - 24, COLOR_MID)
 	print(f, "Arrows: pick. Enter/OK or a second tap: choose.", x, VIEW_H * TILE - 12, COLOR_DARK)
 }
 
