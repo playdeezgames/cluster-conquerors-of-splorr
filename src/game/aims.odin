@@ -142,6 +142,9 @@ target_score :: proc(g: ^Game, holder: int, in_: Intel, weakest: int) -> int {
 	if aim_of(g, holder) == .Bully && in_.owner >= 0 && in_.owner == weakest {
 		gr += BULLY_WEAK_BONUS
 	}
+	if in_.owner >= 0 && nearly_finished(g, in_.owner) {
+		gr += FINISH_BONUS // slice 3 step 7: everyone closes in on an empire down to its last colonies
+	}
 	return gr
 }
 

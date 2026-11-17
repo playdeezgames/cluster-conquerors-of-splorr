@@ -37,7 +37,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
 
-This is slice 2 of 3, done: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 has begun: clusters now come in four sizes, from 20 stars to 72, with up to five rivals and five difficulty levels, from Quiet street to Cul-de-sac from hell. Every rival now has a temper (Petty, Pushy, Two-faced, Neighbourly or Touchy) and an aim (Builder, Bully, Busybody, Committee type or Tinkerer). The rivals now gather their fleets before they attack and escort their Carpools; reaching far and finishing off a beaten empire are still to come.
+This is slice 2 of 3, done: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 has begun: clusters now come in four sizes, from 20 stars to 72, with up to five rivals and five difficulty levels, from Quiet street to Cul-de-sac from hell. Every rival now has a temper (Petty, Pushy, Two-faced, Neighbourly or Touchy) and an aim (Builder, Bully, Busybody, Committee type or Tinkerer). The rivals now gather their fleets before they attack, escort their Carpools, reach far with Gas Cans and close in on a beaten empire.
 
 ### About it
 

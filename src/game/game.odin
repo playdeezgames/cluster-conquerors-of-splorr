@@ -98,6 +98,7 @@ Game :: struct {
 	battles:    int, // battles fought so far (for the simulator)
 	captures:   int, // colonies taken so far (for the simulator)
 	launched:   int, // campaigns gone in (campaigns.odin; for the simulator)
+	hops:       int, // campaigns gone by way of a stop to refuel
 	planned:    int, // campaigns planned
 	timed_out:  int, // campaigns given up for taking too long
 	dropped:    int, // campaigns given up because the target went (or the staging colony did)

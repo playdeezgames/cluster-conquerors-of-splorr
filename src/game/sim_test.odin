@@ -19,7 +19,7 @@ Sim_Stats :: struct {
 	presidents_you: int,
 	won, lost: int,
 	doormats: int, // rivals' forms at side 0
-	launched, captures_n, planned, timed_out, dropped: int, // campaigns gone in, colonies taken
+	launched, captures_n, planned, timed_out, dropped, hops, knocked_out: int, // campaigns gone in, colonies taken
 	steals, sabotages, caught, framed, exposed: int,
 	bylaws: int,
 	rulings: [Ruling]int,
@@ -151,6 +151,12 @@ test_simulate :: proc(t: ^testing.T) {
 			}
 			st.steals += g.steals
 			st.launched += g.launched
+			st.hops += g.hops
+			for e in 0 ..< g.empire_count {
+				if g.empires[e].out {
+					st.knocked_out += 1
+				}
+			}
 			st.planned += g.planned
 			st.timed_out += g.timed_out
 			st.dropped += g.dropped
@@ -191,7 +197,7 @@ test_simulate :: proc(t: ^testing.T) {
 		sim_summary("first trade", st.trade, SIM_GAMES)
 		sim_summary("first war", st.war, SIM_GAMES)
 		fmt.printfln("  rivals' forms on side 0's doormat: %.1f a game (pacts signed, demands paid only to the twice as strong)", f64(st.doormats) / f64(SIM_GAMES))
-		fmt.printfln("  campaigns: %.1f planned, %.1f gone in, %.1f given up as too slow, %.1f dropped a game; colonies taken: %.1f a game", f64(st.planned) / f64(SIM_GAMES), f64(st.launched) / f64(SIM_GAMES), f64(st.timed_out) / f64(SIM_GAMES), f64(st.dropped) / f64(SIM_GAMES), f64(st.captures_n) / f64(SIM_GAMES))
+		fmt.printfln("  campaigns: %.1f planned, %.1f gone in, %.1f given up as too slow, %.1f dropped, %.1f by a stop to refuel a game; colonies taken: %.1f a game; empires knocked out: %v in all", f64(st.planned) / f64(SIM_GAMES), f64(st.launched) / f64(SIM_GAMES), f64(st.timed_out) / f64(SIM_GAMES), f64(st.dropped) / f64(SIM_GAMES), f64(st.hops) / f64(SIM_GAMES), f64(st.captures_n) / f64(SIM_GAMES), st.knocked_out)
 		fmt.printfln("  the Watch: %.1f techs stolen, %.1f wrecks, %.1f watchers caught a game", f64(st.steals) / f64(SIM_GAMES), f64(st.sabotages) / f64(SIM_GAMES), f64(st.caught) / f64(SIM_GAMES))
 		fmt.printfln("  frame-ups: %.1f worked, %.1f fooled nobody a game", f64(st.framed) / f64(SIM_GAMES), f64(st.exposed) / f64(SIM_GAMES))
 		fmt.printfln("  bylaws passed: %.1f a game; in force at the end: %v", f64(st.bylaws) / f64(SIM_GAMES), st.bylaw_kinds)

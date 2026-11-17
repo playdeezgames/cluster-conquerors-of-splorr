@@ -68,6 +68,7 @@ Empire :: struct {
 	temper:   Temper, // a rival's (tempers.odin); .None for yers
 	aim:      Aim, // a rival's (aims.odin); .None for yers
 	campaign: Campaign, // the computer's current target (campaigns.odin)
+	peak:     int, // the most colonies it has had (campaigns.odin)
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.

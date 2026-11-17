@@ -394,6 +394,7 @@ end_turn :: proc(g: ^Game) {
 	for e in 0 ..< g.empire_count {
 		fund_watch(g, e, before[e])
 		research_turn(g, e)
+		g.empires[e].peak = max(g.empires[e].peak, colonies_of(g, e)) // for finishing (campaigns.odin)
 	}
 	watch_turn(g)
 	events_turn(g)

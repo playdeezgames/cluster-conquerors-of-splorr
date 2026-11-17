@@ -97,14 +97,21 @@ test_campaign_escorts_carpools :: proc(t: ^testing.T) {
 		}
 	}
 	testing.expect(t, going)
-	// The colony builds the Carpools for a campaign it stages.
+	// One of its colonies with households to spare builds the Carpool the campaign needs (since step 7,
+	// not only the staging colony), and only the one.
 	g2 := new(Game)
 	defer free(g2)
-	home2, _, _ := campaign_game(g2, 10)
+	home2, other2, _ := campaign_game(g2, 10)
 	rival_fleet(g2, home2, 1, only(.Pickup, 3))
 	g2.empires[1].met[PLAYER] = true
 	ai_turn(g2, 1)
-	testing.expect_value(t, colony_of(g2, home2, 1).build, Ship_Type.Carpool)
+	building := 0
+	for i in ([2]int{home2, other2}) {
+		if colony_of(g2, i, 1).build == .Carpool {
+			building += 1
+		}
+	}
+	testing.expect_value(t, building, 1)
 }
 
 @(test)
@@ -156,4 +163,79 @@ test_campaign_given_up :: proc(t: ^testing.T) {
 	init_game(h, SEED)
 	testing.expect(t, read_save(h, buf))
 	testing.expect_value(t, h.empires[1].campaign.target, yers)
+}
+
+@(test)
+test_campaign_stops_to_refuel :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	home, other, yers := campaign_game(g, 10)
+	// Too far for one trip (a Golf Cart with a Carpool: 3 turns of fuel at 4 cells), with an empty star
+	// half way to stop at.
+	dir := g.stars[home].x < g.galaxy_w / 2 ? 1 : -1
+	g.stars[yers].x = g.stars[home].x + 20 * dir
+	g.stars[other].x = g.stars[home].x + 10 * dir // the other colony becomes the stop: make it nobody's
+	g.stars[other].colony = {}
+	for i in 0 ..< g.star_count {
+		if i != home && i != yers && i != other && any_colony(g, i) == nil {
+			g.stars[i].x = clamp(g.stars[home].x - 30 * dir, 0, g.galaxy_w - 1) // out of the way
+		}
+	}
+	testing.expect(t, !campaign_reaches(g, 1, home, yers))
+	rival_fleet(g, home, 1, only(.Pickup, 3))
+	plan_campaign(g, 1, true)
+	cp := g.empires[1].campaign
+	testing.expect(t, cp.on)
+	testing.expect_value(t, cp.staging, home)
+	testing.expect_value(t, cp.via, other)
+	// The staging colony builds the Gas Can first.
+	g.empires[1].met[PLAYER] = true
+	ai_turn(g, 1)
+	testing.expect_value(t, colony_of(g, home, 1).build, Ship_Type.Gas_Can)
+	// With the Gas Can and the Carpool, they go to the stop...
+	f := fleet_of(g, home, 1)
+	f.ships[.Gas_Can], f.ships[.Carpool] = 1, 1
+	f.refills = GAS_CAN_REFILLS
+	g.empires[1].campaign = cp
+	testing.expect_value(t, run_campaign(g, 1), other)
+	testing.expect(t, g.empires[1].campaign.hopping)
+	testing.expect(t, on_the_way(g, 1, other, .Carpool, 1))
+	testing.expect(t, on_the_way(g, 1, other, .Gas_Can, 1))
+	// ...and from there, refuelled, on to the target.
+	for &o in g.fleets {
+		if o.used && o.owner == 1 && o.to == other {
+			dock(g, &o, other)
+			o.away = 0
+		}
+	}
+	testing.expect_value(t, run_campaign(g, 1), NO_STAR)
+	testing.expect(t, on_the_way(g, 1, yers, .Pickup, 3))
+	testing.expect(t, on_the_way(g, 1, yers, .Carpool, 1))
+	testing.expect_value(t, g.hops, 1)
+	testing.expect_value(t, g.launched, 1)
+}
+
+@(test)
+test_campaign_finishing :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	met_game(g)
+	// One colony from the start is not "nearly finished"; down from three to two is.
+	testing.expect(t, !nearly_finished(g, PLAYER))
+	g.empires[PLAYER].peak = 3
+	testing.expect(t, nearly_finished(g, PLAYER))
+	in_ := Intel{seen = true, owner = PLAYER, strength = 1}
+	g.empires[1].aim = .Tinkerer
+	testing.expect_value(t, target_score(g, 1, in_, NO_OWNER), g.empires[1].grudge[PLAYER] + FINISH_BONUS)
+	// A campaign against it may take twice as long.
+	g.empires[1].campaign = {on = true, target = g.home, staging = g.empires[1].home, via = NO_STAR}
+	g.empires[1].intel[g.home] = in_
+	testing.expect_value(t, campaign_turns(g, 1), 2 * CAMPAIGN_TURNS)
+	g.empires[PLAYER].peak = 1
+	testing.expect_value(t, campaign_turns(g, 1), CAMPAIGN_TURNS)
+	// The planning kit is the least of the empire's warship fleets.
+	f := fleet_of(g, g.empires[1].home, 1)
+	f.ships[.Golf_Cart] = 1
+	f.kit = {}
+	testing.expect_value(t, planning_kit(g, 1), Kit{})
 }

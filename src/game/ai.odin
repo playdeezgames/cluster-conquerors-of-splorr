@@ -38,10 +38,10 @@ ai_turn :: proc(g: ^Game, owner: int) {
 	}
 	camp := e.campaign
 	need := campaign_carpools_wanted(g, owner)
-	carpools := 0
+	carpools, cans := ships_owned(g, owner, .Carpool), 0 // all its Carpools gather for the campaign
 	if camp.on {
 		if f := fleet_of(g, camp.staging, owner); f != nil {
-			carpools = f.ships[.Carpool]
+			cans = f.ships[.Gas_Can]
 		}
 	}
 	for i in 0 ..< g.star_count {
@@ -54,7 +54,10 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		switch {
 		case threat:
 			c.build = i == e.home ? .Pickup : .Golf_Cart
-		case camp.on && i == camp.staging && carpools < need:
+		case camp.on && !camp.hopping && i == camp.staging && camp.via != NO_STAR && cans < 1:
+			c.build = .Gas_Can // for the stop on the way (step 7)
+			cans += 1
+		case camp.on && !camp.hopping && carpools < need && c.households > CARPOOL_SPARE && (i == camp.staging || campaign_reaches(g, owner, i, camp.staging)):
 			c.build = .Carpool
 			carpools += 1
 		case vans < vans_wanted(g, owner) && target_exists:
