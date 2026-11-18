@@ -398,3 +398,25 @@ test_a_rival_offers_trade :: proc(t: ^testing.T) {
 	command(g, .Confirm)
 	testing.expect(t, trading(g, PLAYER, 1))
 }
+
+@(test)
+test_post_fits_the_desk :: proc(t: ^testing.T) {
+	// Slice 3 step 8: the post packs two forms to a line, and says how many more did not fit.
+	items: [5]Text
+	for &it, i in items {
+		add(&it, "turn 14")
+		add_int(&it, i)
+		add(&it, ": tribute (50 BJ)")
+	}
+	one := post_lines(items[:1], 1)
+	testing.expect_value(t, text(&one[0]), "turn 140: tribute (50 BJ)")
+	two := post_lines(items[:2], 1)
+	testing.expect_value(t, text(&two[0]), "turn 140: tribute (50 BJ); turn 141: tribute (50 BJ)")
+	all := post_lines(items[:], 1)
+	testing.expect_value(t, text(&all[0]), "turn 140: tribute (50 BJ); and 4 more.")
+	roomy := post_lines(items[:], 2)
+	testing.expect_value(t, text(&roomy[1]), "turn 142: tribute (50 BJ); and 2 more.")
+	for &ln in roomy {
+		testing.expect(t, ln.n <= POST_COLS)
+	}
+}

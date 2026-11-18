@@ -115,7 +115,9 @@ rule :: proc(g: ^Game, r: Ruling) {
 		add(&b, ": ")
 		add(&b, text(&k.why))
 		add(&b, " Dismissed.")
-		minute(c, text(&b))
+		if complaint_fits(c, text(&b), 0) {
+			minute(c, text(&b))
+		}
 		if k.complainer != NO_OWNER && k.complainer != p {
 			add_grudge(g, k.complainer, p, GRUDGE_DISMISSED)
 		}
@@ -127,6 +129,15 @@ finish_meeting :: proc(g: ^Game) {
 	c := &g.council
 	if c.docket_n == 0 {
 		minute(c, "No complaints. Nobody believes it.")
+	}
+	if c.more_n > 0 {
+		b: Text
+		add(&b, "And ")
+		add_int(&b, c.more_n)
+		add(&b, c.more_n == 1 ? " more complaint, fined " : " more complaints, fined ")
+		add_int(&b, c.more_bj)
+		add(&b, " BJ in all.")
+		minute(c, text(&b))
 	}
 	propose_bylaws(g)
 	if c.meetings % 2 == 1 {

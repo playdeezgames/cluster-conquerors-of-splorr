@@ -223,14 +223,16 @@ cast_bylaw_votes :: proc(g: ^Game, mine: Vote) {
 	add_int(&b, tally[2])
 	add(&b, " for ")
 	add(&b, BYLAWS[c.proposals[1]].name)
-	add(&b, ". ")
-	if won == .None {
-		add(&b, "No bylaw until the next meeting.")
-	} else {
-		add(&b, "Passed: ")
-		add(&b, BYLAWS[won].says)
-	}
+	add(&b, ".")
 	minute(c, text(&b))
+	p: Text // a line of its own: with the tally it ran past a message's 96 characters (slice 3 step 8)
+	if won == .None {
+		add(&p, "No bylaw until the next meeting.")
+	} else {
+		add(&p, "Passed: ")
+		add(&p, BYLAWS[won].says)
+	}
+	minute(c, text(&p))
 	pass_bylaw(g, won)
 }
 

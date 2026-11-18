@@ -259,15 +259,35 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 			print(f, text(&bases), x, y, COLOR_LIGHT)
 			y += 10
 		}
+		theirs := 0
 		for e in 1 ..< g.empire_count {
-			if o := fleet_of(g, g.cursor, e); o != nil {
-				who: Text
-				add_int(&who, fleet_size(o))
-				add(&who, " ")
-				add(&who, RACES[g.empires[e].race].one)
-				add(&who, " ships")
-				print(f, text(&who), x, y, EMPIRE_COLORS[e])
-				y += 10
+			theirs += fleet_of(g, g.cursor, e) != nil ? 1 : 0
+		}
+		if theirs >= 3 {
+			// Slice 3 step 8: three or more rivals' fleets here, as counts in their colours on one line.
+			print(f, "Their ships:", x, y, COLOR_LIGHT)
+			y += 10
+			cx := x
+			for e in 1 ..< g.empire_count {
+				if o := fleet_of(g, g.cursor, e); o != nil {
+					n: Text
+					add_int(&n, fleet_size(o))
+					print(f, text(&n), cx, y, EMPIRE_COLORS[e])
+					cx += (n.n + 1) * GLYPH_W
+				}
+			}
+			y += 10
+		} else {
+			for e in 1 ..< g.empire_count {
+				if o := fleet_of(g, g.cursor, e); o != nil {
+					who: Text
+					add_int(&who, fleet_size(o))
+					add(&who, " ")
+					add(&who, RACES[g.empires[e].race].one)
+					add(&who, " ships")
+					print(f, text(&who), x, y, EMPIRE_COLORS[e])
+					y += 10
+				}
 			}
 		}
 	}
@@ -276,10 +296,36 @@ draw_star_panel :: proc(f: ^Frame, g: ^Game) {
 	if fl != nil {
 		print(f, "Yer ships here:", x, y, COLOR_WHITE)
 		y += 10
+		// As many kinds as there is room for above the fuel, the refills, the bill and the action line.
+		bottom := ACTION_Y - 2
+		for &o in g.fleets {
+			if o.used && o.star == NO_STAR && o.to == g.cursor {
+				bottom = ACTION_Y - 13
+				break
+			}
+		}
+		tail := 2 + 10 + (fl.ships[.Gas_Can] > 0 ? 12 : 0) + (owed(g, fl) > 0 ? 10 : 0)
+		kinds := 0
+		for c in fl.ships {
+			kinds += c > 0 ? 1 : 0
+		}
+		room := max(1, (bottom - tail - y + 1) / 9)
+		shown := kinds <= room ? kinds : room - 1
+		k := 0
 		for c, t in fl.ships {
 			if c == 0 {
 				continue
 			}
+			if k == shown {
+				more: Text
+				add(&more, "+")
+				add_int(&more, kinds - shown)
+				add(&more, " more kinds")
+				print(f, text(&more), x + 6, y, COLOR_MID)
+				y += 9
+				break
+			}
+			k += 1
 			line: Text
 			add_int(&line, c)
 			add(&line, " ")
@@ -939,9 +985,17 @@ draw_council :: proc(f: ^Frame, g: ^Game) {
 		draw_ruling(f, g)
 		return
 	}
+	// When the minutes run longer than the room above the vote (or the foot), the heading stays and
+	// the latest lines show (slice 3 step 8).
+	room := minutes_room(c)
+	skip := max(0, c.lines - room)
 	for i in 0 ..< c.lines {
+		if i > 0 && i <= skip {
+			continue
+		}
+		row := i == 0 ? 0 : i - skip
 		color: u8 = i == 0 ? COLOR_WHITE : COLOR_LIGHT
-		print(f, message(&c.minutes[i]), x, MINUTES_Y + i * 10, color)
+		print(f, message(&c.minutes[i]), x, MINUTES_Y + row * 10, color)
 	}
 	if c.bylaw_voting || c.voting {
 		print(f, c.bylaw_voting ? "Yer vote on the bylaw:" : "Yer vote for President:", x, VOTE_Y - 14, COLOR_WHITE)
@@ -1070,38 +1124,104 @@ draw_desk :: proc(f: ^Frame, g: ^Game) {
 		add(&m, MOOD_NEWS[g.empires[r].mood])
 		y += 10 * print_wrapped(f, text(&m), x, y + 10, 58, COLOR_MID) + 14
 	}
-	print(f, "In the post (answers due):", x, y, COLOR_WHITE)
-	y += 10
-	any_ := false
+	// The post to the rival on the desk, two forms to a line where they fit, as many lines as there is
+	// room for (slice 3 step 8: with five rivals the post to everyone ran off the desk).
+	others := 0
+	items: [MAX_FORMS]Text
+	n_items := 0
 	for &fm in g.forms {
-		if !fm.used || fm.from != PLAYER || y > VIEW_H * TILE - 24 {
+		if !fm.used || fm.from != PLAYER {
 			continue
 		}
-		any_ = true
-		b: Text
-		add(&b, "Turn ")
-		add_int(&b, fm.due)
-		add(&b, ": ")
-		add(&b, POST_NAMES[fm.kind])
+		if fm.to != r {
+			others += 1
+			continue
+		}
+		b := &items[n_items]
+		n_items += 1
+		add(b, "turn ")
+		add_int(b, fm.due)
+		add(b, ": ")
+		add(b, POST_NAMES[fm.kind])
 		if fm.kind == .Tribute || fm.kind == .Threat {
-			add(&b, " (")
-			add_int(&b, fm.amount)
-			add(&b, " BJ)")
+			add(b, " (")
+			add_int(b, fm.amount)
+			add(b, " BJ)")
 		}
 		if fm.kind == .Gift || fm.kind == .Swap {
-			add(&b, " (")
-			add(&b, tech_name(fm.tech))
-			add(&b, ")")
+			add(b, " (")
+			add(b, tech_name(fm.tech))
+			add(b, ")")
 		}
-		add(&b, ", the ")
-		add(&b, empire_name(g, fm.to))
-		print(f, text(&b), x + 2 * GLYPH_W, y, COLOR_LIGHT)
-		y += 10
 	}
-	if !any_ {
+	h: Text
+	add(&h, "In the post to them (answers due")
+	if others > 0 {
+		add(&h, "; ")
+		add_int(&h, others)
+		add(&h, " more to others")
+	}
+	add(&h, "):")
+	print(f, text(&h), x, y, COLOR_WHITE)
+	y += 10
+	if n_items == 0 {
 		print(f, "nothing.", x + 2 * GLYPH_W, y, COLOR_DARK)
 	}
+	room := max(1, (VIEW_H * TILE - 24 - y) / 10 + 1)
+	lines := post_lines(items[:n_items], room)
+	for &ln, i in lines[:min(room, len(lines))] {
+		if ln.n > 0 {
+			print(f, text(&ln), x + 2 * GLYPH_W, y + i * 10, COLOR_LIGHT)
+		}
+	}
 	print(f, "Up/Down: pick. Left/Right: change. Enter/OK: file.", x, VIEW_H * TILE - 12, COLOR_DARK)
+}
+
+POST_COLS :: 56 // the desk's 58 columns, less the indent
+
+// Packs the post into at most `room` lines (up to 4), two forms to a line where they fit; if they do
+// not all fit, the last line ends "and N more."
+post_lines :: proc(items: []Text, room_lines: int) -> (lines: [4]Text) {
+	room := clamp(room_lines, 1, len(lines))
+	used := 0
+	line := 0
+	for used < len(items) && line < room {
+		it := text(&items[used])
+		ln := &lines[line]
+		sep := ln.n > 0 ? "; " : ""
+		if ln.n > 0 && ln.n + len(sep) + len(it) > POST_COLS {
+			line += 1
+			continue
+		}
+		add(ln, sep)
+		add(ln, it)
+		used += 1
+	}
+	if used < len(items) {
+		last := &lines[room - 1]
+		// Take forms back off the last line until "and N more." fits behind it.
+		for {
+			more := len(items) - used
+			tail: Text
+			add(&tail, last.n > 0 ? "; and " : "and ")
+			add_int(&tail, more)
+			add(&tail, " more.")
+			if last.n + tail.n <= POST_COLS || last.n == 0 {
+				add(last, text(&tail))
+				break
+			}
+			// drop the last form on this line
+			cut := 0
+			for i in 0 ..< last.n - 1 {
+				if last.buf[i] == ';' && last.buf[i + 1] == ' ' {
+					cut = i
+				}
+			}
+			last.n = cut
+			used -= 1
+		}
+	}
+	return
 }
 
 // A row of the desk as a label, the value between < and > (if it has one) and what follows it.

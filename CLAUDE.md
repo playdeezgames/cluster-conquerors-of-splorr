@@ -24,6 +24,7 @@ python3 -I tools/extract_gfx.py [--sheet out.png]  # regenerate src/game/gfx.odi
 python3 -I tools/make_cover.py # regenerate the placeholder assets/cover.png
 tools/make_shots.sh            # render real frames natively: assets/screenshots/01-05 and assets/portal.png (the portal card picture; restore it with git unless the user asked for a new one)
 tools/sim.sh [games] [turns] [size] [rivals] [difficulty]   # the balance simulator (size 0 to 3, small to huge; rivals 0 for the size's default; difficulty -2 to 2): the computer plays every side, reports when things first happen
+tools/time.sh [turns]   # how long a turn and a map frame take natively at huge with five rivals (5 games); the browser measured about the same (slice 3 step 8)
 ```
 
 The browser pane's launch config `conquerors-web` (port 8767, in the vault's `.claude/launch.json` and this repo's) serves `build/web`; run `tools/build.sh` first. The pane does not run frames until a screenshot is taken.

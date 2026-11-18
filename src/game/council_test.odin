@@ -249,3 +249,36 @@ test_meetings_start_when_you_have_met_them :: proc(t: ^testing.T) {
 	council_turn(g)
 	testing.expect(t, g.council.started) // that one is gone, and the rivals never met each other
 }
+
+@(test)
+test_six_empire_minutes_fit :: proc(t: ^testing.T) {
+	// A full docket at a meeting of six (slice 3 step 8): the complaints past COMPLAINTS_END are summed
+	// up in one line, the minutes keep room for every vote and its result, and the screen shows the
+	// heading and the latest lines.
+	g := new(Game)
+	defer free(g)
+	init_game(g, SEED, {size = .Huge, rivals = 5})
+	choose_race(g, .Beavers)
+	all_met(g)
+	for e in 0 ..< g.empire_count {
+		g.empires[e].bj = 1000
+		colony_at(g, g.empires[e].home).waste = MESS_WASTE
+	}
+	council_turn(g)
+	c := &g.council
+	testing.expect(t, c.bylaw_voting)
+	testing.expect(t, c.more_n > 0)
+	testing.expect(t, minutes_contain(g, "more complaint"))
+	testing.expect(t, c.lines <= minutes_room(c))
+	testing.expect(t, minutes_contain(g, "Standing for President"))
+	command(g, .Confirm)
+	testing.expect(t, minutes_contain(g, "Passed: ") || minutes_contain(g, "No bylaw"))
+	command(g, .Confirm)
+	testing.expect(t, minutes_contain(g, "Votes: "))
+	testing.expect(t, minutes_contain(g, "two thirds") || minutes_contain(g, "President"))
+	testing.expect(t, c.lines < MINUTES_LINES)
+	for i in 0 ..< c.lines {
+		testing.expect(t, c.minutes[i].n <= MINUTES_COLS)
+	}
+	testing.expect(t, minutes_room(c) * 10 + MINUTES_Y <= VIEW_H * TILE - 24)
+}

@@ -78,6 +78,32 @@ test_dump_play :: proc(t: ^testing.T) {
 		shot(g, fr, "doormat-swap.ppm")
 		g.doormat = {}
 		g.mode = .Map
+		// A star with ships of four empires (slice 3 step 8), seen from yers.
+		{
+			at := g.empires[3].home
+			for e in ([3]int{PLAYER, 1, 2}) {
+				ff := new_fleet(g)
+				ff.owner = e
+				ff.ships[.Golf_Cart], ff.ships[.Pickup], ff.ships[.Carpool] = 5, 2, 1
+				dock(g, ff, at)
+			}
+			g.empires[PLAYER].sees[at] = true
+			g.cursor = at
+			shot(g, fr, "huge-crowded-star.ppm")
+			// The most a star can hold: every empire's ships, yers of every kind, refills and a bill.
+			for e in ([2]int{4, 5}) {
+				ff := new_fleet(g)
+				ff.owner = e
+				ff.ships[.Golf_Cart] = 3
+				dock(g, ff, at)
+			}
+			mine := fleet_of(g, at, PLAYER)
+			for t in Ship_Type {
+				mine.ships[t] = max(mine.ships[t], 1)
+			}
+			mine.refills = GAS_CAN_REFILLS
+			shot(g, fr, "huge-fullest-star.ppm")
+		}
 		// Every rival's home, to see the colours.
 		for r in 1 ..< g.empire_count {
 			g.empires[PLAYER].sees[g.empires[r].home] = true
@@ -85,6 +111,24 @@ test_dump_play :: proc(t: ^testing.T) {
 		g.mode = .Map
 		g.cursor = g.empires[3].home
 		shot(g, fr, "rival-home.ppm")
+		// The council with six empires (slice 3 step 8): every screen of a meeting, in turn.
+		for a in 0 ..< g.empire_count {
+			for b in 0 ..< g.empire_count {
+				g.empires[a].met[b] = a != b
+			}
+		}
+		for e in 0 ..< g.empire_count {
+			if col := any_colony(g, g.empires[e].home); col != nil {
+				col.waste = MESS_WASTE // a full docket
+			}
+		}
+		council_turn(g)
+		for k := 0; k < 12 && (g.mode == .Council || g.mode == .Doormat); k += 1 {
+			digits := "0123456789"
+			shot(g, fr, strings.concatenate({"huge-council-", digits[k / 10:][:1], digits[k % 10:][:1], ".ppm"}, context.temp_allocator))
+			command(g, .Confirm)
+		}
+		g.mode = .Map
 		init_game(g, u64(DUMP_SEED))
 		choose_race(g, .Beavers)
 		for _ in 0 ..< 12 {

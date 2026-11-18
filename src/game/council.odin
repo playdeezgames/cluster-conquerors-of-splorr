@@ -14,7 +14,8 @@ FINE_PERCENT :: 5 // of the empire's BJ, per complaint
 MESS_WASTE :: 5 // waste lying about at a colony before the neighbours complain
 PRESIDENT_DUTY :: 10 // BJ the President pays for every meeting after being elected
 RIVAL_BACKS_RIVAL_IN :: 5 // a rival votes for the other rival one time in this many
-MINUTES_LINES :: 14
+MINUTES_LINES :: 24 // the most a meeting can need (slice 3 step 8), not all shown at once
+COMPLAINTS_END :: 10 // complaints are minuted in full up to this line; the rest are summed up in one
 
 Vote :: enum u8 {
 	Abstain,
@@ -45,15 +46,43 @@ Council :: struct {
 	docket_n:   int,
 	docket_i:   int, // the next to be ruled on
 	ruling:     bool, // waiting for yer ruling as President
+	more_n:     int, // complaints past COMPLAINTS_END this meeting, summed up after the docket
+	more_bj:    int, // and the BJ they were fined
 }
 
 MINUTES_COLS :: (VIEW_W * TILE - 12) / GLYPH_W
 
+// The lines of minutes the council screen has room for: above the vote, or above the foot.
+minutes_room :: proc(c: ^Council) -> int {
+	bottom := c.bylaw_voting || c.voting ? VOTE_Y - 14 : VIEW_H * TILE - 26
+	return (bottom - MINUTES_Y - 8) / 10 + 1
+}
+
 // Adds an entry to the minutes, wrapped at spaces (later lines indented).
 minute :: proc(c: ^Council, s: string) {
+	wrap_minute(c, s, true)
+}
+
+// The lines an entry would take in the minutes.
+minute_lines :: proc(c: ^Council, s: string) -> int {
+	return wrap_minute(c, s, false)
+}
+
+// Whether a complaint still gets its own entry; if not, it is counted for the summing up.
+complaint_fits :: proc(c: ^Council, s: string, fined: int) -> bool {
+	if c.lines + minute_lines(c, s) <= COMPLAINTS_END {
+		return true
+	}
+	c.more_n += 1
+	c.more_bj += fined
+	return false
+}
+
+wrap_minute :: proc(c: ^Council, s: string, write: bool) -> int {
 	rest := s
 	first := true
-	for len(rest) > 0 && c.lines < MINUTES_LINES {
+	n := 0
+	for len(rest) > 0 && (!write || c.lines < MINUTES_LINES) {
 		width := first ? MINUTES_COLS : MINUTES_COLS - 2
 		cut := min(len(rest), width, LOG_CAP - 2)
 		if cut < len(rest) {
@@ -64,19 +93,23 @@ minute :: proc(c: ^Council, s: string) {
 				}
 			}
 		}
-		m := &c.minutes[c.lines]
-		m^ = {}
-		lead := first ? "" : "  "
-		copy(m.text[:len(lead)], lead)
-		copy(m.text[len(lead):len(lead) + cut], rest[:cut])
-		m.n = len(lead) + cut
-		c.lines += 1
+		if write {
+			m := &c.minutes[c.lines]
+			m^ = {}
+			lead := first ? "" : "  "
+			copy(m.text[:len(lead)], lead)
+			copy(m.text[len(lead):len(lead) + cut], rest[:cut])
+			m.n = len(lead) + cut
+			c.lines += 1
+		}
+		n += 1
 		rest = rest[cut:]
 		for len(rest) > 0 && rest[0] == ' ' {
 			rest = rest[1:]
 		}
 		first = false
 	}
+	return n
 }
 
 // "you" or "the Owls", for the minutes.
@@ -153,7 +186,9 @@ fine :: proc(g: ^Game, owner: int, why: string, times := 1, how := "Fined") {
 	add(&b, " ")
 	add_int(&b, amount)
 	add(&b, " BJ.")
-	minute(c, text(&b))
+	if complaint_fits(c, text(&b), amount) {
+		minute(c, text(&b))
+	}
 }
 
 // The complaints against an empire this meeting.
@@ -222,8 +257,9 @@ hold_meeting :: proc(g: ^Game) {
 	c.voting = false
 	c.bylaw_voting = false
 	c.docket_n, c.docket_i = 0, 0
+	c.more_n, c.more_bj = 0, 0
 	b: Text
-	add(&b, "Minutes of the Homeowners' Association, meeting ")
+	add(&b, "Homeowners' Association, meeting ")
 	add_int(&b, c.meetings)
 	add(&b, ", turn ")
 	add_int(&b, g.turn)
