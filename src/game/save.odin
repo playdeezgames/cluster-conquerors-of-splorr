@@ -6,7 +6,7 @@ package game
 // and a new cluster starts.
 
 SAVE_MAGIC :: u32(0x5343_4343) // "CCCS"
-SAVE_VERSION :: u32(18) // 18: slice 3 step 8 (longer minutes); 17: slice 3 step 7 (reach, finishing); 16: slice 3 step 6 (campaigns); 15: slice 3 step 5 (aims); 14: slice 3 step 4 (tempers); 13: slice 3 step 3 (difficulty); 12: slice 3 step 2 (up to six empires); 11: slice 3 step 1 (cluster sizes); 2: slice 2 step 1 (grudges); 3: step 2 (forms); 4: step 3 (alliances, trade); 5: step 4 (the Watch); 6: step 5 (framing); 7: step 6 (bylaws); 8: step 7 (rulings); 9: step 8 (events); 10: step 9 (slice 2 complete)
+SAVE_VERSION :: u32(19) // 19: slice 3 step 9 (slice 3 complete); 18: slice 3 step 8 (longer minutes); 17: slice 3 step 7 (reach, finishing); 16: slice 3 step 6 (campaigns); 15: slice 3 step 5 (aims); 14: slice 3 step 4 (tempers); 13: slice 3 step 3 (difficulty); 12: slice 3 step 2 (up to six empires); 11: slice 3 step 1 (cluster sizes); 2: slice 2 step 1 (grudges); 3: step 2 (forms); 4: step 3 (alliances, trade); 5: step 4 (the Watch); 6: step 5 (framing); 7: step 6 (bylaws); 8: step 7 (rulings); 9: step 8 (events); 10: step 9 (slice 2 complete)
 
 Save_Header :: struct {
 	magic:   u32,

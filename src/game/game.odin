@@ -102,6 +102,7 @@ Game :: struct {
 	planned:    int, // campaigns planned
 	timed_out:  int, // campaigns given up for taking too long
 	dropped:    int, // campaigns given up because the target went (or the staging colony did)
+	retargeted: int, // campaigns dropped for an empire nearly finished (step 9)
 	battle:     Battle, // the player's battle on screen
 	pending:    [8][2]int, // the player's battles this turn: star, enemy
 	pending_n:  int,

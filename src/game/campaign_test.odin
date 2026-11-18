@@ -239,3 +239,60 @@ test_campaign_finishing :: proc(t: ^testing.T) {
 	f.kit = {}
 	testing.expect_value(t, planning_kit(g, 1), Kit{})
 }
+
+@(test)
+test_threat_is_local :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	home, other, yers := campaign_game(g, 10)
+	rival_fleet(g, home, 1, only(.Pickup, 3))
+	rival_fleet(g, other, 1, only(.Pickup, 2))
+	for &f in g.fleets {
+		if f.used && f.owner != 1 {
+			f = {} // nobody else's ships about
+		}
+	}
+	// The other colony 9 cells up or down from home, 11 or so from yers.
+	g.stars[other].x = g.stars[home].x
+	g.stars[other].y = g.stars[home].y + (g.stars[home].y < g.galaxy_h / 2 ? 9 : -9)
+	// An Inspector going by is no threat (step 9).
+	insp := rival_fleet(g, yers, PLAYER, ship_one(.Inspector))
+	update_sight(g)
+	testing.expect(t, !threatened(g, 1))
+	// Armed ships at yer colony, 6 cells from the rival's home and 12 from its other colony, threaten
+	// the home only: it arms, and the campaign goes on from the other.
+	insp.ships = only(.Golf_Cart, 1)
+	update_sight(g)
+	testing.expect(t, threatened(g, 1))
+	testing.expect(t, threatened(g, 1, home))
+	testing.expect(t, !threatened(g, 1, other))
+	g.empires[1].met[PLAYER] = true
+	ai_turn(g, 1)
+	testing.expect_value(t, colony_of(g, home, 1).build, Ship_Type.Pickup)
+	testing.expect(t, colony_of(g, other, 1).build != .Pickup)
+	testing.expect(t, g.empires[1].campaign.on)
+	testing.expect_value(t, g.empires[1].campaign.target, yers)
+}
+
+@(test)
+test_campaign_switches_to_finishing :: proc(t: ^testing.T) {
+	g := new(Game)
+	defer free(g)
+	home, _, yers := campaign_game(g, 10)
+	rival_fleet(g, home, 1, only(.Pickup, 5))
+	plan_campaign(g, 1, true)
+	testing.expect_value(t, g.empires[1].campaign.target, yers)
+	// Another empire, down to its home from three colonies, a little closer: the campaign switches.
+	h2 := g.empires[2].home
+	g.stars[h2].x = g.stars[home].x
+	g.stars[h2].y = clamp(g.stars[home].y + 5, 0, g.galaxy_h - 1)
+	g.empires[2].peak = 3
+	testing.expect(t, nearly_finished(g, 2))
+	g.empires[1].intel[h2] = {seen = true, owner = 2, strength = 10, households = 10}
+	plan_campaign(g, 1, true)
+	testing.expect_value(t, g.empires[1].campaign.target, h2)
+	testing.expect_value(t, g.retargeted, 1)
+	// And it stays on it.
+	plan_campaign(g, 1, true)
+	testing.expect_value(t, g.retargeted, 1)
+}

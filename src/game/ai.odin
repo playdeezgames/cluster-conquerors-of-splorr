@@ -33,9 +33,10 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		}
 	}
 	at_war := goes_to_war(g, owner, target_exists)
-	if !threat {
-		plan_campaign(g, owner, at_war)
-	}
+	// Since step 9 a threat is met where it is: the threatened colonies arm, and the campaign goes on
+	// from the others (a threat anywhere stopped every campaign, and with five rivals there nearly
+	// always was one).
+	plan_campaign(g, owner, at_war)
 	camp := e.campaign
 	need := campaign_carpools_wanted(g, owner)
 	carpools, cans := ships_owned(g, owner, .Carpool), 0 // all its Carpools gather for the campaign
@@ -49,10 +50,11 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		if c == nil {
 			continue
 		}
-		ai_sliders(g, i, c, threat)
-		aim_sliders(g, c, threat)
+		here := threat && threatened(g, owner, i)
+		ai_sliders(g, i, c, here)
+		aim_sliders(g, c, here)
 		switch {
-		case threat:
+		case here:
 			c.build = i == e.home ? .Pickup : .Golf_Cart
 		case camp.on && !camp.hopping && i == camp.staging && camp.via != NO_STAR && cans < 1:
 			c.build = .Gas_Can // for the stop on the way (step 7)
@@ -76,10 +78,8 @@ ai_turn :: proc(g: ^Game, owner: int) {
 		}
 	}
 	ai_fleets(g, owner)
-	if !threat {
-		staging := run_campaign(g, owner)
-		ai_attack(g, owner, at_war, staging)
-	}
+	staging := run_campaign(g, owner)
+	ai_attack(g, owner, at_war, staging)
 }
 
 ATTACK_PERCENT :: 150 // a computer empire attacks only with at least this share of the hits it saw there
@@ -113,6 +113,9 @@ ai_attack :: proc(g: ^Game, owner: int, at_empires := true, skip := NO_STAR) {
 		f := fleet_of(g, i, owner)
 		if f == nil || i == skip || stranded(g, f) || warship_hits(f) == 0 {
 			continue
+		}
+		if colony_of(g, i, owner) != nil && threatened(g, owner, i) {
+			continue // a threatened colony keeps its warships at home
 		}
 		if colony_of(g, i, owner) == nil {
 			if strength_at(g, i, owner) == 0 {
@@ -189,11 +192,11 @@ ai_sliders :: proc(g: ^Game, star: int, c: ^Colony, threat: bool) {
 	c.locked = {}
 }
 
-// A hostile fleet the empire can see near one of its colonies.
-threatened :: proc(g: ^Game, owner: int) -> bool {
+// A hostile fleet the empire can see near one of its colonies (or near this one, given a star).
+threatened :: proc(g: ^Game, owner: int, star := NO_STAR) -> bool {
 	for &f in g.fleets {
-		if !f.used || f.owner == owner || has_pact(g, owner, f.owner) {
-			continue
+		if !f.used || f.owner == owner || has_pact(g, owner, f.owner) || (warship_hits(&f) == 0 && f.ships[.Carpool] == 0) {
+			continue // step 9: Inspectors, Moving Vans and Gas Cans going by are no threat
 		}
 		fx, fy := fleet_cell(g, &f)
 		seen := false
@@ -206,7 +209,7 @@ threatened :: proc(g: ^Game, owner: int) -> bool {
 			continue
 		}
 		for i in 0 ..< g.star_count {
-			if colony_of(g, i, owner) == nil {
+			if colony_of(g, i, owner) == nil || (star != NO_STAR && i != star) {
 				continue
 			}
 			dx, dy := g.stars[i].x - fx, g.stars[i].y - fy

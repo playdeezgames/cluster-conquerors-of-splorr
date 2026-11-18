@@ -179,13 +179,37 @@ plan_campaign :: proc(g: ^Game, owner: int, at_empires: bool) {
 		c.on = false
 		g.timed_out += 1
 	}
+	if c.on && !c.hopping && !finishing(g, owner, c.target) {
+		// Step 9: an empire nearly finished is worth dropping a campaign for, before it recovers.
+		if t, _, _ := best_campaign_target(g, owner, at_empires); t != NO_STAR && finishing(g, owner, t) {
+			c.on = false
+			g.retargeted += 1
+		}
+	}
 	if c.on {
 		return
 	}
+	best, best_staging, best_via := best_campaign_target(g, owner, at_empires)
+	if best != NO_STAR {
+		c^ = {true, best, best_staging, g.turn, best_via, false}
+		g.planned += 1
+	}
+}
+
+// Whether the campaign target is a colony of an empire nearly finished.
+finishing :: proc(g: ^Game, owner, star: int) -> bool {
+	in_ := campaign_intel(g, owner, star)
+	return in_.owner >= 0 && nearly_finished(g, in_.owner)
+}
+
+// The star the empire most wants a campaign against, of those its docked warships could beat, with
+// the staging colony and any stop on the way; NO_STAR if none.
+best_campaign_target :: proc(g: ^Game, owner: int, at_empires: bool) -> (best, best_staging, best_via: int) {
 	total := docked_hits(g, owner)
 	weakest := weakest_met(g, owner)
 	pct := attack_percent(g, owner)
-	best, best_score, best_d, best_staging, best_via := NO_STAR, -1, max(int), NO_STAR, NO_STAR
+	best, best_staging, best_via = NO_STAR, NO_STAR, NO_STAR
+	best_score, best_d := -1, max(int)
 	for t in 0 ..< g.star_count {
 		if !campaign_target_ok(g, owner, t, at_empires) {
 			continue
@@ -204,10 +228,7 @@ plan_campaign :: proc(g: ^Game, owner: int, at_empires: bool) {
 			best, best_score, best_d, best_staging, best_via = t, score, d, staging, via
 		}
 	}
-	if best != NO_STAR {
-		c^ = {true, best, best_staging, g.turn, best_via, false}
-		g.planned += 1
-	}
+	return
 }
 
 // The Carpools the campaign wants at the staging colony (0 if none, or for a fleet or the moth). Since
@@ -301,7 +322,7 @@ run_campaign :: proc(g: ^Game, owner: int) -> int {
 			continue
 		}
 		o := fleet_of(g, i, owner)
-		if o == nil || stranded(g, o) || (warship_hits(o) == 0 && o.ships[.Carpool] == 0) {
+		if o == nil || stranded(g, o) || (warship_hits(o) == 0 && o.ships[.Carpool] == 0) || threatened(g, owner, i) {
 			continue
 		}
 		war := warships_of(o)

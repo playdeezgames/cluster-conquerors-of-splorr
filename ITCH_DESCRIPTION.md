@@ -1,7 +1,7 @@
 # itch.io page copy: Cluster Conquerors of SPLORR!!
 
 Page: https://thegrumpygamedev.itch.io/cluster-conquerors-of-splorr (not created yet; no release booked). Pages comes first (`DESIGN.md`: a normal release, GitHub Pages as soon as a galaxy map can be explored, itch.io later on a Coxswain-booked day).
-**Draft, written November 10, 2026 at slice 1 step 0 and brought up to the end of slice 1 on November 12, 2026 and of slice 2 on November 15, 2026; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, a placeholder made by `tools/make_cover.py`). Screenshots: `assets/screenshots/01-map.png` to `05-watch.png` (native frames at 3x, by `tools/make_shots.sh`).
+**Draft, written November 10, 2026 at slice 1 step 0 and brought up to the end of slice 1 on November 12, 2026, of slice 2 on November 15, 2026 and of slice 3 on November 18, 2026; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, a placeholder made by `tools/make_cover.py`). Screenshots: `assets/screenshots/01-map.png` to `05-watch.png` (native frames at 3x, by `tools/make_shots.sh`).
 
 ## Short description (the one-line field)
 
@@ -37,7 +37,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
 - **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
 
-This is slice 2 of 3, done: one small cluster and two rivals, now with all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 has begun: clusters now come in four sizes, from 20 stars to 72, with up to five rivals and five difficulty levels, from Quiet street to Cul-de-sac from hell. Every rival now has a temper (Petty, Pushy, Two-faced, Neighbourly or Touchy) and an aim (Builder, Bully, Busybody, Committee type or Tinkerer). The rivals now gather their fleets before they attack, escort their Carpools, reach far with Gas Cans and close in on a beaten empire.
+All three slices are built. Slice 2 brought all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 is done: clusters come in four sizes, from 20 stars to 72, with up to five rivals and five difficulty levels, from Quiet street to Cul-de-sac from hell. Every rival now has a temper (Petty, Pushy, Two-faced, Neighbourly or Touchy) and an aim (Builder, Bully, Busybody, Committee type or Tinkerer). The rivals gather their fleets before they attack, escort their Carpools, reach far with Gas Cans and close in on a beaten empire, and now and then one of them is moved out for good.
 
 ### About it
 
