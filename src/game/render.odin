@@ -1109,15 +1109,23 @@ draw_desk :: proc(f: ^Frame, g: ^Game) {
 		}
 		tm: Text
 		add(&tm, "Temper: ")
-		add(&tm, TEMPERS[temper_of(g, r)].name)
-		add(&tm, ". ")
-		add(&tm, TEMPERS[temper_of(g, r)].says)
+		if temper_known(g, r) {
+			add(&tm, TEMPERS[temper_of(g, r)].name)
+			add(&tm, ". ")
+			add(&tm, TEMPERS[temper_of(g, r)].says)
+		} else {
+			add(&tm, "not known yet.")
+		}
 		y += 10 * print_wrapped(f, text(&tm), x, y + 10, 58, COLOR_MID)
 		am: Text
 		add(&am, "Aim: ")
-		add(&am, AIMS[aim_of(g, r)].name)
-		add(&am, ". ")
-		add(&am, AIMS[aim_of(g, r)].says)
+		if aim_known(g, r) {
+			add(&am, AIMS[aim_of(g, r)].name)
+			add(&am, ". ")
+			add(&am, AIMS[aim_of(g, r)].says)
+		} else {
+			add(&am, "not known yet.")
+		}
 		y += 10 * print_wrapped(f, text(&am), x, y + 10, 58, COLOR_MID)
 		m: Text
 		add(&m, "Last heard: they ")

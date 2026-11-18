@@ -109,21 +109,3 @@ breaks_pact :: proc(g: ^Game, e, other: int) -> bool {
 	gr := g.empires[e].grudge[other]
 	return gr >= at || (gr >= grudge_floor(g, other) && empire_strength(g, e) * 100 >= stronger * max(1, empire_strength(g, other)))
 }
-
-// The news when you first meet a rival: its temper and its aim, in one line ("The Rabbits are Touchy
-// Builders."); the forms desk says what they mean.
-temper_news :: proc(g: ^Game, e: int) {
-	t, a := temper_of(g, e), aim_of(g, e)
-	if t == .None && a == .None {
-		return
-	}
-	b: Text
-	add(&b, "The ")
-	add(&b, empire_name(g, e))
-	add(&b, " are ")
-	add(&b, TEMPERS[t].name)
-	add(&b, " ")
-	add(&b, AIMS[a].plural)
-	add(&b, ". The forms desk says more.")
-	say(g, text(&b))
-}

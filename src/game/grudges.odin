@@ -43,6 +43,9 @@ add_grudge :: proc(g: ^Game, holder, against, amount: int) {
 	}
 	gr := &g.empires[holder].grudge[against]
 	gr^ = clamp(gr^ + tempered_grudge(g, holder, amount), 0, GRUDGE_MAX)
+	if against == PLAYER && gr^ > PETTY_GIVEAWAY {
+		give_away_temper(g, holder, .Petty)
+	}
 }
 
 // How much `holder` minds whatever it saw at a star: the owner's grudge, or the moth's.

@@ -482,6 +482,7 @@ player_retreat :: proc(g: ^Game, bt: ^Battle) -> bool {
 // the news.
 finish_battle :: proc(g: ^Game, bt: ^Battle) {
 	g.battles += 1
+	defer bully_battle(g, bt) // after the battle's news
 	add_grudge(g, bt.owners[0], bt.owners[1], GRUDGE_BATTLE)
 	add_grudge(g, bt.owners[1], bt.owners[0], GRUDGE_BATTLE)
 	lost: [2]int

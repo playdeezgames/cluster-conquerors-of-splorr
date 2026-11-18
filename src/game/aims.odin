@@ -184,6 +184,7 @@ busybody_complaints :: proc(g: ^Game) {
 		}
 		if t != NO_OWNER {
 			complain(g, t, BUSYBODY_GRIPES[rng_int(&g.rng, len(BUSYBODY_GRIPES))])
+			give_away_aim(g, e, .Busybody)
 		}
 	}
 }

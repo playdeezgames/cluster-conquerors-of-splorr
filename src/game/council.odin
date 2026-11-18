@@ -314,6 +314,10 @@ start_vote :: proc(g: ^Game) {
 	}
 	c.candidates = {first, second}
 	c.voting = true
+	defer {
+		give_away_aim(g, first, .Committee) // after the line naming them
+		give_away_aim(g, second, .Committee)
+	}
 	b: Text
 	add(&b, "Standing for President: ")
 	add(&b, who(g, first))

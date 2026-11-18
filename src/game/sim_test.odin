@@ -26,8 +26,8 @@ Sim_Stats :: struct {
 	events: [Event]int,
 	goat_ate, goats_off: int,
 	bylaw_kinds: [Bylaw]int, // in force at the end of a game
-	aim_n, aim_colonies, aim_techs, aim_strength, aim_president, aim_households: [Aim]int, // by the rival's aim, at the end
-	temper_n, temper_grudge, temper_pact, temper_forms: [Temper]int, // by the rival's temper: rivals, grudge at side 0 and pacts with it at the end, forms at it
+	aim_n, aim_colonies, aim_techs, aim_strength, aim_president, aim_households, aim_known: [Aim]int, // by the rival's aim, at the end
+	temper_n, temper_grudge, temper_pact, temper_forms, temper_known: [Temper]int, // by the rival's temper: rivals, grudge at side 0 and pacts with it at the end, forms at it
 }
 
 sim_first :: proc(list: ^[dynamic]int, seen: ^bool, turn: int, now: bool) {
@@ -129,6 +129,7 @@ test_simulate :: proc(t: ^testing.T) {
 			for e in 1 ..< g.empire_count {
 				am := g.empires[e].aim
 				st.aim_n[am] += 1
+				st.aim_known[am] += g.empires[e].aim_known ? 1 : 0 // side 0 found it out (step 10)
 				st.aim_colonies[am] += colonies_of(g, e)
 				st.aim_households[am] += households_of(g, e)
 				st.aim_strength[am] += empire_strength(g, e)
@@ -144,6 +145,7 @@ test_simulate :: proc(t: ^testing.T) {
 				}
 				tp := g.empires[e].temper
 				st.temper_n[tp] += 1
+				st.temper_known[tp] += g.empires[e].temper_known ? 1 : 0
 				st.temper_grudge[tp] += g.empires[e].grudge[PLAYER]
 				if has_pact(g, e, PLAYER) {
 					st.temper_pact[tp] += 1
@@ -209,14 +211,14 @@ test_simulate :: proc(t: ^testing.T) {
 				continue
 			}
 			n := st.aim_n[am]
-			fmt.printfln("  %-14s %3v rivals at the end: %.1f colonies, %v households, %.1f techs, strength %v; President in %v", AIMS[am].name, n, f64(st.aim_colonies[am]) / f64(n), st.aim_households[am] / n, f64(st.aim_techs[am]) / f64(n), st.aim_strength[am] / n, st.aim_president[am])
+			fmt.printfln("  %-14s %3v rivals at the end: %.1f colonies, %v households, %.1f techs, strength %v; President in %v; found out by side 0 in %v %%", AIMS[am].name, n, f64(st.aim_colonies[am]) / f64(n), st.aim_households[am] / n, f64(st.aim_techs[am]) / f64(n), st.aim_strength[am] / n, st.aim_president[am], st.aim_known[am] * 100 / n)
 		}
 		for tp in Temper {
 			if tp == .None || st.temper_n[tp] == 0 {
 				continue
 			}
 			n := st.temper_n[tp]
-			fmt.printfln("  %-12s %3v rivals: grudge at side 0 %v at the end, a pact with it in %v %%, %.1f forms at it each", TEMPERS[tp].name, n, st.temper_grudge[tp] / n, st.temper_pact[tp] * 100 / n, f64(st.temper_forms[tp]) / f64(n))
+			fmt.printfln("  %-12s %3v rivals: grudge at side 0 %v at the end, a pact with it in %v %%, %.1f forms at it each; found out by side 0 in %v %%", TEMPERS[tp].name, n, st.temper_grudge[tp] / n, st.temper_pact[tp] * 100 / n, f64(st.temper_forms[tp]) / f64(n), st.temper_known[tp] * 100 / n)
 		}
 		fmt.printfln("  colonies at the end: %.1f per empire; side 0 won %v, lost %v, was President in %v", f64(st.colonies) / f64(SIM_GAMES * (1 + rivals_in({size = Cluster_Size(SIM_SIZE), rivals = SIM_RIVALS}))), st.won, st.lost, st.presidents_you)
 	}

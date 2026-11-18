@@ -124,22 +124,10 @@ test_temper_pushy :: proc(t: ^testing.T) {
 
 @(test)
 test_temper_shown :: proc(t: ^testing.T) {
-	// First contact tells you the temper; a save keeps it.
+	// A save keeps the temper (since step 10 first contact does not tell it: giveaway_test.odin).
 	g := temper_game()
 	defer free(g)
 	g.empires[1].temper = .Petty
-	temper_news(g, 1)
-	found := false
-	for i in 0 ..< NEWS_LINES {
-		m := &g.news[i]
-		s := string(m.text[:m.n])
-		for k := 0; k + 5 <= len(s); k += 1 {
-			if s[k:k + 5] == "Petty" {
-				found = true
-			}
-		}
-	}
-	testing.expect(t, found)
 	buf := make([]u8, SAVE_SIZE)
 	defer delete(buf)
 	write_save(g, buf)

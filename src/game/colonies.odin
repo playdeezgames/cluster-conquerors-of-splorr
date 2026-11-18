@@ -448,6 +448,7 @@ movers_arrive :: proc(g: ^Game, f: ^Fleet, star: int) {
 	}
 	f.ships[.Moving_Van] -= 1
 	found_colony(g, star, NEW_COLONY_HOUSEHOLDS, f.owner)
+	defer builder_settled(g, f.owner, star) // after the news of it
 	if bylaw_is(g, .No_New_Houses) {
 		break_bylaw(g, f.owner, "A Moving Van settled.")
 	}

@@ -69,6 +69,9 @@ Empire :: struct {
 	aim:      Aim, // a rival's (aims.odin); .None for yers
 	campaign: Campaign, // the computer's current target (campaigns.odin)
 	peak:     int, // the most colonies it has had (campaigns.odin)
+	temper_known: bool, // a rival's temper has come out to you (giveaways.odin, slice 3 step 10)
+	aim_known:    bool, // and its aim
+	settled_seen: int, // its new colonies you saw settled (a Builder's giveaway)
 }
 
 // What an empire last saw at a star: whose colony, and how much there could fight back.
@@ -241,8 +244,7 @@ update_sight :: proc(g: ^Game) {
 				add(&t, " (Lot ")
 				add_int(&t, spot + 1)
 				add(&t, "). They hate you. The Homeowners' Association has been notified.")
-				say(g, text(&t))
-				temper_news(g, b)
+				say(g, text(&t)) // its temper and aim come out later, from its giveaways (step 10)
 			}
 		}
 	}

@@ -396,6 +396,7 @@ file_form :: proc(g: ^Game, from, to: int, kind: Form_Kind, amount: int, tech :=
 }
 
 declare_war :: proc(g: ^Game, from, to: int) {
+	broke_yers := false // a rival tore up a pact with you: a Two-faced giveaway after the news (step 10)
 	had := has_pact(g, from, to) || trading(g, from, to)
 	set_treaty(g, from, to, .None)
 	g.trade[from][to] = 0
@@ -403,6 +404,14 @@ declare_war :: proc(g: ^Game, from, to: int) {
 	if had {
 		add_grudge(g, to, from, GRUDGE_BROKEN_PACT)
 		g.wars += 1
+		if to == PLAYER {
+			broke_yers = true
+		} else if from != PLAYER && g.empires[PLAYER].met[to] {
+			h: Text
+			add(&h, " tore up their pact with the ")
+			add(&h, empire_name(g, to))
+			give_away_temper(g, from, .Two_Faced, text(&h))
+		}
 	}
 	if from != PLAYER && to != PLAYER {
 		return
@@ -418,6 +427,9 @@ declare_war :: proc(g: ^Game, from, to: int) {
 		add(&b, " have torn up everything with you, in triplicate.")
 	}
 	say(g, text(&b))
+	if broke_yers {
+		give_away_temper(g, from, .Two_Faced, " tore up the pact with you")
+	}
 }
 
 // At the end of a turn: answers come back, and the rivals break pacts and file forms of their own.
@@ -447,6 +459,7 @@ forms_turn :: proc(g: ^Game) {
 
 // A rival answers a form from someone else.
 answer_form :: proc(g: ^Game, f: Form) {
+	signed := false // a pact or trade signed: a Neighbourly giveaway (step 10)
 	to, from := f.to, f.from
 	if g.empires[to].out || g.empires[from].out {
 		return
@@ -459,6 +472,7 @@ answer_form :: proc(g: ^Game, f: Form) {
 		if !has_pact(g, from, to) && pact_value(g, to, from) > g.empires[to].grudge[from] {
 			set_treaty(g, from, to, .Pact)
 			add(&b, " have signed the non-aggression pact. Their fleets will look the other way.")
+			signed = true
 		} else {
 			add_grudge(g, to, from, GRUDGE_REFUSED_PACT)
 			add(&b, " sent the pact back unsigned. There is a coffee ring on it.")
@@ -495,6 +509,7 @@ answer_form :: proc(g: ^Game, f: Form) {
 			g.trade[to][from] = TRADE_START
 			g.trades += 1
 			add(&b, " signed the trade agreement. Money will change hands.")
+			signed = true
 		} else {
 			add_grudge(g, to, from, GRUDGE_REFUSED_PACT)
 			add(&b, " would rather not trade with you. Or anyone.")
@@ -530,6 +545,9 @@ answer_form :: proc(g: ^Game, f: Form) {
 	}
 	if from == PLAYER {
 		say(g, text(&b))
+		if signed {
+			give_away_temper(g, to, .Neighbourly)
+		}
 	}
 }
 
@@ -548,6 +566,7 @@ rival_files :: proc(g: ^Game, e: int) {
 		give, want := swap_back(g, PLAYER, e), swap_back(g, e, PLAYER)
 		if give != NO_TECH && want != NO_TECH {
 			d^ = {waiting = true, kind = .Swap_Offer, from = e, tech = give, want = want}
+			give_away_aim(g, e, .Tinkerer)
 			return
 		}
 	}
@@ -555,6 +574,7 @@ rival_files :: proc(g: ^Game, e: int) {
 	case !has_pact(g, e, PLAYER) && mine * 100 >= (temper_of(g, e) == .Pushy ? PUSHY_DEMANDS : DEMAND_PERCENT) * max(1, yers):
 		amount := clamp(g.empires[PLAYER].bj / 5 / FORM_AMOUNT_STEP * FORM_AMOUNT_STEP, FORM_AMOUNT_STEP, 200)
 		d^ = {waiting = true, kind = .Demand, from = e, amount = amount}
+		give_away_temper(g, e, .Pushy)
 	case !has_pact(g, e, PLAYER) && pact_value(g, e, PLAYER) + GRUDGE_REFUSED_PACT > g.empires[e].grudge[PLAYER]:
 		d^ = {waiting = true, kind = .Pact_Offer, from = e}
 	case has_pact(g, e, PLAYER) && !trading(g, e, PLAYER) && deal_value(g, e, PLAYER, .Trade) + GRUDGE_REFUSED_PACT > g.empires[e].grudge[PLAYER]:
@@ -585,6 +605,7 @@ back_to_map :: proc(g: ^Game) {
 
 // Yer answer: sign (0) or refuse (1).
 answer_doormat :: proc(g: ^Game, sign: bool) {
+	signed := false // a pact or trade signed: a Neighbourly giveaway (step 10)
 	d := &g.doormat
 	if !d.open {
 		return
@@ -617,6 +638,7 @@ answer_doormat :: proc(g: ^Game, sign: bool) {
 		if sign && !has_pact(g, e, PLAYER) {
 			set_treaty(g, e, PLAYER, .Pact)
 			add(&b, " and you now have a non-aggression pact. Neither side believes it.")
+			signed = true
 		} else {
 			add_grudge(g, e, PLAYER, GRUDGE_REFUSED_PACT)
 			add(&b, " got their pact back unsigned.")
@@ -642,12 +664,16 @@ answer_doormat :: proc(g: ^Game, sign: bool) {
 			g.trade[PLAYER][e] = TRADE_START
 			g.trades += 1
 			add(&b, " and you now trade. Money will change hands.")
+			signed = true
 		} else {
 			add_grudge(g, e, PLAYER, GRUDGE_REFUSED_PACT)
 			add(&b, " got their trade agreement back unsigned.")
 		}
 	}
 	say(g, text(&b))
+	if signed {
+		give_away_temper(g, e, .Neighbourly)
+	}
 }
 
 // How a computer would answer yer doormat (for the simulator): sign pacts; pay demands only to someone

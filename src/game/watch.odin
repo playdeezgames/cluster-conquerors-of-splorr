@@ -155,6 +155,9 @@ watch_turn :: proc(g: ^Game) {
 					add_grudge(g, b, a, touchy(g, b, GRUDGE_SPY_CAUGHT * caught))
 				}
 				report_caught(g, a, b, caught, blamed, exposed)
+				if blamed == PLAYER {
+					give_away_temper(g, b, .Touchy)
+				}
 			}
 		}
 	}

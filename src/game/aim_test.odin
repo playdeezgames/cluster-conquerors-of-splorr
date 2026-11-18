@@ -1,7 +1,6 @@
 #+build !js
 package game
 
-import "core:strings"
 import "core:testing"
 
 @(test)
@@ -36,16 +35,6 @@ test_aim_lines_fit :: proc(t: ^testing.T) {
 			testing.expect(t, len("Aim: ") + len(AIMS[a].name) + 2 + len(AIMS[a].says) <= 58)
 		}
 	}
-	// The first-contact line names both, and fits the news.
-	g := temper_game()
-	defer free(g)
-	g.empires[1].temper = .Two_Faced
-	g.empires[1].aim = .Committee
-	temper_news(g, 1)
-	m := &g.news[NEWS_LINES - 1]
-	s := string(m.text[:m.n])
-	testing.expect(t, strings.contains(s, "Two-faced committee types."))
-	testing.expect(t, m.n <= NEWS_COLS)
 }
 
 @(test)

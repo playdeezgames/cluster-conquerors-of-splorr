@@ -107,6 +107,9 @@ rule :: proc(g: ^Game, r: Ruling) {
 		fine(g, k.accused, text(&k.why), 2, "Doubled, fined")
 		if k.accused != p {
 			add_grudge(g, k.accused, p, touchy(g, k.accused, GRUDGE_DOUBLED))
+			if p == PLAYER {
+				give_away_temper(g, k.accused, .Touchy)
+			}
 		}
 	case .Dismiss:
 		b: Text

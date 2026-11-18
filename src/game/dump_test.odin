@@ -71,6 +71,8 @@ test_dump_play :: proc(t: ^testing.T) {
 		open_desk(g)
 		g.desk.rival = 4
 		g.empires[4].aim = .Committee
+		shot(g, fr, "desk-unknown.ppm") // nothing has come out yet (slice 3 step 10)
+		g.empires[4].temper_known, g.empires[4].aim_known = true, true
 		shot(g, fr, "desk-temper.ppm")
 		// A Tinkerer's swap offer on yer doormat (slice 3 step 5).
 		g.doormat = {open = true, kind = .Swap_Offer, from = 4, tech = tech_id(.Commuting, 2), want = tech_id(.Landscaping, 1)}
