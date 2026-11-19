@@ -245,5 +245,5 @@ The goal is someone knocked out in a fair share of simulated games (none so far,
 
 - Reviewed November 18, 2026 (Decided 7 to 9): every choice of steps 1 to 9, the new-game screen's text, the difficulty names, and the tempers' and aims' lines.
 - Reviewed November 19, 2026 (Decided 10): step 10's giveaways, every choice kept.
-- The keys for the new-game screen and paging the rivals, checked against the controls already taken.
+- Keys checked November 19, 2026, nothing to change: slice 3 added no new key. The new-game screen and paging the rivals (the desk's To row, the Watch's Rival row) use the pattern every list screen already had: Up/Down pick a row, Left/Right change it, Enter/OK acts, Escape/Back goes back. P, W, R and T do nothing on the new-game screen, and F still opens feedback everywhere. Taps work on the new-game rows (a second tap on a value's left or right half changes it), and the touch pads and the gamepad send the same commands. The screen hints and the manual say the same.
 - Sound, the cover and itch.io, for a later decision.
