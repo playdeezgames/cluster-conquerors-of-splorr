@@ -12,6 +12,7 @@ state: struct {
 	screen: game.Frame,
 	dirty:  bool,
 	ready:  bool,
+	sfx:    game.Sfx, // the sound the page plays next (game.sound_after)
 }
 
 main :: proc() {
@@ -76,7 +77,10 @@ platform_command :: proc "c" (command: i32) {
 	if command < 0 || command > i32(max(game.Command)) {
 		return
 	}
-	game.command(&state.rules, game.Command(command))
+	c := game.Command(command)
+	before := game.sound_look(&state.rules)
+	game.command(&state.rules, c)
+	state.sfx = game.sound_after(before, &state.rules, c == .Confirm, c <= .South_East)
 	state.dirty = true
 }
 
@@ -87,7 +91,9 @@ platform_pointer :: proc "c" (x, y, p: i32) {
 	if p < 0 || p > i32(max(game.Pointer)) {
 		return
 	}
+	before := game.sound_look(&state.rules)
 	game.pointer(&state.rules, int(x), int(y), game.Pointer(p))
+	state.sfx = game.sound_after(before, &state.rules, false, false)
 	state.dirty = true
 }
 
@@ -114,4 +120,12 @@ platform_screen_w :: proc "c" () -> i32 {
 @(export)
 platform_screen_h :: proc "c" () -> i32 {
 	return game.SCREEN_H
+}
+
+// The sound to play since the last call (a game.Sfx, 0 for none), and forgets it.
+@(export)
+platform_sfx :: proc "c" () -> i32 {
+	s := state.sfx
+	state.sfx = .None
+	return i32(s)
 }

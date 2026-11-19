@@ -4,8 +4,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 OPT=-o:speed
 [ "${1:-}" = "--size" ] && OPT=-o:size
-mkdir -p build/web
+mkdir -p build/web/sfx
 odin build src/web -collection:tggd=src -target:js_wasm32 -out:build/web/game.wasm $OPT
 cp "$(odin root)/core/sys/wasm/js/odin.js" build/web/
 cp web/index.html web/lootlocker.js web/manual.html build/web/
+cp assets/sfx/*.wav build/web/sfx/
 ls -l build/web

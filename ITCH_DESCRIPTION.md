@@ -1,7 +1,7 @@
 # itch.io page copy: Cluster Conquerors of SPLORR!!
 
-Page: https://thegrumpygamedev.itch.io/cluster-conquerors-of-splorr (not created yet; no release booked). Pages comes first (`DESIGN.md`: a normal release, GitHub Pages as soon as a galaxy map can be explored, itch.io later on a Coxswain-booked day).
-**Draft, written November 10, 2026 at slice 1 step 0 and brought up to the end of slice 1 on November 12, 2026, of slice 2 on November 15, 2026 and of slice 3 on November 18, 2026; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, a placeholder made by `tools/make_cover.py`). Screenshots: `assets/screenshots/01-map.png` to `05-watch.png` (native frames at 3x, by `tools/make_shots.sh`).
+Page: https://thegrumpygamedev.itch.io/cluster-conquerors-of-splorr (not created yet; first release booked in Coxswain for November 26, 2026, ship only on the user's "ship"). Pages comes first (`DESIGN.md`: a normal release, GitHub Pages as soon as a galaxy map can be explored, itch.io later on a Coxswain-booked day).
+**Draft, written November 10, 2026 at slice 1 step 0 and brought up to the end of slice 1 on November 12, 2026, of slice 2 on November 15, 2026, of slice 3 on November 18, 2026 and of the release (sound, cover) on November 19, 2026; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, drawn by `tools/make_cover.py` from the game's own tiles). Screenshots: `assets/screenshots/01-map.png` to `05-watch.png` (native frames at 3x, by `tools/make_shots.sh`).
 
 ## Short description (the one-line field)
 
@@ -35,7 +35,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **The Neighbourhood Watch:** W (gamepad LB, the Watch button) sends a share of yer income to train watchers, then places them on a rival to watch, steal techs or wreck factories, bases or ships, and leave someone else's name all over it. Caught is gone, and they will remember. A frame-up that fools nobody is read out at the next HOA meeting.
 - **Battles:** pick a target, then fight a round, fight it out, or retreat.
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
-- **T** (gamepad Start, the Turn button) ends the turn. **F** sends feedback.
+- **T** (gamepad Start, the Turn button) ends the turn. **M** turns sound off and on. **F** sends feedback.
 
 All three slices are built. Slice 2 brought all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 is done: clusters come in four sizes, from 20 stars to 72, with up to five rivals and five difficulty levels, from Quiet street to Cul-de-sac from hell. Every rival now has a temper (Petty, Pushy, Two-faced, Neighbourly or Touchy) and an aim (Builder, Bully, Busybody, Committee type or Tinkerer), and nobody tells you which: you find out from how they behave. The rivals gather their fleets before they attack, escort their Carpools, reach far with Gas Cans and close in on a beaten empire, and now and then one of them is moved out for good.
 
@@ -43,7 +43,7 @@ All three slices are built. Slice 2 brought all ten species, diplomacy by filed 
 
 An homage to the original Master of Orion (1993), rebuilt from nothing for the browser in Odin compiled to WebAssembly.
 
-**AI disclosure:** made with Claude Code. The design and every decision are TheGrumpyGameDev's; Claude writes the code and the tests and drafts the text at the author's direction.
+**AI disclosure:** made with Claude Code. The design and every decision are TheGrumpyGameDev's; Claude writes the code and the tests, drafts the text, made the sound effects in the Anvil and drew the cover from the Urizen tiles, at the author's direction.
 
 ### Credits
 
@@ -51,6 +51,7 @@ An homage to the original Master of Orion (1993), rebuilt from nothing for the b
 - Code and draft text by Claude Code (AI), at the author's direction.
 - Tiles: Urizen 1-bit tileset by vurmux, https://vurmux.itch.io/urizen-onebit-tileset (CC0).
 - Font: DINOBYTE by mby, https://mby.itch.io/dinobyte (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/).
+- Sound: made by Claude in the Anvil (the SPLORR!! sound and sprite tool).
 - Feedback by LootLocker.
 
 ## Page settings (by hand, when the time comes)
@@ -59,4 +60,4 @@ An homage to the original Master of Orion (1993), rebuilt from nothing for the b
 - Embed: "Click to launch in fullscreen" (the user's rule for every game, November 13, 2026; the canvas is 480 by 270 scaled up). Mobile friendly: yes, landscape orientation.
 - Classification: Games. Genre: Strategy.
 - Tags: 4x, space, turn-based-strategy, 1-bit, satire, metaphor, funny.
-- AI disclosure field: Yes (Code, Text).
+- AI disclosure field: Yes (Code, Text, Sound, Graphics: the cover is composed by Claude from the CC0 Urizen tiles).
