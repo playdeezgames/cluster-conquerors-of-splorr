@@ -50,8 +50,8 @@
 </div>
 <footer>
 	Cluster Conquerors of SPLORR!! by TheGrumpyGameDev. Code made by an AI agent (Claude Code) at the author's direction.
-	Tiles: Urizen by vurmux (CC0). Font: DINOBYTE by mby (CC BY 4.0). Feedback by LootLocker.
-	<a href="manual.html" target="_blank">Manual</a> · <a href="#" id="feedback-link">Send feedback (F)</a> · <a href="#" id="new-cluster">New cluster</a> · <a href="https://thegrumpygamedev.itch.io/">itch.io</a> · <a href="https://playdeezgames.github.io/oeuvre-of-splorr/">more games</a>
+	Tiles: Urizen by vurmux (CC0). Font: DINOBYTE by mby (CC BY 4.0). Sound made in the Anvil. Feedback by LootLocker.
+	<a href="manual.html" target="_blank">Manual</a> · <a href="#" id="feedback-link">Send feedback (F)</a> · <a href="#" id="sound-link">Sound: on (M)</a> · <a href="#" id="new-cluster">New cluster</a> · <a href="https://thegrumpygamedev.itch.io/">itch.io</a> · <a href="https://playdeezgames.github.io/oeuvre-of-splorr/">more games</a>
 </footer>
 <script src="odin.js"></script>
 <script src="lootlocker.js"></script>
@@ -72,8 +72,51 @@
 	const ex = memory.exports;
 	const W = ex.platform_screen_w(), H = ex.platform_screen_h();
 	// Every input goes through these, and is saved shortly after (see saveSoon below).
-	function sendCommand(c) { ex.platform_command(c); saveSoon(); }
-	function sendPointer(x, y, p) { ex.platform_pointer(x, y, p); saveSoon(); }
+	function sendCommand(c) { unlockAudio(); ex.platform_command(c); playSfx(ex.platform_sfx()); saveSoon(); }
+	function sendPointer(x, y, p) { unlockAudio(); ex.platform_pointer(x, y, p); playSfx(ex.platform_sfx()); saveSoon(); }
+
+	// Sound: WAVs made in the Anvil, decoded once the page has an AudioContext. The order matches game.Sfx
+	// (src/game/sounds.odin; 0 is none). The context starts suspended and resumes on the first key or tap.
+	// M or the footer link turns sound off and on; the choice is kept in this browser.
+	const SFX = [null, "blip", "open", "close", "confirm", "turn", "hit", "gavel", "gain", "loss", "win", "lose"];
+	const SFX_GAIN = { blip: 0.18, open: 0.3, close: 0.3, confirm: 0.32 };
+	const SOUND_KEY = "ccos-sound";
+	let soundOn = true;
+	try { soundOn = localStorage.getItem(SOUND_KEY) !== "off"; } catch (e) {}
+	const soundLink = document.getElementById("sound-link");
+	function showSound() { soundLink.textContent = soundOn ? "Sound: on (M)" : "Sound: off (M)"; }
+	function toggleSound() {
+		soundOn = !soundOn;
+		try { localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch (e) {}
+		showSound();
+	}
+	showSound();
+	soundLink.addEventListener("click", (e) => { e.preventDefault(); toggleSound(); });
+	let audio = null;
+	const buffers = [];
+	function unlockAudio() {
+		if (audio) { if (audio.state === "suspended") audio.resume(); return; }
+		const AC = window.AudioContext || window.webkitAudioContext;
+		if (!AC) return;
+		audio = new AC();
+		SFX.forEach((name, i) => {
+			if (!name) return;
+			fetch("sfx/" + name + ".wav").then((r) => r.arrayBuffer())
+				.then((b) => new Promise((res, rej) => audio.decodeAudioData(b, res, rej)))
+				.then((buf) => { buffers[i] = buf; }).catch(() => {});
+		});
+	}
+	function playSfx(i) {
+		const buf = buffers[i];
+		if (!soundOn || !audio || !buf) return;
+		const src = audio.createBufferSource();
+		const gain = audio.createGain();
+		gain.gain.value = SFX_GAIN[SFX[i]] ?? 0.4;
+		src.buffer = buf;
+		src.connect(gain).connect(audio.destination);
+		src.start();
+	}
+	unlockAudio(); // made early (suspended until a key or tap) so the sounds are decoded by then
 	// The game is saved in localStorage after every move and picked up on the next visit. ?seed=N in the
 	// URL starts (and replaces the save with) that cluster; "New cluster" in the footer starts a fresh one.
 	const SAVE_KEY = "ccos-save";
@@ -127,6 +170,7 @@
 	};
 	window.addEventListener("keydown", (e) => {
 		if (e.code === "KeyF" && !e.repeat) { e.preventDefault(); feedback.open(); return; }
+		if (e.code === "KeyM" && !e.repeat) { e.preventDefault(); toggleSound(); return; }
 		if (!(e.code in KEYS)) return;
 		e.preventDefault();
 		const c = KEYS[e.code];
