@@ -1,7 +1,7 @@
 # itch.io page copy: Cluster Conquerors of SPLORR!!
 
 Page: https://thegrumpygamedev.itch.io/cluster-conquerors-of-splorr (not created yet; first release booked in Coxswain for November 26, 2026, ship only on the user's "ship"). Pages comes first (`DESIGN.md`: a normal release, GitHub Pages as soon as a galaxy map can be explored, itch.io later on a Coxswain-booked day).
-**Draft, written November 10, 2026 at slice 1 step 0 and brought up to the end of slice 1 on November 12, 2026, of slice 2 on November 15, 2026, of slice 3 on November 18, 2026 and of the release (sound, cover) on November 19, 2026; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, drawn by `tools/make_cover.py` from the game's own tiles). Screenshots: `assets/screenshots/01-map.png` to `05-watch.png` (native frames at 3x, by `tools/make_shots.sh`).
+**Draft (itch page created as a Draft through Chrome on November 25, 2026, from this text; the Latest version line is also the page's external link; feedback lines dropped while the LootLocker game is not set up), written November 10, 2026 at slice 1 step 0 and brought up to the end of slice 1 on November 12, 2026, of slice 2 on November 15, 2026, of slice 3 on November 18, 2026 and of the release (sound, cover) on November 19, 2026; the user has not approved any of it.** Pasted in by hand; nothing here is published by the repo. Cover: `assets/cover.png` (630 by 500, drawn by `tools/make_cover.py` from the game's own tiles). Screenshots: `assets/screenshots/01-map.png` to `05-watch.png` (native frames at 3x, by `tools/make_shots.sh`).
 
 ## Short description (the one-line field)
 
@@ -11,7 +11,7 @@ Conquer the cluster. Everybody hates you. The Homeowners' Association meets ever
 
 ## Page text
 
-**Latest version:** https://playdeezgames.github.io/cluster-conquerors-of-splorr/ (live since November 10, 2026; also add it as an external link on the page)
+**Latest version:** https://playdeezgames.github.io/cluster-conquerors-of-splorr/
 
 **Cluster Conquerors of SPLORR!!** is a metaphor about paperwork, in the shape of a turn-based space strategy game.
 
@@ -35,7 +35,7 @@ Mouse, keyboard, gamepad and touch (landscape) all work. The game saves itself i
 - **The Neighbourhood Watch:** W (gamepad LB, the Watch button) sends a share of yer income to train watchers, then places them on a rival to watch, steal techs or wreck factories, bases or ships, and leave someone else's name all over it. Caught is gone, and they will remember. A frame-up that fools nobody is read out at the next HOA meeting.
 - **Battles:** pick a target, then fight a round, fight it out, or retreat.
 - **Taking colonies:** Carpools land at an enemy colony once nothing armed is left to stop them.
-- **T** (gamepad Start, the Turn button) ends the turn. **M** turns sound off and on. **F** sends feedback.
+- **T** (gamepad Start, the Turn button) ends the turn. **M** turns sound off and on.
 
 All three slices are built. Slice 2 brought all ten species, diplomacy by filed forms, the Neighbourhood Watch with its frame-ups, bylaws, a President who rules on every complaint, and the cluster's bad luck (a stray Goat, a Flu going round, a Residents' Revolt...). Slice 3 is done: clusters come in four sizes, from 20 stars to 72, with up to five rivals and five difficulty levels, from Quiet street to Cul-de-sac from hell. Every rival now has a temper (Petty, Pushy, Two-faced, Neighbourly or Touchy) and an aim (Builder, Bully, Busybody, Committee type or Tinkerer), and nobody tells you which: you find out from how they behave. The rivals gather their fleets before they attack, escort their Carpools, reach far with Gas Cans and close in on a beaten empire, and now and then one of them is moved out for good.
 
@@ -52,7 +52,8 @@ An homage to the original Master of Orion (1993), rebuilt from nothing for the b
 - Tiles: Urizen 1-bit tileset by vurmux, https://vurmux.itch.io/urizen-onebit-tileset (CC0).
 - Font: DINOBYTE by mby, https://mby.itch.io/dinobyte (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/).
 - Sound: made by Claude in the Anvil (the SPLORR!! sound and sprite tool).
-- Feedback by LootLocker.
+
+*This page was set up by Claude, an AI agent (Claude Code), on behalf of The Grumpy GameDev.*
 
 ## Page settings (by hand, when the time comes)
 
